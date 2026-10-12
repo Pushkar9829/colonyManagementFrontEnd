@@ -31,7 +31,7 @@ export function ReportTab() {
         <Card><ErrorState error={error} onRetry={refetch} /></Card>
       ) : data && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard icon={CheckCircle2} tone="green" label="Completion" value={closed ? `${Math.round((totals.completed / closed) * 100)}%` : '—'} sub={`${totals.completed} of ${closed} rounds`} />
             <StatCard icon={AlertTriangle} tone="amber" label="Partial rounds" value={totals.partial} />
             <StatCard icon={ShieldAlert} tone="red" label="Missed rounds" value={totals.missed} />

@@ -13,6 +13,7 @@ function Scanner({ onScan }) {
   const cb = useRef(onScan);
   const [on, setOn] = useState(false);
   const [error, setError] = useState(null);
+  const [attempt, setAttempt] = useState(0); // a tap after an error asks for the camera again
   cb.current = onScan;
 
   useEffect(() => {
@@ -21,7 +22,7 @@ function Scanner({ onScan }) {
     let cancelled = false;
     (async () => {
       const { default: QrScanner } = await import('qr-scanner');
-      if (cancelled) return;
+      if (cancelled || !video.current) return;
       instance = new QrScanner(
         video.current,
         (r) => {
@@ -42,16 +43,29 @@ function Scanner({ onScan }) {
       cancelled = true;
       instance?.destroy();
     };
-  }, [on]);
+  }, [on, attempt]);
+
+  const start = () => {
+    setError(null);
+    setOn(true);
+    setAttempt((n) => n + 1);
+  };
 
   return (
     <div>
       <div className="relative overflow-hidden rounded-xl bg-slate-900" style={{ aspectRatio: '4 / 3' }}>
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video ref={video} className="size-full object-cover" playsInline muted />
-        {(!on || error) && <p className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-slate-300">{error || 'Camera off'}</p>}
+        {/* While the camera is off the whole box is the button, so it is easy to hit. */}
+        {(!on || error) && (
+          <button type="button" onClick={start} className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-slate-200 transition hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-brand-400">
+            <Camera className="size-10 text-slate-300" />
+            <span className="text-base font-semibold text-white">{error ? 'Tap to try again' : 'Tap to scan pass'}</span>
+            {error && <span className="text-sm text-slate-300">{error}</span>}
+          </button>
+        )}
       </div>
-      <Button className="mt-2" size="sm" variant="secondary" icon={on ? CameraOff : Camera} onClick={() => { setError(null); setOn((v) => !v); }}>{on ? 'Stop camera' : 'Scan QR'}</Button>
+      {on && !error && <Button className="mt-2" size="sm" variant="secondary" icon={CameraOff} onClick={() => setOn(false)}>Stop camera</Button>}
     </div>
   );
 }

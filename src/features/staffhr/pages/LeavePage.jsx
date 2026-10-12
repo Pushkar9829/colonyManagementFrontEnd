@@ -50,7 +50,7 @@ function CalendarTab() {
   };
   return (
     <Card>
-      <CardHeader title={periodLabel(period)} action={<Input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} />} />
+      <CardHeader title={periodLabel(period)} action={<Input title="Month" type="month" value={period} onChange={(e) => setPeriod(e.target.value)} />} />
       {isLoading ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <div className="grid grid-cols-7 gap-px bg-slate-100 p-px text-xs">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="bg-slate-50 px-1 py-1.5 text-center font-semibold text-slate-500">{d}</div>)}

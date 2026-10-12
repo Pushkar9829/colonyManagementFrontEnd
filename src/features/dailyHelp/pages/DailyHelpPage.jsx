@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { BadgeCheck, CalendarOff, FileText, IndianRupee, Plus, Star, UserCheck } from 'lucide-react';
+import { BadgeCheck, CalendarOff, FileText, IndianRupee, LogIn, LogOut, Plus, Star, UserCheck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Attachments, Badge, Button, Checkbox, Card, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
+import { Attachments, Badge, Button, Checkbox, Card, EmptyState, FileUpload, FilterBar, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
@@ -11,6 +11,7 @@ import {
   useAddLeave,
   useCreateHelp,
   useDailyHelp,
+  useGateScan,
   useHelpAttendance,
   useHelpDocuments,
   useHelpLeaves,
@@ -232,21 +233,27 @@ export default function DailyHelpPage() {
   const { data, isLoading } = useDailyHelp({ search: filters.search || undefined, type: filters.type || undefined, page: filters.page });
   const remove = useRemoveHelpFromUnit();
   const update = useUpdateHelp();
+  // Guards mark helpers in / out from the list (the same toggle as typing their gate code).
+  const canMarkGate = [ROLES.GUARD, ROLES.ADMIN].includes(user.role);
+  const gateScan = useGateScan();
   const viewing = data?.data.find((h) => h._id === viewingId);
 
   return (
     <div>
       <PageHeader
         title="Daily help"
-        description={isResident ? 'Maids, cooks and drivers working at your home. Share the passcode with them for gate entry.' : 'All domestic staff registered in the colony.'}
+        description={isResident ? 'Each helper gets a 6-digit gate code. Tap a helper to see and share it.' : user.role === ROLES.GUARD ? 'Tap Mark in / Mark out as a helper passes the gate.' : 'All domestic staff registered in the colony.'}
         actions={(isResident || canManage) && <Button icon={Plus} onClick={() => setAdding(true)}>Add helper</Button>}
       />
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2">
-          <Input placeholder="Search name or phone" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />
-          <Select placeholder="All roles" options={TYPES} value={filters.type} onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value, page: 1 }))} />
-        </div>
-        {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? <EmptyState icon={UserCheck} title="No helpers yet" /> : (
+        <FilterBar cols={2} active={filters.type ? 1 : 0} search={<Input aria-label="Search" placeholder="Search name or phone" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />}>
+          <Select label="Role" placeholder="All roles" options={TYPES} value={filters.type} onChange={(e) => setFilters((f) => ({ ...f, type: e.target.value, page: 1 }))} />
+        </FilterBar>
+        {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
+          <EmptyState icon={UserCheck} title="No helpers yet"
+            description={isResident && !filters.search && !filters.type ? 'Add the people who work at your home so the gate can let them in with their code.' : undefined}
+            action={isResident && !filters.search && !filters.type ? <Button icon={Plus} onClick={() => setAdding(true)}>Add your maid, cook or driver</Button> : undefined} />
+        ) : (
           <ul className="divide-y divide-slate-100">
             {data.data.map((h) => (
               <li key={h._id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
@@ -272,11 +279,17 @@ export default function DailyHelpPage() {
                 </div>
                 {(isResident || canManage) && (
                   <div className="text-center">
-                    <p className="text-[10px] uppercase tracking-wide text-slate-400">Passcode</p>
+                    <p className="text-[10px] uppercase tracking-wide text-slate-400">Gate code</p>
                     <p className="font-mono text-lg font-semibold tracking-widest text-slate-800">{h.passcode}</p>
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2">
+                  {canMarkGate && h.active && (
+                    <Button size="lg" variant={h.isInside ? 'secondary' : 'success'} icon={h.isInside ? LogOut : LogIn} className="w-full sm:w-auto"
+                      loading={gateScan.isPending && gateScan.variables === h.passcode} onClick={() => gateScan.mutate(h.passcode)}>
+                      {h.isInside ? 'Mark out' : 'Mark in'}
+                    </Button>
+                  )}
                   {(isResident || canManage) && <Button size="sm" variant="secondary" onClick={() => setViewingId(h._id)}>Details</Button>}
                   {isResident && <Button size="sm" variant="ghost" onClick={() => window.confirm(`Remove ${h.name} from your home?`) && remove.mutate(h._id)}>Remove</Button>}
                   {canManage && <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: h._id, active: !h.active })}>{h.active ? 'Deactivate' : 'Activate'}</Button>}

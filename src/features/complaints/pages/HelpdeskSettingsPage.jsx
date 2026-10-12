@@ -15,6 +15,14 @@ const ROLE_OPTIONS = [
   { value: 'staff', label: 'All staff' },
   { value: 'accountant', label: 'Accountants' },
 ];
+// "Straight away", "After 2 hours", "After 1 day" — escalation delays in words.
+const afterWords = (h) => {
+  const n = Number(h) || 0;
+  if (n === 0) return 'Straight away';
+  if (n % 24 === 0) return `After ${n / 24} day${n === 24 ? '' : 's'}`;
+  return `After ${n} hour${n === 1 ? '' : 's'}`;
+};
+const ROLE_WORDS = { facility_manager: 'Facility manager', admin: 'Admin', staff: 'All staff', accountant: 'Accountant' };
 const splitKeywords = (text) => text.split(',').map((k) => k.trim()).filter(Boolean);
 
 function CategoryModal({ category, onClose }) {
@@ -96,7 +104,7 @@ function RuleModal({ rule, categories, onClose }) {
   const toggle = (list, v) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
   const body = { levels: levels.map((l) => ({ ...l, afterHours: Number(l.afterHours) })) };
   return (
-    <Modal open onClose={onClose} title={editing ? 'Edit escalation rule' : 'New escalation rule'} size="lg"
+    <Modal open onClose={onClose} title={editing ? 'Edit alert rule' : 'New alert rule'} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending}
         onClick={() => (editing ? update.mutate({ id: rule._id, ...body }) : create.mutate({ category: category || null, priority: priority || null, ...body }))}>Save</Button></>}>
       <div className="space-y-4">
@@ -107,10 +115,10 @@ function RuleModal({ rule, categories, onClose }) {
         {levels.map((l, i) => (
           <div key={l.level} className="rounded-lg border border-slate-200 p-3">
             <div className="flex items-center justify-between">
-              <p className="font-medium text-slate-800">Level {l.level}</p>
+              <p className="font-medium text-slate-800">Alert {l.level}</p>
               {i === levels.length - 1 && levels.length > 1 && <button type="button" className="text-slate-400 hover:text-red-600" aria-label="Remove level" onClick={() => setLevels((ls) => ls.slice(0, -1))}><Trash2 className="size-4" /></button>}
             </div>
-            <Input className="mt-2 max-w-xs" label="Hours after SLA breach" type="number" min={0} value={l.afterHours} onChange={(e) => setLevel(i, { afterHours: e.target.value })} />
+            <Input className="mt-2 max-w-xs" label="Hours after the deadline is missed" hint="0 = straight away" type="number" min={0} value={l.afterHours} onChange={(e) => setLevel(i, { afterHours: e.target.value })} />
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
               {ROLE_OPTIONS.map((r) => <Checkbox key={r.value} label={r.label} checked={l.roles.includes(r.value)} onChange={() => setLevel(i, { roles: toggle(l.roles, r.value) })} />)}
               <Checkbox label="Assignee" checked={Boolean(l.notifyAssignee)} onChange={(e) => setLevel(i, { notifyAssignee: e.target.checked })} />
@@ -140,10 +148,13 @@ function EscalationMatrix({ categories }) {
   const remove = useDeleteRule();
   const [editing, setEditing] = useState(null);
   const name = (key) => categories.find((c) => c.key === key)?.name || label(key);
-  const describe = (levels) => levels.map((l) => `L${l.level} +${l.afterHours}h → ${[...l.roles.map((r) => label(r)), ...(l.users || []).map((u) => u.name || 'member'), ...(l.notifyAssignee ? ['assignee'] : [])].join(', ')}`);
+  const describe = (levels) => levels.map((l) => {
+    const who = [...l.roles.map((r) => ROLE_WORDS[r] || label(r)), ...(l.users || []).map((u) => u.name || 'member'), ...(l.notifyAssignee ? ['assignee'] : [])];
+    return `${afterWords(l.afterHours)}: ${who.join(', ') || 'nobody'}`;
+  });
   return (
     <Card>
-      <CardHeader title="Escalation matrix" subtitle="When a complaint passes its SLA, each level is notified once its hours have passed. The most specific rule wins."
+      <CardHeader title="Who gets alerted when a complaint is late" subtitle="When a complaint misses its target time, these people are told — first straight away, then again if it is still open later. A rule for a specific category or priority wins over a general one."
         action={<Button size="sm" icon={Plus} onClick={() => setEditing({})}>Add rule</Button>} />
       {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : (
         <ul className="divide-y divide-slate-100">
@@ -160,12 +171,12 @@ function EscalationMatrix({ categories }) {
             </li>
           ))}
           <li className="bg-slate-50 px-5 py-3">
-            <p className="text-sm font-medium text-slate-700">Default (no matching rule)</p>
+            <p className="text-sm font-medium text-slate-700">Standard alerts (when no rule above matches)</p>
             <ul className="mt-1 space-y-0.5 text-xs text-slate-500">{describe(data.defaults).map((d) => <li key={d}>{d}</li>)}</ul>
           </li>
         </ul>
       )}
-      {!isLoading && !data?.rules.length && <EmptyState title="No custom rules — the default matrix applies" />}
+      {!isLoading && !data?.rules.length && <EmptyState title="No custom rules yet — the standard alerts apply" />}
       {editing && <RuleModal rule={editing._id ? editing : null} categories={categories} onClose={() => setEditing(null)} />}
     </Card>
   );
@@ -177,7 +188,7 @@ export default function HelpdeskSettingsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Link to="/complaints" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> Helpdesk</Link>
-      <PageHeader title="Helpdesk settings" description="Escalation matrix and complaint categories." />
+      <PageHeader title="Complaint settings" description="Who is alerted when a complaint is late, and the complaint categories." />
       <EscalationMatrix categories={categories} />
       <Categories isAdmin={user.role === ROLES.ADMIN} />
     </div>

@@ -43,12 +43,12 @@ function HeadRows({ rows, field, fieldLabel, placeholder, onChange }) {
       {rows.map((r, i) => (
         // eslint-disable-next-line react/no-array-index-key
         <div key={i} className="flex items-end gap-2">
-          <Input className="flex-1" label={i === 0 ? 'Charge head' : undefined} placeholder="e.g. Sinking fund" value={r.head} onChange={(e) => update(i, { head: e.target.value })} />
-          <Input className="w-32" label={i === 0 ? fieldLabel : undefined} placeholder={placeholder} value={r[field]} onChange={(e) => update(i, { [field]: e.target.value })} />
-          <Button variant="ghost" icon={Trash2} aria-label="Remove" onClick={() => onChange(rows.filter((_, j) => j !== i))} />
+          <Input className="min-w-0 flex-1" label={i === 0 ? 'Charge name' : undefined} aria-label="Charge name" placeholder="e.g. Sinking fund" value={r.head} onChange={(e) => update(i, { head: e.target.value })} />
+          <Input className="w-32" label={i === 0 ? fieldLabel : undefined} aria-label={`${fieldLabel} for ${r.head || 'this charge'}`} placeholder={placeholder} value={r[field]} onChange={(e) => update(i, { [field]: e.target.value })} />
+          <Button variant="ghost" icon={Trash2} aria-label={`Remove ${r.head || 'charge'}`} onClick={() => onChange(rows.filter((_, j) => j !== i))} />
         </div>
       ))}
-      <Button size="sm" variant="secondary" icon={Plus} onClick={() => onChange([...rows, { head: '', [field]: '' }])}>Add head</Button>
+      <Button size="sm" variant="secondary" icon={Plus} onClick={() => onChange([...rows, { head: '', [field]: '' }])}>Add charge</Button>
     </div>
   );
 }
@@ -70,7 +70,7 @@ export default function FinanceSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Finance settings" description="GST, fund accounts, non-occupancy charges, cheque bounce charges, waivers and autopay." actions={<Button loading={save.isPending} onClick={submit}>Save settings</Button>} />
+      <PageHeader title="Finance settings" description="GST, fund accounts, non-occupancy charges, cheque bounce charges, waivers and autopay." />
 
       <Card>
         <CardHeader title="GST" subtitle="When on, bills become GST tax invoices with CGST and SGST lines. Set a head's rate to 0 to keep it exempt." />
@@ -80,16 +80,16 @@ export default function FinanceSettingsPage() {
           <Input label="Default GST rate (%)" type="number" min={0} max={28} {...f('gstDefaultRate')} />
           <Input label="Exempt up to (₹ / month)" type="number" min={0} hint="Members billed at or below this pay no GST (0 = always charge)" {...f('gstExemptUpTo')} />
           <div className="sm:col-span-3">
-            <p className="mb-2 text-sm font-medium text-slate-700">GST rate per charge head</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">GST rate per charge (e.g. sinking fund at 0%)</p>
             <HeadRows rows={form.headGst} field="rate" fieldLabel="Rate %" placeholder="18" onChange={(headGst) => setForm({ ...form, headGst })} />
           </div>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Fund & account mapping" subtitle="Chart-of-accounts code each charge head is credited to. Unmapped heads go to 4000 (maintenance income)." />
+        <CardHeader title="Fund & account mapping" subtitle="Which account each charge is credited to. Charges not listed go to 4000 (maintenance income)." />
         <div className="p-5">
-          <HeadRows rows={form.headAccounts} field="account" fieldLabel="Account" placeholder="3100" onChange={(headAccounts) => setForm({ ...form, headAccounts })} />
+          <HeadRows rows={form.headAccounts} field="account" fieldLabel="Account code" placeholder="3100" onChange={(headAccounts) => setForm({ ...form, headAccounts })} />
           <p className="mt-3 text-xs text-slate-500">Common codes: 3100 Sinking fund · 3200 Repair fund · 4000 Maintenance income. Metered utilities use the heads Water, Electricity and Gas.</p>
         </div>
       </Card>
@@ -114,6 +114,12 @@ export default function FinanceSettingsPage() {
           <Checkbox label="Allow residents to set up autopay (UPI AutoPay / e-NACH)" {...c('autopayEnabled')} />
         </div>
       </Card>
+
+      {/* the form is long — keep Save in view (above the phone shortcut bar) */}
+      <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 px-5 py-3 shadow-sm backdrop-blur lg:bottom-0">
+        <p className="min-w-0 flex-1 text-xs text-slate-500">Save after changing anything above.</p>
+        <Button loading={save.isPending} onClick={submit}>Save settings</Button>
+      </div>
     </div>
   );
 }

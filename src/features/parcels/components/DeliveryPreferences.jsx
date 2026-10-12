@@ -25,7 +25,7 @@ export function DeliveryPreferences() {
 
   return (
     <Card>
-      <CardHeader title="Delivery preferences" subtitle="Let the guard accept these deliveries at the gate without asking you." />
+      <CardHeader title="Leave-at-gate rules" subtitle="Let the guard accept these deliveries at the gate without asking you." />
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner /></div>
       ) : data.length ? (

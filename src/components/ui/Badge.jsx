@@ -11,7 +11,7 @@ const tones = {
 };
 
 export function Badge({ tone = 'slate', className, children }) {
-  return <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-slate-500/10', tones[tone], className)}>{children}</span>;
+  return <span className={cn('inline-flex max-w-full items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ring-slate-500/10', tones[tone], className)}>{children}</span>;
 }
 
 // One colour map for every status string the API returns.

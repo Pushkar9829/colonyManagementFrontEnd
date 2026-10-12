@@ -14,18 +14,18 @@ export default function PatrolsPage() {
   const manager = isManager(user);
   // Scanning is guard-only on the server (admin passes every role check).
   const canScan = hasRole(user, ROLES.GUARD);
+  // Checkpoints and Report are manager tools; guards see the routes read-only.
   const tabs = [
-    { value: 'patrol', label: canScan ? 'Patrol' : 'Live status' },
+    { value: 'patrol', label: canScan ? 'Start patrol' : 'Live status' },
     manager && { value: 'checkpoints', label: 'Checkpoints' },
     { value: 'routes', label: 'Routes' },
-    { value: 'rounds', label: 'Rounds' },
+    { value: 'rounds', label: 'Patrol history' },
     manager && { value: 'report', label: 'Report' },
   ].filter(Boolean);
 
   const [params, setParams] = useSearchParams();
-  const fallback = user.role === ROLES.GUARD ? 'patrol' : 'rounds';
   const requested = params.get('tab');
-  const tab = tabs.some((t) => t.value === requested) ? requested : fallback;
+  const tab = tabs.some((t) => t.value === requested) ? requested : tabs[0].value;
   const setTab = (t) => setParams((p) => { p.set('tab', t); return p; }, { replace: true });
 
   return (

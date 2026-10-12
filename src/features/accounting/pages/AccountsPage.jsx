@@ -71,7 +71,7 @@ function ChartTab({ onLedger }) {
   return (
     <Card>
       <CardHeader title="Chart of accounts" subtitle="Balances to date, in each account's normal direction"
-        action={<Button size="sm" icon={Plus} onClick={() => setModal({})}>Add account</Button>} />
+        action={<Button size="sm" icon={Plus} className="shrink-0 whitespace-nowrap" onClick={() => setModal({})}>Add account</Button>} />
       <div className="border-b border-slate-100 p-4 sm:max-w-xs">
         <Select placeholder="All types" options={ACCOUNT_TYPES} value={type} onChange={(e) => setType(e.target.value)} />
       </div>
@@ -231,7 +231,7 @@ function Summary() {
   const cashBank = accounts.filter((a) => a.isBank || a.isCash).reduce((s, a) => s + a.balance, 0);
   const receivable = accounts.find((a) => a.code === '1100')?.balance || 0;
   return (
-    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard icon={Landmark} label="Cash & bank" value={money(cashBank)} />
       <StatCard icon={Wallet} tone="amber" label="Dues receivable" value={money(receivable)} />
       <StatCard icon={Scale} tone={pl.surplus >= 0 ? 'green' : 'red'} label={pl.surplus >= 0 ? 'Surplus this FY' : 'Deficit this FY'} value={money(Math.abs(pl.surplus))} />
@@ -253,7 +253,7 @@ export default function AccountsPage() {
 
   return (
     <div>
-      <PageHeader title="Accounts" description="Double-entry books: chart of accounts, journal and ledgers. Bills, receipts and vendor bills post automatically."
+      <PageHeader title="Accounts" description="The society's account books. Bills, receipts and vendor bills are added automatically."
         actions={(
           <>
             <Button variant="secondary" icon={RefreshCw} loading={sync.isPending} onClick={() => sync.mutate({})} title={lastSync ? `Last synced ${timeAgo(lastSync)}` : undefined}>

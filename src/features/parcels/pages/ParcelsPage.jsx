@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, BellRing, Clock, Hourglass, Package, PackageCheck, Plus, Undo2 } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Spinner, StatCard, Tabs, Textarea } from '../../../components/ui';
+import { Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Spinner, StatCard, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
@@ -10,12 +10,12 @@ import { OPEN_STATUSES, useParcels, useParcelStats, useRemindParcel, useReturnPa
 import { CollectParcelModal } from '../components/CollectParcelModal';
 import { DeliveryPreferences } from '../components/DeliveryPreferences';
 import { LogParcelForm } from '../components/LogParcelForm';
-import { AgeBadge, ParcelRow, ParcelStatus } from '../components/ParcelRow';
+import { AgeBadge, ParcelRow, ParcelStatus, STATUS_LABEL } from '../components/ParcelRow';
 
 const STATUS_FILTERS = [
-  { value: 'waiting', label: 'Waiting at gate' },
+  { value: 'waiting', label: 'All not collected yet' },
   { value: '', label: 'All' },
-  ...['received', 'notified', 'collected', 'returned'].map((s) => ({ value: s, label: label(s) })),
+  ...['received', 'notified', 'collected', 'returned'].map((s) => ({ value: s, label: STATUS_LABEL[s] || label(s) })),
 ];
 
 function Stats() {
@@ -75,17 +75,18 @@ function Register({ canCollect }) {
 
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-        <Input placeholder="Search number, tracking, courier, name" value={filters.search} onChange={set('search')} />
-        <select value={filters.status} onChange={set('status')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm" aria-label="Status">
-          {STATUS_FILTERS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-        </select>
-        <Checkbox label="Older than 24h" checked={filters.old} onChange={set('old')} />
-      </div>
+      <FilterBar
+        cols={3}
+        active={(filters.status !== 'waiting' ? 1 : 0) + (filters.old ? 1 : 0)}
+        search={<Input placeholder="Search number, tracking, courier, name" aria-label="Search parcels" value={filters.search} onChange={set('search')} />}
+      >
+        <Select aria-label="Status" value={filters.status} onChange={set('status')} options={STATUS_FILTERS} />
+        <Checkbox className="self-center" label="Waiting more than 24h" checked={filters.old} onChange={set('old')} />
+      </FilterBar>
       {isLoading ? (
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : !data?.data.length ? (
-        <EmptyState icon={Package} title="No parcels found" />
+        <EmptyState icon={Package} title="No parcels found" description={filters.search || filters.old || filters.status !== 'waiting' ? 'Try clearing the search or filters.' : 'Nothing is waiting at the gate.'} />
       ) : (
         <ul className="divide-y divide-slate-100">
           {data.data.map((p) => (
@@ -201,7 +202,7 @@ function ResidentView() {
   return (
     <div>
       <PageHeader title="Parcels" description="Deliveries waiting for you at the gate." />
-      <Tabs className="mb-4 w-fit" value={tab} onChange={setTab} tabs={[{ value: 'parcels', label: 'My parcels' }, { value: 'preferences', label: 'Delivery preferences' }]} />
+      <Tabs className="mb-4 w-fit" value={tab} onChange={setTab} tabs={[{ value: 'parcels', label: 'My parcels' }, { value: 'preferences', label: 'Leave-at-gate rules' }]} />
       {tab === 'parcels' ? (
         <>
           <WaitingParcels />

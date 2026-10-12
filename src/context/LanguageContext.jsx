@@ -21,7 +21,7 @@ export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(initialLanguage);
 
   useEffect(() => {
-    document.documentElement.lang = lang;
+    document.documentElement.lang = `${lang}-IN`; // Indian date and number conventions
   }, [lang]);
 
   const setLang = useCallback((next) => {

@@ -106,7 +106,7 @@ function RunsTab({ initialStatus }) {
   return (
     <Card>
       <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-        <Input type="date" value={f.date} onChange={(e) => setF((x) => ({ ...x, date: e.target.value, page: 1 }))} />
+        <Input title="Date" type="date" value={f.date} onChange={(e) => setF((x) => ({ ...x, date: e.target.value, page: 1 }))} />
         <Select placeholder="All statuses" options={Object.keys(RUN_TONES).map((v) => ({ value: v, label: label(v) }))} value={f.status} onChange={(e) => setF((x) => ({ ...x, status: e.target.value, page: 1 }))} />
       </div>
       <Table loading={isLoading} rows={data?.data} empty="Nothing scheduled" onRowClick={setRun}

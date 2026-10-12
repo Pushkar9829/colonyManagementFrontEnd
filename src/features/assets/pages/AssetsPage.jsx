@@ -15,7 +15,7 @@ function Stats() {
   const { data } = useAssetStats();
   if (!data) return null;
   return (
-    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard icon={Boxes} label="Assets" value={data.total} sub={`${data.retired} retired`} />
       <StatCard icon={CheckCircle2} tone="green" label="Working" value={data.working} />
       <StatCard icon={Wrench} tone="amber" label="Under repair" value={data.underRepair} />

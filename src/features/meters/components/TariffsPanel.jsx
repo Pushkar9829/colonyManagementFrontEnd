@@ -73,8 +73,8 @@ export function TariffsPanel({ canEdit }) {
   const [editing, setEditing] = useState(null);
   return (
     <Card>
-      <CardHeader title="Tariffs" subtitle="Metered charges are added to bills as lines such as “Water (12 kL)”." action={canEdit && <Button size="sm" icon={Plus} onClick={() => setEditing({})}>New tariff</Button>} />
-      <Table loading={isLoading} rows={data} empty="No tariffs yet" onRowClick={canEdit ? (t) => setEditing(t) : undefined}
+      <CardHeader title="Rates" subtitle="Price per unit used. Metered charges are added to bills as lines such as “Water (12 kL)”." action={canEdit && <Button size="sm" icon={Plus} onClick={() => setEditing({})}>New rate</Button>} />
+      <Table loading={isLoading} rows={data} empty="No rates set yet" onRowClick={canEdit ? (t) => setEditing(t) : undefined}
         columns={[
           { key: 'type', header: 'Utility', render: (t) => METER_TYPES.find((m) => m.value === t.type)?.label },
           { key: 'name', header: 'Name', render: (t) => <span className="font-medium text-slate-900">{t.name}</span> },

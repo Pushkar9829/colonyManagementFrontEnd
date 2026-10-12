@@ -11,6 +11,7 @@ export const useUpdatePlatformSociety = (o) =>
   useApiMutation(({ id, ...b }) => api.patch(`/platform/societies/${id}`, b), { invalidate: ['platform'], success: 'Society updated', ...o });
 
 export const PLANS = [
+  { value: 'trial', label: 'Trial · everything on until the end date' },
   { value: 'free', label: 'Free · 50 units' },
   { value: 'basic', label: 'Basic · 200 units' },
   { value: 'standard', label: 'Standard · 1000 units' },

@@ -85,11 +85,11 @@ function ConversationList({ activeId, onNew, onBlocked }) {
   const navigate = useNavigate();
   const { data, isLoading } = useConversations({ limit: 50 });
   return (
-    <Card className="flex h-full flex-col overflow-hidden">
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <h2 className="font-semibold text-slate-900">Chats</h2>
-        <div className="flex gap-1">
-          <button type="button" title="Blocked people" onClick={onBlocked} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><Ban className="size-4" /></button>
+    <Card className="flex h-full min-w-0 flex-col overflow-hidden">
+      <div className="flex min-w-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+        <h2 className="min-w-0 truncate font-semibold text-slate-900">Chats</h2>
+        <div className="flex shrink-0 gap-1">
+          <button type="button" title="People you have blocked" onClick={onBlocked} className="flex min-h-9 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"><Ban className="size-4" />Blocked</button>
           <Button size="sm" icon={Plus} onClick={onNew}>New</Button>
         </div>
       </div>
@@ -101,8 +101,8 @@ function ConversationList({ activeId, onNew, onBlocked }) {
             {data.data.map((c) => {
               const Icon = c.kind === 'desk' && !c.asDesk ? DESK_ICON[c.desk] : null;
               return (
-                <li key={c._id}>
-                  <button type="button" onClick={() => navigate(`/messages/${c._id}`)} className={cn('flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50', activeId === c._id && 'bg-brand-50/60')}>
+                <li key={c._id} className="min-w-0">
+                  <button type="button" onClick={() => navigate(`/messages/${c._id}`)} className={cn('flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left hover:bg-slate-50', activeId === c._id && 'bg-brand-50/60')}>
                     {Icon ? <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white"><Icon className="size-4" /></span> : <Avatar name={c.counterpart?.name || c.title} />}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
@@ -194,7 +194,7 @@ function Thread({ id, typing }) {
         {conv.kind === 'direct' && (conv.blockedByMe ? (
           <Button size="sm" variant="secondary" onClick={() => unblock.mutate(conv.counterpart._id, { onSuccess: () => qc.invalidateQueries({ queryKey: ['chat'] }) })}>Unblock</Button>
         ) : (
-          <button type="button" title="Block" onClick={() => window.confirm(`Block ${conv.title}? Neither of you will be able to send messages.`) && block.mutate(conv.counterpart._id)} className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"><Ban className="size-4" /></button>
+          <button type="button" title={`Block ${conv.title}`} onClick={() => window.confirm(`Block ${conv.title}? Neither of you will be able to send messages.`) && block.mutate(conv.counterpart._id)} className="flex min-h-9 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-slate-500 hover:bg-red-50 hover:text-red-600"><Ban className="size-4" />Block</button>
         ))}
       </div>
 
@@ -274,7 +274,7 @@ function QuickActions({ role }) {
       {!mine.includes('management') && (
         <Button variant="secondary" icon={Building2} loading={open.isPending && open.variables?.desk === 'management'} onClick={() => open.mutate({ desk: 'management' })}>Message office</Button>
       )}
-      {mine.length > 0 && <Badge tone="brand" className="col-span-2 self-center">You answer the {mine.map((d) => (d === 'security' ? 'security desk' : 'management office')).join(' & ')}</Badge>}
+      {mine.length > 0 && <Badge tone="brand" className="col-span-2 self-center">Messages sent to the {mine.map((d) => (d === 'security' ? 'Security desk' : 'Management office')).join(' & ')} come to you</Badge>}
     </div>
   );
 }
@@ -321,11 +321,11 @@ export default function MessagesPage() {
         <Link to="/directory" className="text-sm font-medium text-brand-600 hover:underline">Resident directory</Link>
       </div>
       <QuickActions role={user.role} />
-      <div className="grid h-[calc(100dvh-15rem)] min-h-[420px] gap-4 lg:grid-cols-[20rem_1fr]">
-        <div className={cn('min-h-0', id && 'hidden lg:block')}>
+      <div className="grid h-[calc(100dvh-15rem)] min-h-[420px] grid-cols-1 gap-4 lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <div className={cn('min-h-0 min-w-0', id && 'hidden lg:block')}>
           <ConversationList activeId={id} onNew={() => setCreating(true)} onBlocked={() => setBlocked(true)} />
         </div>
-        <div className={cn('min-h-0', !id && 'hidden lg:block')}>
+        <div className={cn('min-h-0 min-w-0', !id && 'hidden lg:block')}>
           {id ? <Thread key={id} id={id} typing={typing} /> : (
             <Card className="flex h-full items-center justify-center"><EmptyState icon={MessageCircle} title="Pick a conversation" description="Or start a new one with a neighbour." /></Card>
           )}

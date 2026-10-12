@@ -4,8 +4,35 @@ import { api } from '../../../api/client';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Card, Pagination, Select, Table } from '../../../components/ui';
 import { dateTime, label } from '../../../lib/format';
+import { actionLabel, detailLines } from '../actions';
 
-const ENTITIES = ['Society', 'User', 'Block', 'Unit', 'Bill', 'Payment', 'Notice', 'Poll', 'Amenity', 'SosAlert'];
+const ENTITIES = [
+  { value: 'Society', label: 'Society settings' },
+  { value: 'Membership', label: 'Members' },
+  { value: 'User', label: 'User accounts' },
+  { value: 'Unit', label: 'Flats / units' },
+  { value: 'Block', label: 'Blocks' },
+  { value: 'Bill', label: 'Bills' },
+  { value: 'Payment', label: 'Payments' },
+  { value: 'Adjustment', label: 'Credits, refunds & waivers' },
+  { value: 'JournalEntry', label: 'Journal entries' },
+  { value: 'VendorBill', label: 'Vendor bills' },
+  { value: 'VendorPayment', label: 'Vendor payments' },
+  { value: 'Budget', label: 'Budget' },
+  { value: 'CommitteeTerm', label: 'Committee' },
+  { value: 'Employee', label: 'Employees' },
+  { value: 'DeviceKey', label: 'Devices' },
+  { value: 'Notice', label: 'Notices' },
+  { value: 'Poll', label: 'Polls' },
+  { value: 'Amenity', label: 'Amenities' },
+  { value: 'SosAlert', label: 'SOS alerts' },
+];
+
+const who = (actor) => {
+  if (!actor) return 'System';
+  const role = label(actor.role);
+  return role ? `${actor.name} (${role})` : actor.name;
+};
 
 export default function AuditPage() {
   const [entity, setEntity] = useState('');
@@ -20,14 +47,24 @@ export default function AuditPage() {
       <PageHeader title="Audit log" description="Who changed what — approvals, billing, payments, settings and deletions." />
       <Card>
         <div className="border-b border-slate-100 p-4 sm:w-64">
-          <Select placeholder="All records" options={ENTITIES} value={entity} onChange={(e) => { setEntity(e.target.value); setPage(1); }} />
+          <Select label="Show" placeholder="Everything" options={ENTITIES} value={entity} onChange={(e) => { setEntity(e.target.value); setPage(1); }} />
         </div>
         <Table loading={isLoading} rows={data?.data} empty="No activity yet"
           columns={[
+            { key: 'action', header: 'What happened', render: (l) => <span className="font-medium text-slate-900" title={l.action}>{actionLabel(l.action)}</span> },
+            { key: 'actor', header: 'Who', render: (l) => who(l.actor) },
             { key: 'createdAt', header: 'When', render: (l) => dateTime(l.createdAt) },
-            { key: 'actor', header: 'Who', render: (l) => (l.actor ? `${l.actor.name} (${label(l.actor.role)})` : 'System') },
-            { key: 'action', header: 'Action', render: (l) => <span className="font-mono text-xs">{l.action}</span> },
-            { key: 'meta', header: 'Details', className: 'max-w-md truncate', render: (l) => <span className="text-xs text-slate-500">{l.meta ? JSON.stringify(l.meta) : ''}</span> },
+            {
+              key: 'meta', header: 'Details', render: (l) => {
+                const lines = detailLines(l.meta);
+                if (!lines.length) return '';
+                return (
+                  <dl className="max-w-md space-y-0.5 whitespace-normal text-xs">
+                    {lines.map(([k, v]) => <div key={k} className="break-words"><dt className="inline text-slate-500">{k}: </dt><dd className="inline text-slate-700">{v}</dd></div>)}
+                  </dl>
+                );
+              },
+            },
           ]} />
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>

@@ -9,6 +9,8 @@ import { ROLE_LABELS } from '../../../lib/roles';
 import { PushToggle } from '../../notifications/components/PushToggle';
 import { ChannelPrefs } from '../../notifications/components/ChannelPrefs';
 import { SessionsCard } from '../components/SessionsCard';
+import { TwoStepCard } from '../components/TwoStepCard';
+import { PrivacyCard } from '../components/PrivacyCard';
 
 export default function ProfilePage() {
   const { user, reloadUser } = useAuth();
@@ -68,7 +70,9 @@ export default function ProfilePage() {
           </Button>
         </div>
       </Card>
+      <TwoStepCard />
       <SessionsCard />
+      <PrivacyCard />
     </div>
   );
 }

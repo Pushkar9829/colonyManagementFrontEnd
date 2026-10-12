@@ -119,7 +119,7 @@ export default function TenanciesPage() {
   return (
     <div>
       <PageHeader title="Tenancies" description="Leases of rented units, police verification and move-outs." actions={<Button icon={Plus} onClick={() => setCreating(true)}>Record lease</Button>} />
-      <div className="mb-6 grid gap-4 sm:grid-cols-2">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2">
         <StatCard icon={CalendarClock} tone="amber" label="Ending in 30 days" value={expiring?.meta?.total ?? '—'} />
         <StatCard icon={AlertTriangle} tone="red" label="Ended — move-out to confirm" value={moveout?.meta?.total ?? '—'} />
       </div>

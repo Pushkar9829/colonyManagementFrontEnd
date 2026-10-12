@@ -41,11 +41,22 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       booting,
+      // With two-step verification on, these resolve to { mfaRequired, mfaToken } and no session starts yet;
+      // the login page then asks for the code and calls verifyMfa.
       async login(identifier, password) {
-        startSession(await api.post('/auth/login', { identifier, password }, { auth: false }));
+        const res = await api.post('/auth/login', { identifier, password }, { auth: false });
+        if (res.mfaRequired) return res;
+        startSession(res);
+        return null;
       },
       async loginWithOtp(phone, code) {
-        startSession(await api.post('/auth/otp/verify', { phone, code }, { auth: false }));
+        const res = await api.post('/auth/otp/verify', { phone, code }, { auth: false });
+        if (res.mfaRequired) return res;
+        startSession(res);
+        return null;
+      },
+      async verifyMfa(mfaToken, { code, backupCode }) {
+        startSession(await api.post('/auth/mfa/verify', { mfaToken, code, backupCode }, { auth: false }));
       },
       async registerSociety(payload) {
         startSession(await api.post('/auth/register-society', payload, { auth: false }));

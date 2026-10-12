@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { History, PenLine, Plus, UserMinus, Users } from 'lucide-react';
+import { History, PenLine, Plus, TriangleAlert, UserMinus, Users } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, ErrorState, Input, Modal, PageLoader, Select, StatusBadge, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
@@ -11,7 +11,7 @@ function NewTermModal({ open, onClose }) {
   const { values, bind, applyServerErrors, reset } = useForm({ name: '', startDate: '', endDate: '', notes: '' });
   const create = useCreateTerm({ onSuccess: () => { reset(); onClose(); } });
   return (
-    <Modal open={open} onClose={onClose} title="New committee term" description="Add office-bearers, then seat the committee. Seating it dissolves the sitting one."
+    <Modal open={open} onClose={onClose} title="Start new committee" description="Add office-bearers, then seat the committee. Seating it replaces the sitting one."
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={() => create.mutate({ ...values, notes: values.notes || undefined }, { onError: applyServerErrors })}>Create</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Name" required placeholder="Managing Committee 2026-2031" {...bind('name')} />
@@ -53,14 +53,14 @@ function PositionRow({ term, p, admin }) {
         <p className="font-medium text-slate-900">{p.name}{p.unitLabel && <span className="ml-1 text-sm font-normal text-slate-500">· {p.unitLabel}</span>}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <Badge tone="brand">{positionLabel(p)}</Badge>
-          {p.isSignatory && <Badge tone="blue">Signatory</Badge>}
+          {p.isSignatory && <Badge tone="blue">Can sign</Badge>}
           {!p.active && <Badge>Ended {p.to ? date(p.to) : ''}</Badge>}
           {p.from && <span className="text-xs text-slate-500">since {date(p.from)}</span>}
         </div>
       </div>
       {editable && (
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" icon={PenLine} onClick={() => update.mutate({ id: term._id, positionId: p._id, isSignatory: !p.isSignatory })}>{p.isSignatory ? 'Not signatory' : 'Make signatory'}</Button>
+          <Button size="sm" variant="secondary" icon={PenLine} loading={update.isPending} onClick={() => update.mutate({ id: term._id, positionId: p._id, isSignatory: !p.isSignatory })}>{p.isSignatory ? 'Remove signing rights' : 'Give signing rights'}</Button>
           {term.status === 'upcoming' ? (
             <Button size="sm" variant="ghost" onClick={() => remove.mutate({ id: term._id, positionId: p._id })}>Remove</Button>
           ) : (
@@ -75,6 +75,7 @@ function PositionRow({ term, p, admin }) {
 function TermCard({ term, admin, onAdd }) {
   const activate = useActivateTerm();
   const dissolve = useDissolveTerm();
+  const [confirming, setConfirming] = useState(false);
   const positions = term.positions || [];
   return (
     <Card>
@@ -85,7 +86,6 @@ function TermCard({ term, admin, onAdd }) {
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => onAdd(term)}>Add</Button>
             {term.status === 'upcoming' && <Button size="sm" loading={activate.isPending} onClick={() => { if (window.confirm('Seat this committee? The current committee will be dissolved.')) activate.mutate(term._id); }}>Seat committee</Button>}
-            {term.status === 'active' && <Button size="sm" variant="danger" loading={dissolve.isPending} onClick={() => { if (window.confirm('Dissolve the sitting committee?')) dissolve.mutate(term._id); }}>Dissolve</Button>}
           </div>
         )}
       />
@@ -94,6 +94,20 @@ function TermCard({ term, admin, onAdd }) {
       ) : (
         <EmptyState icon={Users} title="No office-bearers yet" description={admin ? 'Add the elected or appointed members.' : undefined} />
       )}
+      {admin && term.status === 'active' && (
+        // Kept apart from everyday buttons: dissolving ends every office-bearer's term at once.
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-red-100 bg-red-50/40 px-5 py-3">
+          <p className="min-w-0 flex-1 basis-56 text-xs text-slate-600"><span className="font-semibold text-red-700">Danger zone · </span>Dissolving ends this committee and every office-bearer's term.</p>
+          <Button size="sm" variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirming(true)}>Dissolve committee…</Button>
+        </div>
+      )}
+      <Modal open={confirming} onClose={() => setConfirming(false)} title="Dissolve this committee?" size="sm"
+        footer={<><Button variant="secondary" onClick={() => setConfirming(false)}>Keep committee</Button><Button variant="danger" loading={dissolve.isPending} onClick={() => dissolve.mutate(term._id, { onSuccess: () => setConfirming(false) })}>Dissolve</Button></>}>
+        <div className="flex gap-3 text-sm text-slate-600">
+          <TriangleAlert className="size-5 shrink-0 text-red-600" />
+          <p>{term.name} will end today and all {positions.filter((p) => p.active).length} office-bearers will step down. It moves to past committees and cannot be seated again. Start and seat a new committee instead if you are replacing it.</p>
+        </div>
+      </Modal>
     </Card>
   );
 }
@@ -115,7 +129,7 @@ export default function CommitteePage() {
       <PageHeader
         title="Managing Committee"
         description="Office-bearers of the society and the history of past committees."
-        actions={admin && <Button icon={Plus} onClick={() => setCreating(true)}>New term</Button>}
+        actions={admin && <Button icon={Plus} onClick={() => setCreating(true)}>Start new committee</Button>}
       />
       {access?.positions?.length > 0 && (
         <Card className="mb-6 border-brand-200 bg-brand-50/50 p-4 text-sm text-brand-800">
@@ -124,7 +138,7 @@ export default function CommitteePage() {
       )}
       <div className="space-y-6">
         {live.length ? live.map((t) => <TermCard key={t._id} term={t} admin={admin} onAdd={setAdding} />) : (
-          <Card><EmptyState icon={Users} title="No committee on record" description={admin ? 'Create a term and add its office-bearers.' : 'The committee has not been recorded yet.'} /></Card>
+          <Card><EmptyState icon={Users} title="No committee on record" description={admin ? 'Start a new committee and add its office-bearers.' : 'The committee has not been recorded yet.'} /></Card>
         )}
         {past.length > 0 && (
           <div>

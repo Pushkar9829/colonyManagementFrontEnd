@@ -69,6 +69,8 @@ export const router = createBrowserRouter([
   {
     element: <RequireAuth />,
     children: [
+      // Society policy requires two-step verification for this role: set it up before using the app.
+      { element: <AuthLayout />, children: [{ path: 'setup-two-step', element: page(() => import('../features/profile/pages/MfaSetupRequiredPage')) }] },
       {
         element: <AppLayout />,
         children: [
@@ -98,6 +100,8 @@ export const router = createBrowserRouter([
           ]),
           guarded([A], [{ path: 'devices', element: page(() => import('../features/devices/pages/DevicesPage')) }]),
           // ---- feature module routes (add below this line; use guarded([roles], [...]) and page(() => import(...))) ----
+          guarded([A], [{ path: 'privacy/requests', element: page(() => import('../features/privacy/pages/DeletionRequestsPage')) }]),
+          { element: <RequirePlatform />, children: [{ path: 'platform/privacy', element: page(() => import('../features/privacy/pages/DeletionRequestsPage')) }] },
           guarded([FM, S], [
             { path: 'assets', element: page(() => import('../features/assets/pages/AssetsPage')) },
             { path: 'assets/scan', element: page(() => import('../features/assets/pages/AssetScanPage')) },

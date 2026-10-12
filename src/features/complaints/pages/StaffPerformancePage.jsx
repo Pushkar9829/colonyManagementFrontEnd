@@ -28,7 +28,7 @@ export default function StaffPerformancePage() {
             { key: 'resolved', header: 'Resolved', render: (r) => `${r.resolved}${r.open ? ` · ${r.open} open` : ''}` },
             { key: 'avg', header: 'Avg resolution', render: (r) => (r.avgResolutionHours == null ? '—' : `${r.avgResolutionHours} h`) },
             {
-              key: 'sla', header: 'SLA met', render: (r) => (r.slaMetPercent == null ? '—' : (
+              key: 'sla', header: 'Fixed on time', render: (r) => (r.slaMetPercent == null ? '—' : (
                 <span className={cn('font-medium', r.slaMetPercent >= 90 ? 'text-emerald-700' : r.slaMetPercent >= 70 ? 'text-amber-700' : 'text-red-700')}>{r.slaMetPercent}%</span>
               )),
             },

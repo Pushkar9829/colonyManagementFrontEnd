@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Input, Modal, Pagination, Select, Spinner, Table, Textarea, Card } from '../../../components/ui';
+import { Badge, Button, FilterBar, Input, Modal, Pagination, Select, Spinner, Table, Textarea, Card } from '../../../components/ui';
 import { date, dateTime, label, money, timeAgo } from '../../../lib/format';
 import { PLANS, usePlatformSocieties, usePlatformSociety, useUpdatePlatformSociety } from '../api';
 import { FeatureFlagsPanel, SubscriptionPanel } from '../components/SocietyBillingPanels';
@@ -64,7 +65,7 @@ function SocietyModal({ id, onClose }) {
         <div className="grid gap-3 sm:grid-cols-3">
           <Select label="Plan" options={PLANS} value={currentPlan.name} onChange={(e) => setPlan({ ...currentPlan, name: e.target.value, unitLimit: '' })} />
           <Input label="Unit limit" type="number" min={1} hint="Blank = plan default / unlimited" value={currentPlan.unitLimit ?? ''} onChange={(e) => setPlan({ ...currentPlan, unitLimit: e.target.value })} />
-          <Input label="Paid until" type="date" value={currentPlan.validUntil} onChange={(e) => setPlan({ ...currentPlan, validUntil: e.target.value })} />
+          <Input label={currentPlan.name === 'trial' ? 'Trial ends' : 'Paid until'} type="date" value={currentPlan.validUntil} onChange={(e) => setPlan({ ...currentPlan, validUntil: e.target.value })} />
           <Textarea className="sm:col-span-3" label="Internal notes" rows={2} value={notes ?? s.platformNotes ?? ''} onChange={(e) => setNotes(e.target.value)} />
           <div className="sm:col-span-3"><Button loading={update.isPending} onClick={savePlan}>Save plan & notes</Button></div>
         </div>
@@ -83,30 +84,41 @@ function SocietyModal({ id, onClose }) {
 }
 
 export default function PlatformSocietiesPage() {
-  const [filters, setFilters] = useState({ search: '', status: '', plan: '', page: 1 });
+  const [params] = useSearchParams();
+  // The overview's tiles link here with ?plan=trial or ?status=suspended.
+  const [filters, setFilters] = useState({ search: '', status: params.get('status') || '', plan: params.get('plan') || '', page: 1 });
   const [openId, setOpenId] = useState(null);
   const { data, isLoading } = usePlatformSocieties({ search: filters.search || undefined, status: filters.status || undefined, plan: filters.plan || undefined, page: filters.page });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
   const expired = (s) => s.plan?.validUntil && new Date(s.plan.validUntil) < new Date();
+  const daysLeft = (s) => Math.ceil((new Date(s.plan.validUntil) - Date.now()) / 86400000);
+  const until = (s) => {
+    if (!s.plan?.validUntil) return <span className="text-slate-400">No end date</span>;
+    const d = daysLeft(s);
+    const tone = d < 0 ? 'text-red-600 font-medium' : d <= 7 ? 'text-amber-700 font-medium' : '';
+    return <span className={tone}>{date(s.plan.validUntil)}{d >= 0 && d <= 30 ? ` · ${d === 0 ? 'today' : `${d} day${d === 1 ? '' : 's'} left`}` : ''}</span>;
+  };
 
   return (
     <div>
       <PageHeader title="Societies" description="Plans, limits and account status for every society." />
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Input placeholder="Search name, city or code" value={filters.search} onChange={set('search')} />
-          <Select placeholder="Any status" value={filters.status} onChange={set('status')} options={[{ value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }]} />
-          <Select placeholder="Any plan" value={filters.plan} onChange={set('plan')} options={PLANS} />
-        </div>
+        <FilterBar cols={3} active={[filters.status, filters.plan].filter(Boolean).length}
+          search={<Input aria-label="Search societies" placeholder="Search name, city or code" value={filters.search} onChange={set('search')} />}>
+          <Select aria-label="Status" placeholder="Any status" value={filters.status} onChange={set('status')} options={[{ value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }]} />
+          <Select aria-label="Plan" placeholder="Any plan" value={filters.plan} onChange={set('plan')} options={PLANS} />
+        </FilterBar>
         <Table loading={isLoading} rows={data?.data} empty="No societies" onRowClick={(s) => setOpenId(s._id)}
           columns={[
             { key: 'name', header: 'Society', render: (s) => <div><p className="font-medium text-slate-900">{s.name}</p><p className="text-xs text-slate-500">{s.city || '—'} · {s.code}</p></div> },
-            { key: 'plan', header: 'Plan', render: (s) => <div className="flex gap-1"><Badge tone="brand">{label(s.plan?.name || 'free')}</Badge>{expired(s) && <Badge tone="red">Expired</Badge>}</div> },
-            { key: 'units', header: 'Units', render: (s) => `${s.units}${s.plan?.unitLimit ? ` / ${s.plan.unitLimit}` : ''}` },
-            { key: 'members', header: 'Members' },
-            { key: 'collectedThisMonth', header: 'Collected (month)', render: (s) => money(s.collectedThisMonth) },
-            { key: 'lastActivityAt', header: 'Last activity', render: (s) => (s.lastActivityAt ? timeAgo(s.lastActivityAt) : '—') },
+            { key: 'plan', header: 'Plan', render: (s) => <div className="flex gap-1"><Badge tone="brand">{label(s.plan?.name || 'free')}</Badge>{expired(s) && <Badge tone="red">{s.plan?.name === 'trial' ? 'Trial over' : 'Expired'}</Badge>}</div> },
+            { key: 'validUntil', header: 'Trial ends / paid until', mobileLabel: 'Ends', render: until },
             { key: 'active', header: 'Status', render: (s) => (s.active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Suspended</Badge>) },
+            { key: 'units', header: 'Units', render: (s) => `${s.units}${s.plan?.unitLimit ? ` / ${s.plan.unitLimit}` : ''}` },
+            { key: 'members', header: 'Members', mobile: false },
+            { key: 'collectedThisMonth', header: 'Society collections (month)', mobile: false, render: (s) => money(s.collectedThisMonth) },
+            { key: 'lastActivityAt', header: 'Last activity', mobile: false, render: (s) => (s.lastActivityAt ? timeAgo(s.lastActivityAt) : '—') },
+            { key: 'open', header: '', className: 'w-8 text-right', mobile: false, render: () => <ChevronRight className="ml-auto size-4 text-slate-400" aria-hidden="true" /> },
           ]} />
         <Pagination meta={data?.meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
       </Card>

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, CheckCircle2, Clock, Gauge, Lightbulb, Plus, Settings2, Star, Wrench } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, FileUpload, Input, Modal, Pagination, Select, StatCard, StatusBadge, Table, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, FileUpload, FilterBar, Input, Modal, Pagination, Select, StatCard, StatusBadge, Table, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { dateTime, label } from '../../../lib/format';
@@ -21,6 +21,10 @@ function NewComplaintModal({ open, onClose }) {
   const { values, bind, set, applyServerErrors, reset } = useForm({ category: 'plumbing', priority: 'medium', area: 'unit', title: '', description: '' });
   const [files, setFiles] = useState([]);
   const { categories, options } = useCategoryOptions();
+  // The society may have switched the default category off: keep the value in step with what the select shows.
+  useEffect(() => {
+    if (options?.length && !options.some((o) => o.value === values.category)) set('category', options[0].value);
+  }, [options, values.category, set]);
   const suggestion = suggestCategory(`${values.title} ${values.description}`, categories);
   const showSuggestion = suggestion && suggestion.key !== values.category;
   const create = useCreateComplaint({ onSuccess: (c) => { reset(); setFiles([]); onClose(); navigate(`/complaints/${c._id}`); } });
@@ -50,9 +54,9 @@ function Stats() {
   const { data } = useComplaintStats(true);
   if (!data) return null;
   return (
-    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard icon={Wrench} label="Active" value={data.active} />
-      <StatCard icon={AlertTriangle} tone="red" label="SLA breached" value={data.overdue} />
+      <StatCard icon={AlertTriangle} tone="red" label="Past deadline (SLA)" value={data.overdue} />
       <StatCard icon={Clock} tone="sky" label="Avg resolution" value={data.avgResolutionHours ? `${data.avgResolutionHours.toFixed(1)} h` : '—'} />
       <StatCard icon={Star} tone="amber" label="Avg rating" value={data.avgRating ? `${data.avgRating.toFixed(1)} / 5` : '—'} />
     </div>
@@ -63,6 +67,8 @@ export default function ComplaintsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const manager = isManager(user);
+  const resident = user.role === ROLES.RESIDENT;
+  const canRaise = [ROLES.RESIDENT, ROLES.FACILITY_MANAGER, ROLES.ADMIN].includes(user.role);
   const [creating, setCreating] = useState(false);
   const [filters, setFilters] = useState({ status: '', category: '', priority: '', overdue: '', page: 1 });
   const { data, isLoading } = useComplaints(Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '')));
@@ -73,34 +79,36 @@ export default function ComplaintsPage() {
   return (
     <div>
       <PageHeader
-        title="Helpdesk"
-        description={user.role === ROLES.RESIDENT ? 'Raise and track maintenance requests.' : user.role === ROLES.STAFF ? 'Tickets assigned to you.' : 'All complaints with SLA tracking.'}
+        title="Complaints"
+        description={resident ? 'Raise and track maintenance requests.' : user.role === ROLES.STAFF ? 'Tickets assigned to you.' : 'All complaints with SLA tracking.'}
         actions={(
           <>
             {manager && <Link to="/complaints/performance"><Button variant="secondary" icon={Gauge}>Staff performance</Button></Link>}
             {manager && <Link to="/complaints/settings"><Button variant="secondary" icon={Settings2}>Settings</Button></Link>}
-            {[ROLES.RESIDENT, ROLES.FACILITY_MANAGER, ROLES.ADMIN].includes(user.role) && <Button icon={Plus} onClick={() => setCreating(true)}>New complaint</Button>}
+            {canRaise && <Button icon={Plus} onClick={() => setCreating(true)}>New complaint</Button>}
           </>
         )}
       />
       {manager && <Stats />}
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-4">
-          <Select placeholder="All statuses" options={STATUSES} value={filters.status} onChange={set('status')} />
-          <Select placeholder="All categories" options={categoryOptions} value={filters.category} onChange={set('category')} />
-          <Select placeholder="All priorities" options={PRIORITIES} value={filters.priority} onChange={set('priority')} />
-          <Select placeholder="Any SLA" options={[{ value: 'true', label: 'SLA breached' }]} value={filters.overdue} onChange={set('overdue')} />
-        </div>
+        <FilterBar cols={resident ? 2 : 4} active={[filters.status, filters.category, filters.priority, filters.overdue].filter(Boolean).length}>
+          <Select label="Status" placeholder="All statuses" options={STATUSES} value={filters.status} onChange={set('status')} />
+          <Select label="Category" placeholder="All categories" options={categoryOptions} value={filters.category} onChange={set('category')} />
+          {!resident && <Select label="Priority" placeholder="All priorities" options={PRIORITIES} value={filters.priority} onChange={set('priority')} />}
+          {!resident && <Select label="Deadline" placeholder="Any deadline" options={[{ value: 'true', label: 'Past deadline' }]} value={filters.overdue} onChange={set('overdue')} />}
+        </FilterBar>
         <Table
           loading={isLoading}
           rows={data?.data}
           empty="No complaints"
+          emptyHint={canRaise ? "Something broken? Tap New complaint and we'll assign it to staff." : undefined}
+          emptyAction={canRaise ? <Button icon={Plus} onClick={() => setCreating(true)}>New complaint</Button> : undefined}
           onRowClick={(c) => navigate(`/complaints/${c._id}`)}
           columns={[
             { key: 'ticketNumber', header: 'Ticket', render: (c) => <span className="font-mono text-xs font-semibold text-slate-700">{c.ticketNumber}</span> },
             { key: 'title', header: 'Issue', className: 'max-w-xs', render: (c) => <div className="truncate"><p className="truncate font-medium text-slate-900">{c.title}</p><p className="text-xs text-slate-500">{categoryName(c.category)}{c.unit ? ` · ${c.unit.label}` : ''}</p></div> },
             { key: 'priority', header: 'Priority', render: (c) => <StatusBadge status={c.priority} /> },
-            { key: 'status', header: 'Status', render: (c) => <div className="flex items-center gap-1.5"><StatusBadge status={c.status} />{c.isOverdue && <Badge tone="red">SLA</Badge>}{c.escalationLevel > 0 && <Badge tone="amber">L{c.escalationLevel}</Badge>}</div> },
+            { key: 'status', header: 'Status', render: (c) => <div className="flex items-center gap-1.5"><StatusBadge status={c.status} />{c.isOverdue && <Badge tone="red">Past deadline</Badge>}{c.escalationLevel > 0 && <Badge tone="amber">L{c.escalationLevel}</Badge>}</div> },
             { key: 'assignedTo', header: 'Assigned', render: (c) => c.assignedTo?.name || <span className="text-slate-400">—</span> },
             { key: 'createdAt', header: 'Raised', render: (c) => dateTime(c.createdAt) },
             { key: 'rating', header: '', render: (c) => (c.rating ? <span className="flex items-center gap-0.5 text-amber-500"><Star className="size-3.5 fill-current" />{c.rating}</span> : c.status === 'resolved' ? <CheckCircle2 className="size-4 text-emerald-500" /> : null) },

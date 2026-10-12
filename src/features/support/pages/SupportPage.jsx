@@ -6,7 +6,7 @@ import { Badge, Button, Card, FileUpload, Input, Modal, PageLoader, Pagination, 
 import { useForm } from '../../../hooks/useForm';
 import { label, timeAgo } from '../../../lib/format';
 import { CATEGORIES, PRIORITIES, useCloseTicket, useCreateTicket, useReopenTicket, useReplyTicket, useTicket, useTickets } from '../api';
-import { SlaBadge, TicketThread } from '../components/TicketThread';
+import { PRIORITY_TEXT, PriorityText, SlaBadge, TicketThread } from '../components/TicketThread';
 
 const opts = (list) => list.map((v) => ({ value: v, label: label(v) }));
 
@@ -19,7 +19,7 @@ function NewTicketModal({ onClose }) {
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={() => create.mutate({ ...values, description: values.description || undefined, attachments: files.length ? files.map((f) => f._id) : undefined }, { onError: applyServerErrors })}>Send</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Select label="Category" options={opts(CATEGORIES)} {...bind('category')} />
-        <Select label="Priority" options={opts(PRIORITIES)} hint="Urgent: we reply within 4 hours" {...bind('priority')} />
+        <Select label="How urgent is it?" options={PRIORITIES.map((v) => ({ value: v, label: PRIORITY_TEXT[v] || label(v) }))} hint="Urgent: we reply within 4 hours" {...bind('priority')} />
         <Input className="sm:col-span-2" label="Subject" required {...bind('subject')} />
         <Textarea className="sm:col-span-2" label="Details" rows={5} placeholder="What happened, where, and what you expected" {...bind('description')} />
         <FileUpload className="sm:col-span-2" folder="support" files={files} onChange={setFiles} label="Screenshots" />
@@ -78,8 +78,8 @@ export default function SupportPage() {
       <Card>
         <Table loading={isLoading} rows={data?.data} empty="No tickets" onRowClick={(t) => openTicket(t._id)}
           columns={[
-            { key: 'number', header: 'Ticket', render: (t) => <div><p className="font-medium text-slate-900">{t.subject}</p><p className="text-xs text-slate-500">{t.number} · {label(t.category)} · by {t.raisedBy?.name}</p></div> },
-            { key: 'priority', header: 'Priority', render: (t) => <StatusBadge status={t.priority} /> },
+            { key: 'number', header: 'Ticket', render: (t) => <div><p className="font-medium text-slate-900">{t.subject}</p><p className="text-xs text-slate-500">{label(t.category)}</p></div> },
+            { key: 'priority', header: 'Priority', render: (t) => <PriorityText priority={t.priority} /> },
             { key: 'status', header: 'Status', render: (t) => <div className="flex flex-wrap gap-1"><StatusBadge status={t.status} />{t.awaiting === 'society' && <Badge tone="blue">Your reply needed</Badge>}<SlaBadge ticket={t} /></div> },
             { key: 'lastActivityAt', header: 'Updated', render: (t) => timeAgo(t.lastActivityAt) },
           ]} />

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AlertTriangle, FilePlus2, FileUp, HandCoins, IndianRupee, Percent, PiggyBank, Receipt, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, FilePlus2, FileUp, HandCoins, IndianRupee, Percent, PiggyBank, Receipt, Wallet } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Checkbox, Input, Modal, Pagination, Select, StatCard, StatusBadge, Table, Tabs } from '../../../components/ui';
+import { Badge, Button, Card, Checkbox, FilterBar, Input, Modal, Pagination, Select, StatCard, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { currentPeriod, date, label, money, periodLabel, toPaise, todayISO } from '../../../lib/format';
@@ -18,6 +18,7 @@ import {
   usePayOnline,
   usePayments,
   useRecordPayment,
+  useStatement,
 } from '../api';
 import { BillDetailModal } from '../components/BillDetailModal';
 import { ReceiptModal } from '../components/ReceiptModal';
@@ -29,20 +30,79 @@ import { OpeningBalancesModal } from '../components/OpeningBalancesModal';
 
 const periodText = (p) => (p === 'OPENING' ? 'Opening balance' : periodLabel(p));
 
-function SummaryCards({ period, resident }) {
+// Finance staff: this month's numbers, labelled with the month, plus all-time dues so the tiles
+// line up with the dashboard (which shows dues across every month).
+function SummaryCards({ period }) {
   const { data: s } = useBillingSummary(period);
+  const { data: all } = useBillingSummary(undefined);
   if (!s) return null;
   const rate = s.billed ? Math.round((s.collected / s.billed) * 100) : 0;
+  const month = periodLabel(period);
   return (
-    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard icon={Receipt} label={period ? `Billed · ${periodLabel(period)}` : 'Total billed'} value={money(s.billed)} sub={`${s.bills} bills`} />
-      <StatCard icon={Wallet} tone="green" label="Collected" value={money(s.collected)} sub={`${rate}% collection`} />
-      <StatCard icon={IndianRupee} tone="amber" label="Outstanding" value={money(s.outstanding)} />
-      {resident ? (
-        <StatCard icon={PiggyBank} tone="green" label="Advance balance" value={money(s.advance)} sub="Used on your next bills" />
-      ) : (
-        <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={money(s.overdue)} />
-      )}
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <StatCard icon={Receipt} label={`Billed · ${month}`} value={money(s.billed)} sub={`${s.bills} bills`} />
+      <StatCard icon={Wallet} tone="green" label={`Collected · ${month}`} value={money(s.collected)} sub={`${rate}% of this month's bills`} />
+      <StatCard icon={IndianRupee} tone="amber" label={`Outstanding · ${month}`} value={money(s.outstanding)} sub="Unpaid on this month's bills" />
+      <StatCard icon={AlertTriangle} tone="red" label={`Overdue · ${month}`} value={money(s.overdue)} sub="Past due date" />
+      <StatCard icon={IndianRupee} tone={all?.outstanding ? 'red' : 'green'} label="All-time dues" value={all ? money(all.outstanding) : '…'} sub={all?.overdue ? `${money(all.overdue)} overdue, all months` : 'Nothing overdue'} />
+    </div>
+  );
+}
+
+const isOpen = (b) => b.balance > 0 && ['unpaid', 'partial'].includes(b.status);
+const shortDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+
+// Resident: what is due right now and one big button to pay it (oldest open bill first).
+function DueHero({ onPay, paying }) {
+  const { data: bills, isLoading } = useBills({ limit: 100 });
+  const { data: s } = useBillingSummary(undefined);
+  if (isLoading || !bills) return null;
+  const open = (bills.data || []).filter(isOpen).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+  if (!open.length) {
+    return (
+      <Card className="mb-4 flex items-center gap-3 border-emerald-200 bg-emerald-50 p-5">
+        <CheckCircle2 className="size-8 shrink-0 text-emerald-600" />
+        <div>
+          <p className="text-lg font-semibold text-emerald-800">You're all paid up</p>
+          {s?.advance > 0 && <p className="text-sm text-emerald-700">{money(s.advance)} advance balance · used on your next bills</p>}
+        </div>
+      </Card>
+    );
+  }
+  const first = open[0];
+  const total = open.reduce((sum, b) => sum + b.balance, 0);
+  const late = new Date(first.dueDate) < new Date();
+  return (
+    <Card className="mb-4 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        {open.length > 1 ? (
+          <p className="text-2xl font-bold text-slate-900">{open.length} bills · {money(total)} due</p>
+        ) : (
+          <p className="text-2xl font-bold text-slate-900">{money(first.balance)} due by {shortDate(first.dueDate)}</p>
+        )}
+        <p className={late ? 'text-sm font-medium text-red-600' : 'text-sm text-slate-500'}>
+          {late ? `Overdue since ${shortDate(first.dueDate)}` : `${periodText(first.period)} · ${first.billNumber}`}
+          {open.length > 1 && ` · Pay now pays the oldest (${money(first.balance)})`}
+        </p>
+      </div>
+      <Button size="lg" className="w-full sm:w-auto" loading={paying === first._id} onClick={() => onPay(first._id)}>Pay now</Button>
+    </Card>
+  );
+}
+
+// Resident tiles: just the three numbers a household cares about.
+function ResidentSummary() {
+  const { data: s } = useBillingSummary(undefined);
+  const year = todayISO().slice(0, 4);
+  const { data: st } = useStatement({ from: `${year}-01-01` });
+  if (!s) return null;
+  // Money actually paid this year: payments, less any that bounced (waivers and credit notes are not payments).
+  const paidThisYear = st ? st.entries.reduce((sum, e) => sum + (e.type === 'payment' ? e.credit : e.type === 'bounce' ? -e.debit : 0), 0) : null;
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+      <StatCard icon={IndianRupee} tone={s.outstanding ? 'amber' : 'green'} label="Due now" value={money(s.outstanding)} sub={s.overdue ? `${money(s.overdue)} overdue` : undefined} />
+      <StatCard icon={Wallet} tone="green" label={`Paid in ${year}`} value={paidThisYear == null ? '…' : money(paidThisYear)} />
+      <StatCard icon={PiggyBank} tone="green" label="Advance balance" value={money(s.advance)} sub="Used on your next bills" />
     </div>
   );
 }
@@ -127,16 +187,17 @@ function BillsTable({ finance, onOpen, onPay, payingId }) {
   return (
     <Card>
       {finance && (
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Input type="month" value={filters.period} onChange={set('period')} />
-          <Select placeholder="All statuses" value={filters.status} onChange={set('status')} options={['unpaid', 'partial', 'paid', 'cancelled'].map((s) => ({ value: s, label: label(s) }))} />
-          <Select placeholder="Any due date" value={filters.overdue} onChange={set('overdue')} options={[{ value: 'true', label: 'Overdue only' }]} />
-        </div>
+        <FilterBar cols={3} active={[filters.period, filters.status, filters.overdue].filter(Boolean).length}>
+          <Input label="Bill month" type="month" value={filters.period} onChange={set('period')} />
+          <Select label="Status" placeholder="All statuses" value={filters.status} onChange={set('status')} options={['unpaid', 'partial', 'paid', 'cancelled'].map((s) => ({ value: s, label: label(s) }))} />
+          <Select label="Due date" placeholder="Any due date" value={filters.overdue} onChange={set('overdue')} options={[{ value: 'true', label: 'Overdue only' }]} />
+        </FilterBar>
       )}
       <Table
         loading={isLoading}
         rows={data?.data}
         empty="No bills yet"
+        emptyHint={finance ? "Generate this month's maintenance bills to get started." : 'Your maintenance bills will appear here when the society raises them.'}
         onRowClick={(b) => onOpen(b._id)}
         columns={[
           { key: 'billNumber', header: 'Bill', render: (b) => <span className="font-medium text-slate-900">{b.billNumber}</span> },
@@ -163,11 +224,11 @@ function PaymentsTable({ finance, onReceipt }) {
   return (
     <Card>
       {finance && (
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Select placeholder="Received & bounced" value={filters.status} onChange={set('status')} options={[{ value: 'success', label: 'Received' }, { value: 'bounced', label: 'Bounced' }, { value: 'failed', label: 'Failed' }]} />
-          <Select placeholder="Bills & advances" value={filters.purpose} onChange={set('purpose')} options={[{ value: 'bill', label: 'Against bills' }, { value: 'advance', label: 'Advances' }]} />
-          <Select placeholder="Any mode" value={filters.method} onChange={set('method')} options={['upi', 'cash', 'cheque', 'bank', 'online', 'autopay'].map((m) => ({ value: m, label: label(m) }))} />
-        </div>
+        <FilterBar cols={3} active={[filters.status, filters.purpose, filters.method].filter(Boolean).length}>
+          <Select label="Status" placeholder="Received & bounced" value={filters.status} onChange={set('status')} options={[{ value: 'success', label: 'Received' }, { value: 'bounced', label: 'Bounced' }, { value: 'failed', label: 'Failed' }]} />
+          <Select label="Type" placeholder="Bills & advances" value={filters.purpose} onChange={set('purpose')} options={[{ value: 'bill', label: 'Against bills' }, { value: 'advance', label: 'Advances' }]} />
+          <Select label="Mode" placeholder="Any mode" value={filters.method} onChange={set('method')} options={['upi', 'cash', 'cheque', 'bank', 'online', 'autopay'].map((m) => ({ value: m, label: label(m) }))} />
+        </FilterBar>
       )}
       <Table loading={isLoading} rows={data?.data} empty="No payments yet" onRowClick={(p) => p.receiptNumber && onReceipt(p._id)}
         columns={[
@@ -247,10 +308,10 @@ export default function BillingPage() {
           <Button variant="secondary" icon={PiggyBank} onClick={() => setModal('payAdvance')}>Pay in advance</Button>
         )}
       />
-      <SummaryCards period={finance ? currentPeriod() : undefined} resident={!finance} />
-      {!finance && <AutopayCard />}
+      {finance ? <SummaryCards period={currentPeriod()} /> : <><DueHero onPay={(id) => pay.mutate(id)} paying={pay.isPending ? pay.variables : null} /><ResidentSummary /></>}
       <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={setTab} tabs={tabs} />
       {tab === 'bills' && <BillsTable finance={finance} onOpen={setBillId} onPay={(id) => pay.mutate(id)} payingId={pay.isPending ? pay.variables : null} />}
+      {!finance && tab === 'bills' && <AutopayCard />}
       {tab === 'payments' && <PaymentsTable finance={finance} onReceipt={setReceiptId} />}
       {tab === 'statement' && <StatementPanel finance={finance} />}
       {finance && tab === 'waivers' && <WaiversPanel />}

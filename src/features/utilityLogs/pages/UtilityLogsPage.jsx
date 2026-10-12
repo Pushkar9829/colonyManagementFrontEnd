@@ -2,23 +2,25 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Download, Plus, Settings2 } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Table, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Table, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
-import { date, dateTime, label, money, toPaise, todayISO } from '../../../lib/format';
+import { date, dateTime, label, money, periodLabel, toPaise, todayISO } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
 import { addDays, clean, downloadFile, numOrUndef } from '../../assets/shared';
 import { useCreatePoint, useCreateReading, usePoints, useReadings, useUtilitySummary } from '../api';
 
 const KINDS = [
-  { value: 'dg', label: 'DG sets' },
-  { value: 'tank', label: 'Water tanks' },
-  { value: 'stp', label: 'STP' },
-  { value: 'wtp', label: 'WTP' },
-  { value: 'meter', label: 'Electricity meters' },
-  { value: 'pump', label: 'Pumps' },
+  { value: 'dg', label: 'DG sets (generator)', one: 'DG set (generator)' },
+  { value: 'tank', label: 'Water tanks', one: 'water tank' },
+  { value: 'stp', label: 'STP (sewage plant)', one: 'STP (sewage plant)' },
+  { value: 'wtp', label: 'WTP (water plant)', one: 'WTP (water plant)' },
+  { value: 'meter', label: 'Electricity meters', one: 'electricity meter' },
+  { value: 'pump', label: 'Pumps', one: 'pump' },
 ];
+// Summary periods arrive as "2026-10-12" (by day) or "2026-10" (by month).
+const periodText = (p) => (p?.length === 7 ? periodLabel(p) : date(p));
 const SHIFTS = ['morning', 'afternoon', 'evening', 'night'].map((v) => ({ value: v, label: label(v) }));
 const fmt = (v, unit = '') => (v === undefined || v === null ? '—' : `${Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}${unit}`);
 
@@ -28,7 +30,7 @@ function PointModal({ kind, open, onClose }) {
   const submit = () =>
     create.mutate({ kind, ...clean({ name: values.name, location: values.location, capacity: numOrUndef(values.capacity), openingDieselStock: numOrUndef(values.openingDieselStock), openingHours: numOrUndef(values.openingHours), openingMeterReading: numOrUndef(values.openingMeterReading) }) }, { onError: applyServerErrors });
   return (
-    <Modal open={open} onClose={onClose} title={`Add ${KINDS.find((k) => k.value === kind)?.label.replace(/s$/, '')}`} description={['stp', 'wtp'].includes(kind) ? 'Standard parameters (pH, TDS…) with normal ranges are added; adjust later if needed.' : undefined}
+    <Modal open={open} onClose={onClose} title={`Add ${KINDS.find((k) => k.value === kind)?.one || 'log point'}`} description={['stp', 'wtp'].includes(kind) ? 'Standard parameters (pH, TDS…) with normal ranges are added; adjust later if needed.' : undefined}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={submit}>Add</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Name" required {...bind('name')} />
@@ -58,7 +60,7 @@ function ReadingModal({ point, onClose }) {
     create.mutate(clean(body), { onError: applyServerErrors });
   };
   return (
-    <Modal open onClose={onClose} title={`Log · ${point.name}`} description={point.kind === 'dg' ? `Diesel in tank: ${fmt(point.dieselStock, ' L')} · hour meter ${fmt(point.lastHours)}` : point.kind === 'meter' ? `Last reading: ${fmt(point.lastMeterReading, ' kWh')}` : undefined}
+    <Modal open onClose={onClose} title={`Add reading · ${point.name}`} description={point.kind === 'dg' ? `Diesel in tank: ${fmt(point.dieselStock, ' L')} · hour meter ${fmt(point.lastHours)}` : point.kind === 'meter' ? `Last reading: ${fmt(point.lastMeterReading, ' kWh')}` : undefined}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Date" type="date" {...bind('date')} />
@@ -145,7 +147,7 @@ function KindPanel({ kind, manager }) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader title="Log points" action={manager && <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAdding(true)}>Add</Button>} />
+        <CardHeader title="Equipment" subtitle="Tap Add reading at each shift." action={manager && <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAdding(true)}>Add</Button>} />
         {!isLoading && !points?.length ? <EmptyState icon={Settings2} title="Nothing to log yet" description={manager ? 'Add the equipment staff take readings from.' : 'Ask the facility manager to set this up.'} /> : (
           <ul className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
             {(points || []).map((p) => (
@@ -157,7 +159,7 @@ function KindPanel({ kind, manager }) {
                     {p.lastReadingAt ? ` · ${dateTime(p.lastReadingAt)}` : ''}
                   </p>
                 </div>
-                <Button size="sm" onClick={() => setLogPoint(p)}>Log</Button>
+                <Button size="sm" icon={Plus} className="shrink-0 whitespace-nowrap" onClick={() => setLogPoint(p)}>Add reading</Button>
               </li>
             ))}
           </ul>
@@ -171,7 +173,7 @@ function KindPanel({ kind, manager }) {
             { key: 'date', header: 'Date', render: (r) => <div><p>{date(r.date)}</p><p className="text-xs text-slate-400">{r.shift ? label(r.shift) : dateTime(r.at)}</p></div> },
             { key: 'point', header: 'Point', render: (r) => r.point?.name },
             { key: 'value', header: 'Reading', className: 'whitespace-normal', render: (r) => <span className="flex items-center gap-2">{readingText(r)}{r.outOfRange && <Badge tone="red">Out of range</Badge>}</span> },
-            { key: 'by', header: 'By', render: (r) => r.recordedBy?.name || '—' },
+            { key: 'by', header: 'By', mobile: false, render: (r) => r.recordedBy?.name || '—' },
             { key: 'notes', header: 'Notes', className: 'max-w-xs truncate', render: (r) => r.notes || '' },
           ]} />
         <Pagination meta={readings.data?.meta} onPage={setPage} />
@@ -180,14 +182,14 @@ function KindPanel({ kind, manager }) {
       {manager && (
         <Card>
           <CardHeader title={groupBy === 'month' ? 'Monthly summary' : 'Daily summary'} action={<Button size="sm" variant="secondary" icon={Download} onClick={() => downloadFile('/utility-logs/export', { kind, groupBy, ...range }, `utility-${kind}.xlsx`).catch((e) => toast.error(e))}>Excel</Button>} />
-          <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-            <Select options={[{ value: 'day', label: 'By day' }, { value: 'month', label: 'By month' }]} value={groupBy} onChange={(e) => { setGroupBy(e.target.value); setRange({ from: addDays(todayISO(), e.target.value === 'month' ? -364 : -29), to: todayISO() }); }} />
-            <Input type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-            <Input type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
-          </div>
+          <FilterBar cols={3}>
+            <Select label="Group" options={[{ value: 'day', label: 'By day' }, { value: 'month', label: 'By month' }]} value={groupBy} onChange={(e) => { setGroupBy(e.target.value); setRange({ from: addDays(todayISO(), e.target.value === 'month' ? -364 : -29), to: todayISO() }); }} />
+            <Input label="From" type="date" value={range.from} max={range.to} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+            <Input label="To" type="date" value={range.to} min={range.from} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+          </FilterBar>
           <Table loading={summary.isLoading} rows={(summary.data?.rows || []).map((r) => ({ ...r, _id: `${r.period}-${r.point._id}` }))} empty="No readings in this range"
             columns={[
-              { key: 'period', header: groupBy === 'month' ? 'Month' : 'Date' },
+              { key: 'period', header: groupBy === 'month' ? 'Month' : 'Date', render: (r) => periodText(r.period) },
               { key: 'point', header: 'Point', render: (r) => r.point.name },
               { key: 'readings', header: 'Entries' },
               ...SUMMARY_COLS[kind],

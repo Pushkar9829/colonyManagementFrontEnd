@@ -20,8 +20,8 @@ export function StatementPanel({ finance }) {
 
   return (
     <div className="space-y-4">
-      <Card className="grid gap-3 p-4 sm:grid-cols-4">
-        {finance && <div className="sm:col-span-2"><UnitPicker value={unit} onChange={(id) => setUnit(id)} /></div>}
+      <Card className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-4">
+        {finance && <div className="col-span-2"><UnitPicker value={unit} onChange={(id) => setUnit(id)} /></div>}
         <Input label="From" type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
         <Input label="To" type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
       </Card>
@@ -32,7 +32,7 @@ export function StatementPanel({ finance }) {
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
             <StatCard label="Outstanding dues" value={money(st.outstanding)} tone={st.outstanding ? 'red' : 'green'} />
             <StatCard label="Advance balance" value={money(st.creditBalance)} tone="green" sub={st.unbilledCharges ? `${money(st.unbilledCharges)} charges on next bill` : undefined} />
             <StatCard label="Net balance" value={balanceText(st.closingBalance)} sub={st.closingBalance < 0 ? 'In advance' : 'Payable'} />

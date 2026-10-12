@@ -86,7 +86,7 @@ function RunDetail({ id, onBack }) {
   return (
     <div className="space-y-4">
       <button type="button" onClick={onBack} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" />All payroll runs</button>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Users} label={periodLabel(run.period)} value={run.employees} sub={<Badge tone={RUN_TONES[run.status]}>{label(run.status)}</Badge>} />
         <StatCard icon={IndianRupee} tone="sky" label="Gross" value={money(run.gross)} />
         <StatCard icon={Wallet} tone="amber" label="Deductions" value={money(run.deductions)} />

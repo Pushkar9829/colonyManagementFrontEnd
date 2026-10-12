@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, KeyRound, Plus, X } from 'lucide-react';
+import { Check, KeyRound, Plus, UserPlus, X } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Input, Modal, Pagination, Select, StatusBadge, Table, Tabs } from '../../../components/ui';
+import { Badge, Button, Card, FilterBar, Input, Modal, Pagination, Select, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, label } from '../../../lib/format';
@@ -64,17 +64,26 @@ export default function MembersPage() {
   const reject = useRejectMember();
   const update = useUpdateMember();
   const resetPw = useResetPassword();
+  const waiting = pendingCount?.meta?.total || 0;
+  const showTab = (v) => { setParams({ status: v }, { replace: true }); setFilters((f) => ({ ...f, page: 1 })); };
 
   return (
     <div>
       <PageHeader title="Members" description="Residents, committee and staff accounts." actions={<Button icon={Plus} onClick={() => setEditing({})}>Add member</Button>} />
-      <Tabs className="mb-4 w-fit" value={status} onChange={(v) => { setParams({ status: v }, { replace: true }); setFilters((f) => ({ ...f, page: 1 })); }}
+      {waiting > 0 && status !== 'pending' && (
+        <Card className="mb-4 flex flex-wrap items-center gap-3 border-amber-200 bg-amber-50 p-4">
+          <UserPlus className="size-5 shrink-0 text-amber-600" />
+          <p className="min-w-0 flex-1 text-sm font-medium text-amber-900">{waiting === 1 ? '1 person is' : `${waiting} people are`} waiting to join</p>
+          <Button size="sm" onClick={() => showTab('pending')}>Review</Button>
+        </Card>
+      )}
+      <Tabs className="mb-4 w-fit" value={status} onChange={showTab}
         tabs={[{ value: 'active', label: 'Active' }, { value: 'pending', label: 'Join requests', count: pendingCount?.meta?.total }, { value: 'inactive', label: 'Inactive' }, { value: 'rejected', label: 'Rejected' }]} />
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2">
-          <Input placeholder="Search name, email, phone" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />
-          <Select placeholder="All roles" options={ROLE_OPTIONS} value={filters.role} onChange={(e) => setFilters((f) => ({ ...f, role: e.target.value, page: 1 }))} />
-        </div>
+        <FilterBar cols={2} active={filters.role ? 1 : 0}
+          search={<Input aria-label="Search members" placeholder="Search name, email, phone" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />}>
+          <Select aria-label="Role" placeholder="All roles" options={ROLE_OPTIONS} value={filters.role} onChange={(e) => setFilters((f) => ({ ...f, role: e.target.value, page: 1 }))} />
+        </FilterBar>
         <Table loading={isLoading} rows={data?.data} empty={status === 'pending' ? 'No pending requests' : 'No members'}
           columns={[
             { key: 'name', header: 'Name', render: (m) => <div><p className="font-medium text-slate-900">{m.name}{String(m.user) === String(user._id) && <span className="ml-1 text-xs text-slate-400">(you)</span>}</p><p className="text-xs text-slate-500">{m.email || m.phone}</p></div> },

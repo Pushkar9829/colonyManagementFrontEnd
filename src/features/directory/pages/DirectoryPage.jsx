@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BookUser, Briefcase, EyeOff, Mail, MessageCircle, Phone, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { useBlocks } from '../../units/api';
@@ -10,7 +10,7 @@ import { Avatar } from '../../forum/components/RichText';
 import { useOpenDirect } from '../../chat/api';
 import { useDirectory, useDirectoryContacts, useMyDirectoryProfile, useUpdateDirectoryProfile } from '../api';
 
-function PersonCard({ p, onMessage, messaging }) {
+function PersonCard({ p, onMessage, messaging, onPrivacy }) {
   return (
     <Card className="flex flex-col p-4">
       <div className="flex items-start gap-3">
@@ -27,6 +27,9 @@ function PersonCard({ p, onMessage, messaging }) {
           {p.skills?.length > 0 && <div className="flex flex-wrap gap-1">{p.skills.map((s) => <Badge key={s} tone="blue">{s}</Badge>)}</div>}
           {p.about && <p className="text-xs text-slate-500">{p.about}</p>}
         </div>
+      )}
+      {p.isMe && onPrivacy && (
+        <p className="mt-2 text-xs text-slate-500">Shown to neighbours · <button type="button" onClick={onPrivacy} className="font-medium text-brand-700 hover:underline">Change</button></p>
       )}
       <div className="mt-auto flex flex-wrap gap-2 pt-3">
         {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"><Phone className="size-3.5" />{p.phone}</a>}
@@ -55,19 +58,22 @@ function Neighbours({ listed, onEdit }) {
           <Button size="sm" onClick={onEdit}>List me</Button>
         </Card>
       )}
-      <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
+      <Card>
+        <FilterBar cols={2} active={block ? 1 : 0} className="border-b-0" search={(
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, flat, block or profession" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, flat, block or profession" aria-label="Search name, flat, block or profession" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
         </div>
-        <Select value={block} onChange={(e) => { setBlock(e.target.value); setPage(1); }} placeholder="All blocks" options={blocks.map((b) => ({ value: b._id, label: `Block ${b.name}` }))} />
-      </div>
+        )}>
+          <Select value={block} onChange={(e) => { setBlock(e.target.value); setPage(1); }} placeholder="All blocks" aria-label="Block" options={blocks.map((b) => ({ value: b._id, label: `Block ${b.name}` }))} />
+        </FilterBar>
+      </Card>
       {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
         <Card><EmptyState icon={BookUser} title={search || block ? 'No one matches' : 'No one has listed themselves yet'} description="Residents choose what to share. Only people who opted in appear here." /></Card>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.data.map((p) => <PersonCard key={p._id} p={{ ...p, role: 'resident' }} onMessage={open.mutate} messaging={open.isPending && open.variables === p._id} />)}
+            {data.data.map((p) => <PersonCard key={p._id} p={{ ...p, role: 'resident' }} onPrivacy={onEdit} onMessage={open.mutate} messaging={open.isPending && open.variables === p._id} />)}
           </div>
           <Pagination meta={data.meta} onPage={setPage} />
         </>

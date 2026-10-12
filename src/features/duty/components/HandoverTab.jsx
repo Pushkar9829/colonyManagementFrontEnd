@@ -115,7 +115,7 @@ function HandoverCard({ h, canAck, onAck }) {
         <div className="min-w-0">
           <p className="font-semibold text-slate-900">{label(h.shift)} shift · {h.gate}</p>
           <p className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-            {h.fromGuard?.name || 'Guard'} <ArrowRight className="size-3.5" /> {h.toGuard?.name || 'Any guard'}
+            From {h.fromGuard?.name || 'Guard'} <ArrowRight className="size-3.5" /> Handed to: {h.toGuard?.name || 'next guard on shift'}
             <span className="text-xs">· {dateTime(h.createdAt)}</span>
           </p>
         </div>

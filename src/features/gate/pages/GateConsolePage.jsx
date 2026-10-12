@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { AlertTriangle, Baby, Car, CheckCircle2, KeyRound, LogOut, Package, Phone, PhoneCall, QrCode, ShieldAlert, ShieldX, UserPlus, WifiOff } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { AlertTriangle, Baby, Car, CheckCircle2, KeyRound, LogOut, Package, Phone, QrCode, ShieldAlert, ShieldX, Undo2, UserPlus, WifiOff } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FileUpload, Input, Modal, Spinner, Tabs } from '../../../components/ui';
@@ -8,11 +8,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/cn';
 import { label, time, timeAgo } from '../../../lib/format';
+import { ROLES } from '../../../lib/roles';
 import { useForm } from '../../../hooks/useForm';
 import { api } from '../../../api/client';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { VisitorRow } from '../../visitors/components/VisitorRow';
-import { checkWatchlist, useCheckOut, useFrequent, useGuardCheckIn, useHouseholdContacts, useLogVisitor, useVerifyPass, useVisitors } from '../../visitors/api';
+import { checkWatchlist, useCheckOut, useDenyVisitor, useGuardSendBack, useFrequent, useGuardCheckIn, useHouseholdContacts, useLogVisitor, useVerifyPass, useVisitors } from '../../visitors/api';
 import { useDailyHelp, useGateScan } from '../../dailyHelp/api';
 import { LogParcelForm } from '../../parcels/components/LogParcelForm';
 import { ChildExitPanel } from '../../emergency/components/ChildExitPanel';
@@ -23,6 +24,8 @@ import { ManualLog } from '../components/ManualLog';
 import { BarrierControl } from '../components/BarrierControl';
 
 const PURPOSES = ['guest', 'delivery', 'cab', 'service', 'other'];
+const LESS_USED = [{ value: 'vehicles', label: 'Vehicles' }, { value: 'children', label: 'Children' }];
+const TAB_VALUES = ['entry', 'scan', 'parcels', 'vehicles', 'children', 'pending', 'inside'];
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v !== undefined && v !== false));
 
 function useWide() {
@@ -156,11 +159,12 @@ function NewEntry({ queue }) {
             {pref.preference.company}{pref.preference.oneOff ? ' (today only)' : ''}{pref.preference.note ? ` — ${pref.preference.note}` : ''}. No approval needed.
           </Notice>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Input label="Visitor name" required {...bind('name')} />
-          <Input label="Phone" type="tel" {...bind('phone')} onBlur={precheck} />
-          {['delivery', 'cab', 'service'].includes(values.purpose) && <Input label="Company" placeholder="Amazon, Swiggy, Uber…" {...bind('company')} />}
-          <Input label="Vehicle number" {...bind('vehicleNumber')} onBlur={precheck} />
+        {/* Phones: name (and company) full width, phone + vehicle side by side so the form stays short. */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          <Input className="col-span-2 sm:col-span-1" label="Visitor name" required {...bind('name')} />
+          {['delivery', 'cab', 'service'].includes(values.purpose) && <Input className="col-span-2 sm:col-span-1" label="Company" placeholder="Amazon, Swiggy, Uber…" {...bind('company')} />}
+          <Input label="Phone" type="tel" inputMode="tel" {...bind('phone')} onBlur={precheck} />
+          <Input label="Vehicle number" autoCapitalize="characters" {...bind('vehicleNumber')} onBlur={precheck} />
         </div>
         {pre && (
           <Notice tone={pre.status === 'block' ? 'red' : 'amber'} icon={pre.status === 'block' ? ShieldX : ShieldAlert} title={pre.status === 'block' ? 'On the blocklist' : 'On the watchlist'}>
@@ -172,9 +176,13 @@ function NewEntry({ queue }) {
         ) : (
           <Checkbox label="Resident confirmed by phone — let them in" checked={values.guardApproved} onChange={(e) => set('guardApproved', e.target.checked)} />
         )}
-        <Button type="submit" size="lg" icon={queue.online ? UserPlus : WifiOff} loading={log.isPending} disabled={!values.unit} className="w-full">
-          {queue.online ? 'Request entry' : 'Save entry offline'}
-        </Button>
+        {/* Stays at the bottom of the screen on phones so the guard never has to scroll to send. */}
+        <div className="sticky bottom-0 z-10 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+          <Button type="submit" size="lg" icon={queue.online ? UserPlus : WifiOff} loading={log.isPending} disabled={!values.unit} className="w-full">
+            {queue.online ? 'Request entry' : 'Save entry offline'}
+          </Button>
+          {!values.unit && <p className="mt-1 text-center text-xs text-slate-500 sm:hidden">Pick the flat first</p>}
+        </div>
       </form>
     </Card>
   );
@@ -236,7 +244,7 @@ function ScanPanel({ queue }) {
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader title="Scan guest pass QR" />
-        <div className="p-4"><QrScanner onScan={onScan} paused={busy} /></div>
+        <div className="p-4"><QrScanner onScan={onScan} paused={busy} fallbackHint="Or type the 6-digit code from the guest’s phone in the box below." /></div>
       </Card>
       <div className="space-y-4">
         {result && <Notice tone={result.tone} icon={result.icon} title={result.title} onClose={() => setResult(null)}>{result.body}</Notice>}
@@ -289,31 +297,70 @@ function ContactsModal({ visitor, onClose }) {
   );
 }
 
+// "Let in" / "Send back" ask once more in a large dialog, so a wrong tap on a busy gate does not decide.
+function DecisionModal({ decision, onClose, onConfirm, busy }) {
+  const v = decision?.visitor;
+  const letIn = decision?.kind === 'in';
+  return (
+    <Modal
+      open={Boolean(decision)}
+      onClose={onClose}
+      size="sm"
+      title={letIn ? `Let ${v?.name} in?` : `Send ${v?.name} back?`}
+      description={v ? `${label(v.purpose)} for ${v.unit?.label || 'the flat'}` : ''}
+      footer={
+        <>
+          <Button variant="secondary" size="lg" onClick={onClose}>Cancel</Button>
+          <Button variant={letIn ? 'success' : 'danger'} size="lg" loading={busy} onClick={onConfirm}>{letIn ? 'Yes, let in' : 'Yes, send back'}</Button>
+        </>
+      }
+    >
+      <p className="text-sm text-slate-600">
+        {letIn ? 'Only let them in if the resident said yes (for example on a phone call).' : 'The visitor is turned away and the household sees that entry was refused.'}
+      </p>
+    </Modal>
+  );
+}
+
 function PendingList({ online }) {
+  const { user } = useAuth();
   const live5 = useLiveInterval(5000);
   const { data } = useVisitors({ status: 'pending', limit: 30 }, { refetchInterval: live5, enabled: online });
   const allow = useGuardCheckIn();
+  const adminDeny = useDenyVisitor();
+  const guardDeny = useGuardSendBack();
+  const deny = user.role === ROLES.GUARD ? guardDeny : adminDeny;
   const [calling, setCalling] = useState(null);
+  const [decision, setDecision] = useState(null); // { kind: 'in' | 'back', visitor }
+  // Guards send visitors back through their own endpoint; admins refuse on the household's behalf.
+  const canSendBack = user.role === ROLES.ADMIN || user.role === ROLES.GUARD;
   const rows = data?.data || [];
+  const confirm = () => {
+    const done = { onSuccess: () => setDecision(null) };
+    if (decision.kind === 'in') allow.mutate(decision.visitor._id, done);
+    else deny.mutate(decision.visitor._id, done);
+  };
   return (
     <Card>
-      <CardHeader title={`Awaiting approval (${rows.length})`} subtitle={online ? 'Updates live · no answer in time shows “Call resident”' : 'Offline — list may be out of date'} />
+      <CardHeader title={`Waiting for approval (${rows.length})`} subtitle={online ? 'Updates live · if the resident does not answer, call them' : 'Offline — list may be out of date'} />
       {!rows.length ? (
-        <EmptyState title="No one waiting" />
+        <EmptyState title="No one waiting" description="Visitors you log wait here until the resident answers." />
       ) : (
         <ul className="divide-y divide-slate-100">
           {rows.map((v) => (
-            <VisitorRow key={v._id} v={v}
+            <VisitorRow key={v._id} v={v} actionsBelow
               actions={
-                <>
-                  <Button size="sm" variant={v.callResident ? 'danger' : 'secondary'} icon={Phone} onClick={() => setCalling(v)}>Call</Button>
-                  <Button size="sm" variant="secondary" icon={PhoneCall} onClick={() => window.confirm('Resident confirmed on phone?') && allow.mutate(v._id)}>Allow</Button>
-                </>
+                <div className={cn('grid w-full gap-2', canSendBack && 'sm:grid-cols-2')}>
+                  <Button size="lg" variant="success" icon={CheckCircle2} className="w-full" onClick={() => setDecision({ kind: 'in', visitor: v })}>Let in</Button>
+                  {canSendBack && <Button size="lg" variant="danger" icon={Undo2} className="w-full" onClick={() => setDecision({ kind: 'back', visitor: v })}>Send back</Button>}
+                  <Button variant={v.callResident ? 'danger' : 'secondary'} icon={Phone} className={cn('w-full', canSendBack && 'sm:col-span-2')} onClick={() => setCalling(v)}>Call resident</Button>
+                </div>
               } />
           ))}
         </ul>
       )}
       <ContactsModal visitor={calling} onClose={() => setCalling(null)} />
+      <DecisionModal decision={decision} onClose={() => setDecision(null)} onConfirm={confirm} busy={allow.isPending || deny.isPending} />
     </Card>
   );
 }
@@ -394,19 +441,32 @@ export default function GateConsolePage() {
   const { user } = useAuth();
   const queue = useGateQueue(user.society?._id || user.society);
   const wide = useWide();
-  const [tab, setTab] = useState('entry');
-  const { data: pending } = useVisitors({ status: 'pending', limit: 1 }, { enabled: !wide && queue.online, refetchInterval: 10000 });
+  const [params] = useSearchParams();
+  // ?tab= lets the home screen open the console on a given job (scan, parcels, waiting list…).
+  const [tab, setTab] = useState(() => (TAB_VALUES.includes(params.get('tab')) ? params.get('tab') : 'entry'));
+  const [moreTab, setMoreTab] = useState('vehicles');
+  const live = { enabled: !wide && queue.online, refetchInterval: 10000 };
+  const { data: pending } = useVisitors({ status: 'pending', limit: 1 }, live);
+  const { data: inside } = useVisitors({ status: 'checked_in', limit: 1 }, live);
+  const { data: helpInside } = useDailyHelp({ inside: true, limit: 1 }, live);
+  const waitingCount = pending?.meta?.total || 0;
+  const insideCount = (inside?.meta?.total || 0) + (helpInside?.meta?.total || 0);
 
-  // On tablets/desktops the waiting and inside lists stay visible beside the action tabs.
-  const tabs = [
-    { value: 'entry', label: 'Entry' },
-    { value: 'scan', label: 'Scan / code' },
-    { value: 'parcels', label: 'Parcels' },
-    { value: 'vehicles', label: 'Vehicles' },
-    { value: 'children', label: 'Children' },
-    ...(wide ? [] : [{ value: 'pending', label: 'Pending', count: pending?.meta?.total || 0 }, { value: 'inside', label: 'Inside' }]),
-  ];
-  const current = !wide || !['pending', 'inside'].includes(tab) ? tab : 'entry';
+  // Tablets/desktops keep the waiting and inside lists beside the action tabs. Phones get them as tabs,
+  // most-used first, with the rarely used ones folded under "More".
+  const tabs = wide
+    ? [{ value: 'entry', label: 'Entry' }, { value: 'scan', label: 'Scan / code' }, { value: 'parcels', label: 'Parcels' }, ...LESS_USED]
+    : [
+        { value: 'entry', label: 'Entry' },
+        { value: 'pending', label: 'Waiting', count: waitingCount },
+        { value: 'inside', label: 'Inside' },
+        { value: 'scan', label: 'Scan / code' },
+        { value: 'parcels', label: 'Parcels' },
+        { value: 'more', label: 'More' },
+      ];
+  const current = wide && ['pending', 'inside'].includes(tab) ? 'entry' : tab;
+  const inMore = !wide && LESS_USED.some((t) => t.value === current);
+  const openTab = (v) => setTab(v === 'more' ? moreTab : v);
 
   const panel = {
     entry: <NewEntry queue={queue} />,
@@ -431,9 +491,23 @@ export default function GateConsolePage() {
         }
       />
       <OfflineBanner queue={queue} />
+      {!wide && queue.online && (
+        <div className="sticky top-16 z-10 -mx-4 mb-3 flex border-y border-slate-200 bg-white/95 text-sm font-semibold backdrop-blur sm:mx-0 sm:rounded-lg sm:border">
+          <button type="button" onClick={() => setTab('pending')} className={cn('flex-1 px-3 py-2.5 text-center', waitingCount ? 'text-amber-700' : 'text-slate-600')}>
+            Waiting: {waitingCount}
+          </button>
+          <span className="w-px bg-slate-200" aria-hidden="true" />
+          <button type="button" onClick={() => setTab('inside')} className="flex-1 px-3 py-2.5 text-center text-slate-700">
+            Inside: {insideCount}
+          </button>
+        </div>
+      )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <div className="min-w-0 space-y-4">
-          <Tabs className="w-full sm:w-fit" value={current} onChange={setTab} tabs={tabs} />
+          <Tabs className="w-full sm:w-fit" value={inMore ? 'more' : current} onChange={openTab} tabs={tabs} />
+          {inMore && (
+            <Tabs className="w-fit" value={current} onChange={(v) => { setMoreTab(v); setTab(v); }} tabs={LESS_USED} />
+          )}
           {panel}
         </div>
         {wide && (

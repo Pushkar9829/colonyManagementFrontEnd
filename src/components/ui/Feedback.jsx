@@ -7,8 +7,15 @@ export function Spinner({ className }) {
 
 export function PageLoader() {
   return (
-    <div className="flex min-h-[50vh] items-center justify-center">
-      <Spinner className="size-8" />
+    <div className="space-y-4" role="status" aria-live="polite">
+      <div className="h-7 w-48 animate-pulse rounded-md bg-slate-200" />
+      <div className="h-4 w-72 max-w-full animate-pulse rounded bg-slate-100" />
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => <div key={i} className="h-20 animate-pulse rounded-xl bg-slate-100" />)}
+      </div>
+      <div className="flex items-center gap-2 pt-2 text-sm text-slate-500">
+        <Spinner className="size-4" /> Loading…
+      </div>
     </div>
   );
 }

@@ -152,7 +152,7 @@ function ScanPanel() {
     <Card className="lg:sticky lg:top-4">
       <CardHeader title="Scan checkpoint" subtitle="Point the camera at the checkpoint QR code" />
       <div className="space-y-4 p-4 sm:p-5">
-        <QrScanner onScan={onScan} paused={busy} />
+        <QrScanner onScan={onScan} paused={busy} fallbackHint="Or type the code printed under the QR in the box below." />
         {busy && (
           <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-600">
             <Spinner className="size-5" /> {locating ? 'Getting location…' : 'Recording scan…'}
@@ -171,7 +171,8 @@ function ScanPanel() {
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Or type the checkpoint code"
+              placeholder="Checkpoint code"
+              aria-label="Checkpoint code"
               autoCapitalize="characters"
               className="block h-12 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />

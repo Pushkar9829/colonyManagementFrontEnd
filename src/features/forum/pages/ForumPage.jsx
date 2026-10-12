@@ -152,20 +152,24 @@ export default function ForumPage() {
       )}
       {tab === 'moderation' && moderator ? <ModerationQueue /> : (
         <>
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-            {[{ _id: '', name: 'All', topicCount: undefined }, ...categories].map((c) => (
-              <button key={c._id || 'all'} type="button" onClick={() => { setCategory(c._id); setPage(1); }}
-                className={cn('shrink-0 rounded-full border px-3 py-1 text-sm font-medium transition', category === c._id ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300')}>
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Category">
+            {[{ _id: '', name: 'All categories', topicCount: undefined }, ...categories].map((c) => (
+              <button key={c._id || 'all'} type="button" aria-pressed={category === c._id} onClick={() => { setCategory(c._id); setPage(1); }}
+                className={cn('inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium transition sm:min-h-8', category === c._id ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300')}>
                 {c.name}{c.topicCount !== undefined ? ` · ${c.topicCount}` : ''}
               </button>
             ))}
           </div>
-          <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search topics" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+              <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search topics" aria-label="Search topics" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
             </div>
-            <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} options={[{ value: '', label: 'All topics' }, { value: 'open', label: 'Unresolved' }, { value: 'resolved', label: 'Resolved' }, { value: 'mine', label: 'Started by me' }]} />
+            {/* a different filter from the category chips above, so it says what it does */}
+            <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
+              <span className="shrink-0">Show:</span>
+              <Select className="flex-1 sm:w-48" aria-label="Show topics" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} options={[{ value: '', label: 'All topics' }, { value: 'open', label: 'Unanswered / unresolved' }, { value: 'resolved', label: 'Resolved' }, { value: 'mine', label: 'My topics' }]} />
+            </div>
           </div>
           {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
             <Card><EmptyState icon={MessagesSquare} title={search || category || status ? 'No matching topics' : 'No discussions yet'} description="Start the first conversation with your neighbours." action={<Button icon={Plus} onClick={() => setCreating(true)}>New topic</Button>} /></Card>

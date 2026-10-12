@@ -54,13 +54,13 @@ function TodayTab() {
   const t = data?.totals;
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-end gap-2">
         <Button variant="secondary" size="sm" icon={ChevronLeft} aria-label="Previous day" onClick={() => setD(addDays(d, -1))} />
-        <Input type="date" value={d} max={todayISO()} onChange={(e) => setD(e.target.value)} />
+        <Input label="Date" type="date" value={d} max={todayISO()} onChange={(e) => setD(e.target.value)} />
         <Button variant="secondary" size="sm" icon={ChevronRight} aria-label="Next day" disabled={d >= todayISO()} onClick={() => setD(addDays(d, 1))} />
       </div>
       {t && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={UserCheck} tone="green" label="Present" value={`${t.present} / ${t.employees}`} sub={`${t.in} on duty now`} />
           <StatCard icon={Clock} tone="amber" label="Late" value={t.late} />
           <StatCard icon={Plane} tone="sky" label="On leave" value={t.onLeave} />

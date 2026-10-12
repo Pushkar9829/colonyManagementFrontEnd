@@ -16,6 +16,7 @@ const SCOPES = [
   { value: 'meters:write', label: 'Send meter readings' },
   { value: 'attendance:write', label: 'Send staff attendance punches' },
 ];
+const SCOPE_SHORT = { 'gate:events': 'Gate events', 'gate:commands': 'Opens barrier', 'meters:write': 'Meter readings', 'attendance:write': 'Attendance' };
 
 export default function DevicesPage() {
   const toast = useToast();
@@ -30,20 +31,20 @@ export default function DevicesPage() {
 
   return (
     <div>
-      <PageHeader title="Devices & API keys" description="Connect gate cameras, RFID readers, barriers and meters. Each device gets its own key, sent in the X-Device-Key header." actions={<Button icon={Plus} onClick={() => setOpen(true)}>Add device</Button>} />
+      <PageHeader title="Devices & API keys" description="Connect gate cameras, RFID readers, boom barriers and meters." actions={<Button icon={Plus} onClick={() => setOpen(true)}>Add device</Button>} />
       <Card>
-        <Table loading={isLoading} rows={data} empty="No devices connected"
+        <Table loading={isLoading} rows={data} empty="No devices yet" emptyHint="No devices yet. Add one, then give its key to your installer." emptyAction={<Button icon={Plus} onClick={() => setOpen(true)}>Add device</Button>}
           columns={[
             { key: 'name', header: 'Device', render: (d) => <div><p className="font-medium text-slate-900">{d.name}</p><p className="text-xs text-slate-500">{TYPE_LABELS[d.type]}{d.location ? ` · ${d.location}` : ''}</p></div> },
             { key: 'prefix', header: 'Key', render: (d) => <span className="font-mono text-xs">{d.prefix}…</span> },
-            { key: 'scopes', header: 'Permissions', render: (d) => <div className="flex flex-wrap gap-1">{d.scopes.map((s) => <Badge key={s}>{s}</Badge>)}</div> },
+            { key: 'scopes', header: 'Permissions', render: (d) => <div className="flex flex-wrap gap-1">{d.scopes.map((s) => <Badge key={s}>{SCOPE_SHORT[s] || s}</Badge>)}</div> },
             { key: 'lastUsedAt', header: 'Last used', render: (d) => (d.lastUsedAt ? timeAgo(d.lastUsedAt) : 'Never') },
             { key: 'active', header: 'Status', render: (d) => (d.active ? <Badge tone="green">Active</Badge> : <Badge>Disabled</Badge>) },
             {
               key: 'a', header: '', className: 'text-right', render: (d) => (
                 <div className="flex justify-end gap-1">
                   <Button size="sm" variant="ghost" onClick={() => toggle.mutate({ id: d._id, active: !d.active })}>{d.active ? 'Disable' : 'Enable'}</Button>
-                  <button type="button" onClick={() => window.confirm(`Revoke the key for ${d.name}? The device stops working immediately.`) && revoke.mutate(d._id)} className="p-1.5 text-slate-400 hover:text-red-600" aria-label="Revoke"><Trash2 className="size-4" /></button>
+                  <button type="button" onClick={() => window.confirm(`Revoke the key for ${d.name}? The device stops working immediately.`) && revoke.mutate(d._id)} className="p-1.5 text-slate-400 hover:text-red-600" aria-label={`Revoke key for ${d.name}`} title="Revoke key"><Trash2 className="size-4" /></button>
                 </div>
               ),
             },
@@ -53,6 +54,7 @@ export default function DevicesPage() {
       <Modal open={open} onClose={() => setOpen(false)} title="Add device"
         footer={<><Button variant="secondary" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={!form.name || !form.scopes.length} loading={create.isPending} onClick={() => create.mutate({ ...form, location: form.location || undefined })}>Create key</Button></>}>
         <div className="space-y-4">
+          <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">Each device gets its own secret key. After you create it, give the key to your installer — they set the device to send it in the <code>X-Device-Key</code> header with every request.</p>
           <Input label="Name" placeholder="Main gate ANPR camera" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <Select label="Type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} options={TYPES.map((t) => ({ value: t, label: TYPE_LABELS[t] }))} />
           <Input label="Location" placeholder="Gate 1, Tower B basement…" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />

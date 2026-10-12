@@ -3,6 +3,7 @@ import { Ban, Clock, Download, PackageCheck, ShieldAlert, Users } from 'lucide-r
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, CardHeader, EmptyState, ErrorState, Input, PageLoader, StatCard, Table } from '../../../components/ui';
 import { useToast } from '../../../context/ToastContext';
+import { cn } from '../../../lib/cn';
 import { dateTime, label, todayISO } from '../../../lib/format';
 import { downloadFile, useVisitorAnalytics } from '../api';
 
@@ -105,10 +106,16 @@ export default function VisitorAnalyticsPage() {
       <Card className="mb-6 flex flex-wrap items-end gap-3 p-4">
         <Input label="From" type="date" value={range.from} max={range.to} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
         <Input label="To" type="date" value={range.to} min={range.from} max={todayISO()} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
-        <div className="flex gap-1">
-          {[7, 30, 90].map((n) => (
-            <Button key={n} size="sm" variant="ghost" onClick={() => setRange({ from: isoDaysAgo(n - 1), to: todayISO() })}>Last {n} days</Button>
-          ))}
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Quick periods">
+          {[7, 30, 90].map((n) => {
+            const on = range.to === todayISO() && range.from === isoDaysAgo(n - 1);
+            return (
+              <button key={n} type="button" aria-pressed={on} onClick={() => setRange({ from: isoDaysAgo(n - 1), to: todayISO() })}
+                className={cn('h-10 rounded-full border px-4 text-sm font-medium transition', on ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50')}>
+                Last {n} days
+              </button>
+            );
+          })}
         </div>
       </Card>
       {isLoading ? (

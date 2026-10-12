@@ -73,7 +73,7 @@ function Completion() {
   return (
     <div className="space-y-4">
       {summary && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
           <StatCard icon={Percent} label="Overall completion" value={`${summary.percent}%`} />
           <StatCard icon={CheckCircle2} tone="green" label="Complete homes" value={`${summary.completeUnits} / ${summary.occupiedUnits}`} />
           <StatCard icon={FileClock} tone="amber" label="Awaiting review" value={summary.pendingDocuments} />

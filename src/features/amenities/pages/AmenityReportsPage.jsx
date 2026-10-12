@@ -36,7 +36,7 @@ export default function AmenityReportsPage() {
         <Input label="To" type="date" value={range.to} min={range.from} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
       </Card>
       {t && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={CalendarDays} label="Bookings" value={t.bookings} sub={`${t.cancelled} cancelled`} />
           <StatCard icon={UserX} tone="red" label="No-shows" value={t.noShows} />
           <StatCard icon={IndianRupee} tone="green" label="Revenue" value={money(t.revenue)} sub="Fees + pass sales, net of refunds" />

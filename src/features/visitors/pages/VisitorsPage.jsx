@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { BarChart3, DoorOpen, Plus, QrCode, ShieldAlert, Star, Trash2, Zap } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Tabs } from '../../../components/ui';
+import { Badge, Button, Card, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { dateTime, dayBounds, label, timeAgo } from '../../../lib/format';
@@ -179,23 +179,19 @@ function HistoryTab({ initialFlagged }) {
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e?.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Input placeholder="Search name, phone, vehicle" value={filters.search} onChange={set('search')} />
-        <Input type="date" value={filters.date} onChange={set('date')} />
-        <select value={filters.status} onChange={set('status')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-          <option value="">All statuses</option>
-          {['pending', 'checked_in', 'checked_out', 'denied'].map((s) => <option key={s} value={s}>{label(s)}</option>)}
-        </select>
-        <select value={filters.purpose} onChange={set('purpose')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-          <option value="">All purposes</option>
-          {PURPOSES.map((s) => <option key={s} value={s}>{label(s)}</option>)}
-        </select>
+      <FilterBar
+        active={[filters.status, filters.purpose, filters.date, filters.flagged].filter(Boolean).length}
+        search={<Input label="Search" placeholder="Name, phone or vehicle" value={filters.search} onChange={set('search')} />}
+      >
+        <Input label="Visit date" type="date" value={filters.date} onChange={set('date')} />
+        <Select label="Status" placeholder="All statuses" value={filters.status} onChange={set('status')} options={['pending', 'checked_in', 'checked_out', 'denied'].map((v) => ({ value: v, label: label(v) }))} />
+        <Select label="Purpose" placeholder="All purposes" value={filters.purpose} onChange={set('purpose')} options={PURPOSES.map((v) => ({ value: v, label: label(v) }))} />
         {!isResident && <Checkbox label="Only watchlist / blocklist hits" checked={filters.flagged} onChange={set('flagged')} />}
-      </div>
+      </FilterBar>
       {isLoading ? (
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : !data?.data.length ? (
-        <EmptyState icon={DoorOpen} title="No visitors found" />
+        <EmptyState icon={DoorOpen} title="No visitors found" description={filters.search || filters.date || filters.status || filters.purpose || filters.flagged ? 'Try clearing the search or filters.' : undefined} />
       ) : (
         <ul className="divide-y divide-slate-100">
           {data.data.map((v) => (
@@ -226,7 +222,8 @@ export default function VisitorsPage() {
   const manager = hasRole(user, ROLES.FACILITY_MANAGER);
   const tab = params.get('tab') || 'history';
   const setTab = (t) => setParams((p) => { p.set('tab', t); return p; }, { replace: true });
-  const [passOpen, setPassOpen] = useState(false);
+  // ?new=pass (from the home screen) opens the pre-approve form straight away.
+  const [passOpen, setPassOpen] = useState(() => isResident && params.get('new') === 'pass');
 
   return (
     <div>

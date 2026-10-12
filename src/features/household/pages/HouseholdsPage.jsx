@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Card, Checkbox, Input, Modal, Pagination, Spinner, Table } from '../../../components/ui';
+import { Badge, Card, Checkbox, FilterBar, Input, Modal, Pagination, Spinner, Table } from '../../../components/ui';
 import { dateTime, label } from '../../../lib/format';
 import { useHouseholds, useUnitHousehold } from '../api';
 import { HouseholdDetail } from '../components/HouseholdDetail';
@@ -15,28 +15,37 @@ function UnitModal({ unit, onClose }) {
 }
 
 export default function HouseholdsPage() {
-  const [filters, setFilters] = useState({ search: '', medicalOnly: false, page: 1 });
-  const { data, isLoading } = useHouseholds({ search: filters.search || undefined, medicalOnly: filters.medicalOnly || undefined, page: filters.page });
+  const [filters, setFilters] = useState({ search: '', medicalOnly: false, noContacts: false, page: 1 });
+  // The API has no "missing contacts" filter, so that one is applied here on pages of 100 homes.
+  const { data, isLoading } = useHouseholds({ search: filters.search || undefined, medicalOnly: filters.medicalOnly || undefined, page: filters.page, limit: filters.noContacts ? 100 : undefined });
   const [open, setOpen] = useState(null);
+  const rows = (data?.data || []).filter((r) => !filters.noContacts || !r.emergencyContacts).map((r) => ({ ...r, key: r.unit._id }));
+  const meta = data?.meta;
   return (
     <div>
       <PageHeader title="Households" description="Family members, pets and emergency details for every home." />
       <Card>
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center">
-          <Input className="sm:w-64" placeholder="Search unit, e.g. A-1" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />
-          <Checkbox label="Only homes with seniors / special needs" checked={filters.medicalOnly} onChange={(e) => setFilters((f) => ({ ...f, medicalOnly: e.target.checked, page: 1 }))} />
-        </div>
-        <Table loading={isLoading} rows={data?.data?.map((r) => ({ ...r, key: r.unit._id }))} rowKey="key" empty="No units" onRowClick={(r) => setOpen(r.unit)}
+        <FilterBar cols={3} active={Number(filters.medicalOnly) + Number(filters.noContacts)}
+          search={<Input aria-label="Search unit" placeholder="Search unit, e.g. A-1" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />}>
+          <Checkbox className="sm:h-10" label="Only homes with seniors / special needs" checked={filters.medicalOnly} onChange={(e) => setFilters((f) => ({ ...f, medicalOnly: e.target.checked, page: 1 }))} />
+          <Checkbox className="sm:h-10" label="Homes without emergency contacts" checked={filters.noContacts} onChange={(e) => setFilters((f) => ({ ...f, noContacts: e.target.checked, page: 1 }))} />
+        </FilterBar>
+        {filters.noContacts && meta && (
+          <p className="border-b border-slate-100 bg-amber-50/60 px-4 py-2 text-xs text-amber-800">
+            {rows.length} of {Math.min(meta.limit, Math.max(0, meta.total - (meta.page - 1) * meta.limit))} homes{meta.pages > 1 ? ` on page ${meta.page} of ${meta.pages}` : ''} have no emergency contact.
+          </p>
+        )}
+        <Table loading={isLoading} rows={rows} rowKey="key" empty={filters.noContacts ? 'Every home here has an emergency contact' : 'No units'} onRowClick={(r) => setOpen(r.unit)}
           columns={[
             { key: 'unit', header: 'Unit', render: (r) => <span className="font-medium text-slate-900">{r.unit.label}</span> },
-            { key: 'occ', header: 'Occupancy', render: (r) => label(r.unit.occupancy) },
+            { key: 'contacts', header: 'Emergency contacts', render: (r) => (r.emergencyContacts ? r.emergencyContacts : <Badge tone="red">Missing</Badge>) },
+            { key: 'flags', header: 'Care needs', render: (r) => (r.elderly > 0 || r.specialNeeds > 0 ? <div className="flex flex-wrap gap-1">{r.elderly > 0 && <Badge tone="amber">{r.elderly} senior</Badge>}{r.specialNeeds > 0 && <Badge tone="amber">{r.specialNeeds} special needs</Badge>}</div> : null) },
             { key: 'members', header: 'Family', render: (r) => r.members },
-            { key: 'pets', header: 'Pets', render: (r) => r.pets },
-            { key: 'contacts', header: 'Emergency contacts', render: (r) => (r.emergencyContacts ? r.emergencyContacts : <Badge tone="amber">None</Badge>) },
-            { key: 'flags', header: 'Care needs', render: (r) => <div className="flex gap-1">{r.elderly > 0 && <Badge tone="amber">{r.elderly} senior</Badge>}{r.specialNeeds > 0 && <Badge tone="amber">{r.specialNeeds} special needs</Badge>}</div> },
-            { key: 'updated', header: 'Updated', render: (r) => (r.updatedAt ? dateTime(r.updatedAt) : <span className="text-slate-400">Not filled</span>) },
+            { key: 'occ', header: 'Occupancy', mobile: false, render: (r) => label(r.unit.occupancy) },
+            { key: 'pets', header: 'Pets', mobile: false, render: (r) => r.pets },
+            { key: 'updated', header: 'Updated', mobile: false, render: (r) => (r.updatedAt ? dateTime(r.updatedAt) : <span className="text-slate-400">Not filled</span>) },
           ]} />
-        <Pagination meta={data?.meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
+        <Pagination meta={meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
       </Card>
       {open && <UnitModal unit={open} onClose={() => setOpen(null)} />}
     </div>

@@ -126,7 +126,7 @@ export default function PollsPage() {
   const { data, isLoading } = usePolls({ status: status || undefined, page });
   return (
     <div>
-      <PageHeader title="Polls" description="One vote per household." actions={manager && <Button icon={Plus} onClick={() => setCreating(true)}>New poll</Button>} />
+      <PageHeader title="Polls" description="Tap an option to vote. One vote per flat." actions={manager && <Button icon={Plus} onClick={() => setCreating(true)}>New poll</Button>} />
       <Tabs className="mb-4 w-fit" value={status} onChange={(v) => { setStatus(v); setPage(1); }} tabs={[{ value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }, { value: '', label: 'All' }]} />
       {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? <Card><EmptyState icon={Vote} title="No polls" /></Card> : (
         <div className="grid gap-4 lg:grid-cols-2">

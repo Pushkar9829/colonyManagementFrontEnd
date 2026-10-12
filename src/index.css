@@ -18,3 +18,14 @@
     @apply bg-slate-50 text-slate-800 antialiased;
   }
 }
+
+/* Phones: icon-only buttons get at least a 40px tap area (WCAG 2.5.8), however small the icon. */
+@media (max-width: 639px) {
+  main button:has(> svg:only-child) {
+    min-width: 40px;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}

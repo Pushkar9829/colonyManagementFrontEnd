@@ -25,7 +25,7 @@ export default function WorkOrdersPage() {
     <div>
       <PageHeader title="Work orders" description={manager ? 'Jobs for vendors and technicians, from estimate to verified completion.' : 'Work orders assigned to you.'} actions={manager && <Button icon={Plus} onClick={() => setCreating(true)}>New work order</Button>} />
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={Hammer} label="Open" value={stats.open} />
           <StatCard icon={ClipboardCheck} tone="amber" label="Awaiting verification" value={stats.awaitingVerification} />
           <StatCard icon={IndianRupee} tone="sky" label="Open estimates" value={money(stats.openEstimate)} />

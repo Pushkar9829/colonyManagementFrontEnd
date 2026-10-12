@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertTriangle, FilePlus2, IndianRupee, Play, Plus, Receipt, Repeat } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Attachments, Badge, Button, Card, CardHeader, Input, Modal, Pagination, Select, Spinner, StatCard, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
+import { Attachments, Badge, Button, Card, CardHeader, FilterBar, Input, Modal, Pagination, Select, Spinner, StatCard, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { date, label, money, todayISO } from '../../../lib/format';
 import { DateRange, DownloadButtons } from '../../accounting/components/common';
@@ -78,21 +78,21 @@ function Bills({ initialFilter, onOpen }) {
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e?.target ? e.target.value : e, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <VendorPicker label={undefined} placeholder="All vendors" includeInactive value={filters.vendor} onChange={set('vendor')} />
-        <Select placeholder="Any status" options={BILL_STATUSES} value={filters.status} onChange={set('status')} />
-        <Select placeholder="Any due date" options={[{ value: 'open', label: 'Unpaid / partly paid' }, { value: 'overdue', label: 'Overdue' }]} value={filters.due} onChange={set('due')} />
-        <Input placeholder="Invoice or bill no." value={filters.search} onChange={set('search')} />
-        <Input type="date" aria-label="From" value={range.from} onChange={(e) => setRange({ ...range, from: e.target.value })} />
-        <Input type="date" aria-label="To" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
-      </div>
+      <FilterBar cols={5} active={[filters.vendor, filters.status, filters.due, range.from, range.to].filter(Boolean).length}
+        search={<Input label="Search" placeholder="Invoice or bill no." value={filters.search} onChange={set('search')} />}>
+        <VendorPicker label="Vendor" placeholder="All vendors" includeInactive value={filters.vendor} onChange={set('vendor')} />
+        <Select label="Status" placeholder="Any status" options={BILL_STATUSES} value={filters.status} onChange={set('status')} />
+        <Select label="Payment" placeholder="Any" options={[{ value: 'open', label: 'Unpaid / partly paid' }, { value: 'overdue', label: 'Overdue' }]} value={filters.due} onChange={set('due')} />
+        <Input label="Bill date from" type="date" value={range.from} max={range.to || undefined} onChange={(e) => setRange({ ...range, from: e.target.value })} />
+        <Input label="Bill date to" type="date" value={range.to} min={range.from || undefined} onChange={(e) => setRange({ ...range, to: e.target.value })} />
+      </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No vendor bills" onRowClick={(b) => onOpen(b._id)}
         columns={[
           { key: 'number', header: 'Bill', render: (b) => <div><p className="font-mono text-xs font-semibold">{b.number}</p><p className="text-xs text-slate-500">{b.billNo}</p></div> },
           { key: 'vendor', header: 'Vendor', render: (b) => b.vendor?.name },
-          { key: 'billDate', header: 'Date', render: (b) => date(b.billDate) },
+          { key: 'billDate', header: 'Date', mobile: false, render: (b) => date(b.billDate) },
           { key: 'dueDate', header: 'Due', render: (b) => <span className={overdue(b) ? 'font-medium text-red-600' : ''}>{date(b.dueDate)}</span> },
-          { key: 'total', header: 'Total', className: 'text-right', render: (b) => <span className="tabular-nums">{money(b.total)}</span> },
+          { key: 'total', header: 'Total', className: 'text-right', mobile: false, render: (b) => <span className="tabular-nums">{money(b.total)}</span> },
           { key: 'balance', header: 'Balance', className: 'text-right', render: (b) => <span className={cn('tabular-nums', b.balance ? 'font-medium text-slate-900' : 'text-slate-400')}>{money(b.balance)}</span> },
           { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
         ]} />
@@ -133,11 +133,11 @@ function Ageing() {
   const { data, isLoading } = useAgeing({ asOf });
   return (
     <Card>
-      <CardHeader title="Payables ageing" subtitle="Unpaid vendor bills by age from the bill date"
-        action={<div className="flex flex-wrap items-center gap-2"><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/expenses/reports/ageing" query={{ asOf }} filename={`payables-ageing-${asOf}`} /></div>} />
+      <CardHeader title="Unpaid vendor bills by age" subtitle="How long each unpaid bill has been waiting, counted from the bill date"
+        action={<div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium text-slate-700">As of</span><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/expenses/reports/ageing" query={{ asOf }} filename={`payables-ageing-${asOf}`} /></div>} />
       {isLoading || !data ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <>
-          <div className="grid gap-3 p-4 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:gap-3 p-4 sm:grid-cols-5">
             {data.buckets.map((b) => <StatCard key={b.key} label={b.label} value={money(data.totals[b.key])} tone={b.key === 'd90_plus' ? 'red' : b.key === 'd61_90' ? 'amber' : 'brand'} />)}
             <StatCard label="Overdue" value={money(data.totals.overdue)} tone="red" icon={AlertTriangle} />
           </div>
@@ -165,7 +165,7 @@ function ExpenseReport() {
       <CardHeader title="Expenses by month" subtitle={groupBy === 'account' ? 'All expense accounts in the books' : 'Vendor bills by vendor category'}
         action={<DownloadButtons path="/expenses/reports/expenses" query={query} filename={`expenses-${range.to}`} />} />
       <div className="grid gap-3 border-b border-slate-100 p-4 lg:grid-cols-[1fr_3fr]">
-        <Select aria-label="Group by" value={groupBy} onChange={(e) => setGroupBy(e.target.value)} options={[{ value: 'account', label: 'By account' }, { value: 'category', label: 'By vendor category' }]} />
+        <Select label="Group by" value={groupBy} onChange={(e) => setGroupBy(e.target.value)} options={[{ value: 'account', label: 'By account' }, { value: 'category', label: 'By vendor category' }]} />
         <DateRange value={range} onChange={setRange} />
       </div>
       {isLoading || !data ? <div className="flex justify-center py-10"><Spinner /></div> : (
@@ -196,7 +196,7 @@ function Stats() {
   const { data } = useAgeing({});
   if (!data) return null;
   return (
-    <div className="mb-6 grid gap-4 sm:grid-cols-3">
+    <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
       <StatCard icon={Receipt} label="Owed to vendors" value={money(data.totals.total)} sub={`${data.totals.bills} open bills`} />
       <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={money(data.totals.overdue)} />
       <StatCard icon={Repeat} tone="amber" label="Older than 60 days" value={money(data.totals.d61_90 + data.totals.d90_plus)} />
@@ -220,7 +220,7 @@ export default function VendorBillsPage() {
         actions={<Button icon={FilePlus2} onClick={() => setAdding(true)}>Record bill</Button>} />
       <Stats />
       <Tabs className="mb-4 w-fit" value={tab} onChange={setTab}
-        tabs={[{ value: 'bills', label: 'Bills' }, { value: 'recurring', label: 'Recurring' }, { value: 'ageing', label: 'Ageing' }, { value: 'report', label: 'Expense report' }]} />
+        tabs={[{ value: 'bills', label: 'Bills' }, { value: 'recurring', label: 'Recurring' }, { value: 'ageing', label: 'Overdue by age' }, { value: 'report', label: 'Expense report' }]} />
       {tab === 'bills' && <Bills initialFilter={params.get('filter') || ''} onOpen={setOpenId} />}
       {tab === 'recurring' && <Recurring />}
       {tab === 'ageing' && <Ageing />}

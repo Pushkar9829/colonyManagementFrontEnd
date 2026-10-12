@@ -74,11 +74,11 @@ function MyChildren() {
   const children = data?.data || [];
   return (
     <Card className="mb-6">
-      <CardHeader title="My children" subtitle="Guards see these children and alert you when one leaves the gate alone." action={<Button size="sm" icon={Plus} onClick={() => setEditing({})}>Add child</Button>} />
+      <CardHeader title="My children" subtitle="Guards see these children and alert you when one leaves the gate alone." action={<Button icon={Plus} className="w-full sm:w-auto" onClick={() => setEditing({})}>Add child</Button>} />
       {isLoading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : !children.length ? (
-        <EmptyState icon={Baby} title="No children added" description="Add your child so the gate can alert you if they walk out alone." />
+        <EmptyState icon={Baby} title="No children added" description="Add your child so the gate can alert you if they walk out alone." action={<Button icon={Plus} onClick={() => setEditing({})}>Add child</Button>} />
       ) : (
         <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-3">
           {children.map((c) => (
@@ -105,12 +105,12 @@ function MyChildren() {
                   <span className={cn('absolute top-0.5 size-5 rounded-full bg-white shadow transition-all', c.alertOnExit ? 'left-5.5' : 'left-0.5')} />
                 </span>
               </label>
-              <div className="mt-2 flex justify-end gap-1">
-                <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(c)}>Edit</Button>
-                <Button size="sm" variant="ghost" icon={Trash2} className="text-red-600 hover:bg-red-50" loading={remove.isPending && remove.variables === c._id}
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <Button size="sm" variant="ghost" icon={Trash2} className="text-slate-500 hover:bg-red-50 hover:text-red-600" loading={remove.isPending && remove.variables === c._id}
                   onClick={() => window.confirm(`Remove ${c.name}? Guards will no longer see this child.`) && remove.mutate(c._id)}>
                   Delete
                 </Button>
+                <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(c)}>Edit</Button>
               </div>
             </div>
           ))}

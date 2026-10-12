@@ -20,7 +20,7 @@ function PlanCard({ plan, features }) {
     );
   return (
     <Card>
-      <CardHeader title={label(plan.plan)} subtitle={plan.custom ? 'Custom price' : 'Default price'} action={<Badge tone="brand">{features?.length ? `${features.length} modules` : 'core only'}</Badge>} />
+      <CardHeader title={label(plan.plan)} subtitle={plan.custom ? 'Custom price' : 'Price for new societies'} action={<Badge tone="brand">{features?.length ? `${features.length} modules` : 'core only'}</Badge>} />
       <div className="grid gap-3 p-5 sm:grid-cols-3">
         <Input label="Per unit / month (₹)" type="number" min={0} step="0.01" value={v.perUnit} onChange={set('perUnit')} />
         <Input label="Flat fee / month (₹)" type="number" min={0} step="0.01" value={v.flat} onChange={set('flat')} />

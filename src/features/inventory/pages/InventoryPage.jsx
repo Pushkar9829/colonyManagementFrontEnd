@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Download, Package, Plus, Wallet } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Input, Modal, Pagination, Select, StatCard, Table, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, FilterBar, Input, Modal, Pagination, Select, StatCard, Table, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
@@ -12,7 +12,10 @@ import { clean, downloadFile, opts, usePeople } from '../../assets/shared';
 import { useAdjustStock, useCreateItem, useItems, useMovements, useStockIn, useStockOut, useUpdateItem, useValuation } from '../api';
 
 const CATEGORIES = opts(['electrical', 'plumbing', 'cleaning', 'chemical', 'spare_part', 'consumable', 'stationery', 'safety', 'garden', 'other']);
-const UNITS = ['pcs', 'kg', 'g', 'l', 'ml', 'm', 'box', 'pack', 'roll', 'set', 'pair', 'can', 'bottle'].map((u) => ({ value: u, label: u }));
+// Units are stored lower-case; litres are written "L" so "60 l" never reads as "60 1".
+const UNIT_TEXT = { l: 'L', ml: 'mL' };
+const unitText = (u) => UNIT_TEXT[u] || u || '';
+const UNITS = ['pcs', 'kg', 'g', 'l', 'ml', 'm', 'box', 'pack', 'roll', 'set', 'pair', 'can', 'bottle'].map((u) => ({ value: u, label: unitText(u) }));
 const TYPE_TONES = { in: 'green', out: 'amber', adjust: 'blue' };
 const qty = (n) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: 3 });
 
@@ -62,11 +65,11 @@ function MoveModal({ item, mode, onClose }) {
   };
   const titles = { in: 'Receive stock', out: 'Issue stock', adjust: 'Stock count correction' };
   return (
-    <Modal open onClose={onClose} title={`${titles[mode]} · ${item.name}`} description={`In stock: ${qty(item.stock)} ${item.unit}`}
+    <Modal open onClose={onClose} title={`${titles[mode]} · ${item.name}`} description={`In stock: ${qty(item.stock)} ${unitText(item.unit)}`}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={stockIn.isPending || stockOut.isPending || adjust.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        {mode !== 'adjust' && <Input label={`Quantity (${item.unit})`} type="number" min="0" step="any" required {...bind('qty')} />}
-        {mode === 'adjust' && <Input label={`Counted quantity (${item.unit})`} type="number" min="0" step="any" required {...bind('countedQty')} />}
+        {mode !== 'adjust' && <Input label={`Quantity (${unitText(item.unit)})`} type="number" min="0" step="any" required {...bind('qty')} />}
+        {mode === 'adjust' && <Input label={`Counted quantity (${unitText(item.unit)})`} type="number" min="0" step="any" required {...bind('countedQty')} />}
         <Input label="Date" type="date" {...bind('date')} />
         {mode === 'in' && (
           <>
@@ -95,17 +98,17 @@ function ItemsTab({ manager, lowOnly }) {
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-        <Input placeholder="Search items…" value={f.search} onChange={set('search')} />
-        <Select placeholder="All categories" options={CATEGORIES} value={f.category} onChange={set('category')} />
-        <Select placeholder="All stock levels" options={[{ value: 'true', label: 'At / below reorder level' }]} value={f.low} onChange={set('low')} />
-      </div>
+      <FilterBar cols={3} active={[f.category, f.low].filter(Boolean).length}
+        search={<Input aria-label="Search items" placeholder="Search items…" value={f.search} onChange={set('search')} />}>
+        <Select aria-label="Category" placeholder="All categories" options={CATEGORIES} value={f.category} onChange={set('category')} />
+        <Select aria-label="Stock level" placeholder="All stock levels" options={[{ value: 'true', label: 'At / below reorder level' }]} value={f.low} onChange={set('low')} />
+      </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No items"
         columns={[
           { key: 'name', header: 'Item', render: (i) => <div><p className="font-medium text-slate-900">{i.name}</p><p className="text-xs text-slate-500">{i.code} · {label(i.category)}{i.location ? ` · ${i.location}` : ''}</p></div> },
-          { key: 'stock', header: 'In stock', render: (i) => <span className="flex items-center gap-2 font-medium">{qty(i.stock)} {i.unit}{i.low && <Badge tone="red">Reorder</Badge>}</span> },
-          { key: 'reorderLevel', header: 'Reorder at', render: (i) => (i.reorderLevel ? `${qty(i.reorderLevel)} ${i.unit}` : '—') },
-          { key: 'avgCost', header: 'Avg cost', render: (i) => money(i.avgCost) },
+          { key: 'stock', header: 'In stock', render: (i) => <span className="flex items-center gap-2 font-medium">{qty(i.stock)} {unitText(i.unit)}{i.low && <Badge tone="red">Reorder</Badge>}</span> },
+          { key: 'reorderLevel', header: 'Reorder at', render: (i) => (i.reorderLevel ? `${qty(i.reorderLevel)} ${unitText(i.unit)}` : '—') },
+          { key: 'avgCost', header: 'Avg cost', mobile: false, render: (i) => money(i.avgCost) },
           { key: 'value', header: 'Value', render: (i) => money(i.value) },
           { key: 'act', header: '', render: (i) => manager && (
             <div className="flex gap-1">
@@ -130,22 +133,22 @@ function LedgerTab() {
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-4">
-        <Select placeholder="All movements" options={[{ value: 'in', label: 'Stock in' }, { value: 'out', label: 'Issued' }, { value: 'adjust', label: 'Adjustments' }]} value={f.type} onChange={set('type')} />
-        <Input type="date" value={f.from} onChange={set('from')} />
-        <Input type="date" value={f.to} onChange={set('to')} />
-        <Button variant="secondary" icon={Download} onClick={() => downloadFile('/inventory/export', { report: 'ledger', from: f.from, to: f.to }, 'stock-ledger.xlsx').catch((e) => toast.error(e))}>Excel</Button>
-      </div>
+      <FilterBar cols={4} active={[f.type, f.from, f.to].filter(Boolean).length}>
+        <Select label="Movement" placeholder="All movements" options={[{ value: 'in', label: 'Stock in' }, { value: 'out', label: 'Issued' }, { value: 'adjust', label: 'Adjustments' }]} value={f.type} onChange={set('type')} />
+        <Input label="From" type="date" value={f.from} max={f.to || undefined} onChange={set('from')} />
+        <Input label="To" type="date" value={f.to} min={f.from || undefined} onChange={set('to')} />
+        <Button className="self-end" variant="secondary" icon={Download} onClick={() => downloadFile('/inventory/export', { report: 'ledger', from: f.from, to: f.to }, 'stock-ledger.xlsx').catch((e) => toast.error(e))}>Download Excel</Button>
+      </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No stock movements"
         columns={[
           { key: 'date', header: 'Date', render: (m) => <div><p>{date(m.date)}</p><p className="text-xs text-slate-400">{dateTime(m.createdAt)}</p></div> },
           { key: 'item', header: 'Item', render: (m) => m.item?.name },
           { key: 'type', header: 'Type', render: (m) => <Badge tone={TYPE_TONES[m.type]}>{m.type === 'out' ? 'Issued' : label(m.type)}</Badge> },
-          { key: 'qty', header: 'Qty', render: (m) => <span className={m.qty < 0 ? 'text-amber-700' : 'text-emerald-700'}>{m.qty > 0 ? '+' : ''}{qty(m.qty)} {m.item?.unit}</span> },
+          { key: 'qty', header: 'Qty', render: (m) => <span className={m.qty < 0 ? 'text-amber-700' : 'text-emerald-700'}>{m.qty > 0 ? '+' : ''}{qty(m.qty)} {unitText(m.item?.unit)}</span> },
           { key: 'balanceAfter', header: 'Balance', render: (m) => qty(m.balanceAfter) },
           { key: 'value', header: 'Value', render: (m) => money(Math.abs(m.value)) },
           { key: 'party', header: 'Vendor / issued to', className: 'max-w-xs whitespace-normal', render: (m) => [m.vendorName, m.invoiceNumber, m.issuedTo?.name, m.location, m.reason].filter(Boolean).join(' · ') || '—' },
-          { key: 'by', header: 'By', render: (m) => m.by?.name || '—' },
+          { key: 'by', header: 'By', mobile: false, render: (m) => m.by?.name || '—' },
         ]} />
       <Pagination meta={data?.meta} onPage={(page) => setF((x) => ({ ...x, page }))} />
     </Card>
@@ -158,7 +161,7 @@ function ValuationTab() {
   return (
     <div className="space-y-4">
       {data && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
           <StatCard icon={Wallet} label="Stock value" value={money(data.totalValue)} sub="At moving average cost" />
           <StatCard icon={Package} tone="sky" label="Items" value={data.items.length} />
           <StatCard icon={AlertTriangle} tone="red" label="At reorder level" value={data.lowStock} />

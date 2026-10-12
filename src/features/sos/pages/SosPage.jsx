@@ -2,11 +2,35 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PhoneCall, Siren } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Button, Card, EmptyState, Pagination, Spinner, StatusBadge, Tabs } from '../../../components/ui';
+import { Badge, Button, Card, EmptyState, Modal, Pagination, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { dateTime, label, timeAgo } from '../../../lib/format';
 import { hasRole } from '../../../lib/roles';
 import { useAcknowledgeSos, useResolveSos, useSosAlerts } from '../api';
+
+// Plain words for the alert states (the API says active / acknowledged / resolved).
+const STATUS = { active: { label: 'Open', tone: 'red' }, acknowledged: { label: 'Guard responding', tone: 'blue' }, resolved: { label: 'Closed', tone: 'slate' } };
+
+function CloseModal({ alert, responder, onClose, onConfirm, busy }) {
+  const [note, setNote] = useState('');
+  return (
+    <Modal
+      open={Boolean(alert)}
+      onClose={onClose}
+      size="sm"
+      title={responder ? 'Close this alert?' : 'Cancel your alert?'}
+      description={alert ? `${label(alert.type)} emergency${alert.unit ? ` · ${alert.unit.label}` : ''}` : ''}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>Back</Button>
+          <Button loading={busy} onClick={() => onConfirm(note.trim())}>{responder ? 'Close alert' : 'Cancel alert'}</Button>
+        </>
+      }
+    >
+      <Textarea label={responder ? 'What happened? (optional)' : 'Why are you cancelling? (optional)'} rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+    </Modal>
+  );
+}
 
 export default function SosPage() {
   const { user } = useAuth();
@@ -15,7 +39,14 @@ export default function SosPage() {
   const { data, isLoading } = useSosAlerts({ status: status || undefined, page });
   const ack = useAcknowledgeSos();
   const resolve = useResolveSos();
+  const [closing, setClosing] = useState(null);
   const responder = hasRole(user, 'guard', 'facility_manager');
+  // Guards have no SOS button in the header, so their empty state explains what this page does instead.
+  const emptyText = user.role === 'guard'
+    ? 'No alerts right now. When a resident presses SOS, this page rings and the alert appears here.'
+    : responder
+      ? 'When a resident presses SOS, the alert appears here.'
+      : 'Use the red SOS button at the top in an emergency.';
 
   return (
     <div>
@@ -25,7 +56,7 @@ export default function SosPage() {
         actions={<Link to="/emergency"><Button variant="secondary" icon={PhoneCall}>Emergency numbers</Button></Link>}
       />
       <Tabs
-        className="mb-4 w-fit"
+        className="mb-4 w-full sm:w-fit"
         value={status}
         onChange={(v) => {
           setStatus(v);
@@ -33,9 +64,9 @@ export default function SosPage() {
         }}
         tabs={[
           { value: '', label: 'All' },
-          { value: 'active', label: 'Active' },
-          { value: 'acknowledged', label: 'Acknowledged' },
-          { value: 'resolved', label: 'Resolved' },
+          { value: 'active', label: 'Open' },
+          { value: 'acknowledged', label: 'Guard responding' },
+          { value: 'resolved', label: 'Closed' },
         ]}
       />
       <Card>
@@ -44,7 +75,7 @@ export default function SosPage() {
             <Spinner />
           </div>
         ) : !data?.data.length ? (
-          <EmptyState icon={Siren} title="No alerts" description="Use the red SOS button at the top in an emergency." />
+          <EmptyState icon={Siren} title={status ? 'No alerts here' : 'No alerts'} description={emptyText} />
         ) : (
           <ul className="divide-y divide-slate-100">
             {data.data.map((a) => (
@@ -55,7 +86,7 @@ export default function SosPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold text-slate-900">{label(a.type)} emergency</p>
-                    <StatusBadge status={a.status} />
+                    <Badge tone={STATUS[a.status]?.tone}>{STATUS[a.status]?.label || label(a.status)}</Badge>
                   </div>
                   <p className="text-sm text-slate-600">
                     {a.raisedBy?.name}
@@ -66,8 +97,8 @@ export default function SosPage() {
                   {a.message && <p className="mt-1 text-sm text-slate-700">“{a.message}”</p>}
                   <p className="mt-1 text-xs text-slate-400">
                     {dateTime(a.createdAt)} ({timeAgo(a.createdAt)})
-                    {a.acknowledgedBy ? ` · acknowledged by ${a.acknowledgedBy.name}` : ''}
-                    {a.resolvedBy ? ` · resolved by ${a.resolvedBy.name}` : ''}
+                    {a.acknowledgedBy ? ` · ${a.acknowledgedBy.name} responding` : ''}
+                    {a.resolvedBy ? ` · closed by ${a.resolvedBy.name}` : ''}
                     {a.resolutionNote ? ` — ${a.resolutionNote}` : ''}
                   </p>
                 </div>
@@ -80,18 +111,11 @@ export default function SosPage() {
                     )}
                     {responder && a.status === 'active' && (
                       <Button size="sm" loading={ack.isPending && ack.variables === a._id} onClick={() => ack.mutate(a._id)}>
-                        Acknowledge
+                        I’m responding
                       </Button>
                     )}
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        const note = window.prompt(responder ? 'Resolution note' : 'Why are you closing this alert?') ?? null;
-                        if (note !== null) resolve.mutate({ id: a._id, resolutionNote: note || undefined });
-                      }}
-                    >
-                      {responder ? 'Resolve' : 'Cancel alert'}
+                    <Button size="sm" variant="secondary" onClick={() => setClosing(a)}>
+                      {responder ? 'Close alert' : 'Cancel alert'}
                     </Button>
                   </div>
                 )}
@@ -101,6 +125,14 @@ export default function SosPage() {
         )}
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>
+      <CloseModal
+        key={closing?._id}
+        alert={closing}
+        responder={responder}
+        busy={resolve.isPending}
+        onClose={() => setClosing(null)}
+        onConfirm={(note) => resolve.mutate({ id: closing._id, resolutionNote: note || undefined }, { onSuccess: () => setClosing(null) })}
+      />
     </div>
   );
 }

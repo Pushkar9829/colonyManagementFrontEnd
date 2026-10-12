@@ -58,7 +58,7 @@ export default function PlatformSupportPage() {
     <div>
       <PageHeader title="Support tickets" description="Tickets raised by society admins, facility managers and accountants across all societies." />
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
           <StatCard icon={Inbox} label="Waiting for us" value={stats.awaitingPlatform} tone="amber" />
           <StatCard icon={AlertTriangle} label="First-response SLA missed" value={stats.breached} tone="red" />
           <StatCard icon={LifeBuoy} label="Open / in progress" value={(stats.byStatus.open || 0) + (stats.byStatus.in_progress || 0)} tone="sky" />

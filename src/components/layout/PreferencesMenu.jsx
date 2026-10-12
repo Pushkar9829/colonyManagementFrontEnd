@@ -11,7 +11,8 @@ const THEMES = [
 ];
 
 // Language + light/dark theme, stored per device.
-export function PreferencesMenu({ className }) {
+// placement "up" opens the list above the button (used at the bottom of the phone menu).
+export function PreferencesMenu({ className, placement = "down" }) {
   const { t, lang, setLang, languages } = useT();
   const { theme, setTheme, resolved } = useTheme();
   const [open, setOpen] = useState(false);
@@ -29,10 +30,11 @@ export function PreferencesMenu({ className }) {
     <div className={cn('relative', className)} ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700" aria-label={`${t('Language')} / ${t('Theme')}`} aria-expanded={open}>
         <Languages className="size-5" />
-        <ThemeIcon className="size-4" />
+        <span className="text-xs font-semibold">{{ en: 'EN', hi: 'हि', mr: 'म' }[lang] || lang.toUpperCase()}</span>
+        <ThemeIcon className="ml-0.5 size-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className={cn("absolute z-40 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg", placement === "up" ? "bottom-full left-0 mb-2" : "right-0 mt-2")}>
           <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{t('Language')}</p>
           {languages.map((l) => (
             <button key={l.code} type="button" onClick={() => setLang(l.code)} className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50">

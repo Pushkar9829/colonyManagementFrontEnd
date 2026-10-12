@@ -6,4 +6,5 @@ export { Table, Pagination } from './Table';
 export { Badge, StatusBadge } from './Badge';
 export { Spinner, PageLoader, EmptyState, ErrorState } from './Feedback';
 export { Tabs } from './Tabs';
+export { FilterBar } from './FilterBar';
 export { FileUpload, Attachments } from './FileUpload';

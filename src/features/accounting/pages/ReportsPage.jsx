@@ -104,7 +104,7 @@ function BalanceSheet() {
   const d = q.data;
   return (
     <Frame title="Balance sheet" subtitle={d && <span className="flex items-center gap-2">As of {date(asOf)} <BalancedBadge ok={d.balanced} /></span>} loading={q.isLoading} error={q.error} refetch={q.refetch}
-      actions={<div className="flex flex-wrap items-center gap-2"><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/accounting/reports/balance-sheet" query={{ asOf }} filename={`balance-sheet-${asOf}`} /></div>}>
+      actions={<div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium text-slate-700">As of</span><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/accounting/reports/balance-sheet" query={{ asOf }} filename={`balance-sheet-${asOf}`} /></div>}>
       {d && (
         <div className="grid gap-0 lg:grid-cols-2 lg:divide-x lg:divide-slate-100">
           <table className="min-w-full text-sm">

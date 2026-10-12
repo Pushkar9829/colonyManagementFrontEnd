@@ -37,7 +37,7 @@ function SearchBox({ value, onChange, placeholder }) {
   return (
     <div className="relative">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-      <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+      <input aria-label={placeholder} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
     </div>
   );
 }
@@ -160,13 +160,14 @@ function Listings({ openId, onOpen }) {
   const reset = () => setPage(1);
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* phones: the button gets its own row so it never sits on top of the chips */}
+      <div className="mb-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
           {['', ...TYPES].map((t) => (
-            <button key={t || 'all'} type="button" onClick={() => { setType(t); reset(); }} className={cn('shrink-0 rounded-full border px-3 py-1 text-sm font-medium', type === t ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600')}>{t ? TYPE_LABEL[t] : 'All'}</button>
+            <button key={t || 'all'} type="button" onClick={() => { setType(t); reset(); }} className={cn('inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium sm:min-h-8', type === t ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600')}>{t ? TYPE_LABEL[t] : 'All'}</button>
           ))}
         </div>
-        <Button className="shrink-0" icon={Plus} onClick={() => setCreating(true)}>Sell / post</Button>
+        <Button className="w-full shrink-0 sm:w-auto" icon={Plus} onClick={() => setCreating(true)}>Sell / post</Button>
       </div>
       <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_12rem_auto]">
         <SearchBox value={search} onChange={(v) => { setSearch(v); reset(); }} placeholder="Search listings" />

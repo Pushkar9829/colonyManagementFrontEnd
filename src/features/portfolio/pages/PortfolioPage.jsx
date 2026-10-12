@@ -46,7 +46,7 @@ export default function PortfolioPage() {
   return (
     <div>
       <PageHeader title="Portfolio" description={`${totals.societies} societies you manage · ${periodLabel(period)}`} />
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Wallet} tone="green" label="Collected this month" value={money(totals.collectedThisMonth)} sub={`of ${money(totals.billedThisMonth)} billed${totals.collectionRate !== null ? ` · ${totals.collectionRate}%` : ''}`} />
         <StatCard icon={IndianRupee} tone="red" label="Overdue" value={money(totals.overdueAmount)} sub={`${totals.overdueBills} bills`} />
         <StatCard icon={Wrench} tone="amber" label="Open complaints" value={totals.openComplaints} sub={`${totals.slaBreaches} past SLA`} />

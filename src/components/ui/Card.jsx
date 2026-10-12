@@ -11,8 +11,8 @@ export function Card({ className, children, ...props }) {
 
 export function CardHeader({ title, subtitle, action, className }) {
   return (
-    <div className={cn('flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4', className)}>
-      <div className="min-w-0">
+    <div className={cn('flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4', className)}>
+      <div className="min-w-0 flex-1 basis-48">
         <h3 className="font-semibold text-slate-900">{title}</h3>
         {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
       </div>
@@ -32,16 +32,17 @@ const tones = {
 
 export function StatCard({ label, value, sub, icon: Icon, tone = 'brand', to }) {
   const body = (
-    <Card className={cn('flex items-center gap-4 p-4', to && 'transition hover:border-brand-200 hover:shadow')}>
+    <Card className={cn('flex h-full items-center gap-4 p-3 sm:p-4', to && 'transition hover:border-brand-200 hover:shadow')}>
       {Icon && (
-        <div className={cn('flex size-11 shrink-0 items-center justify-center rounded-lg', tones[tone])}>
+        // two cards share a phone row, so the icon makes way for the number there
+        <div className={cn('hidden size-11 shrink-0 items-center justify-center rounded-lg sm:flex', tones[tone])}>
           <Icon className="size-5" />
         </div>
       )}
       <div className="min-w-0">
-        <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-0.5 text-xl font-semibold text-slate-900">{value}</p>
-        {sub && <p className="truncate text-xs text-slate-500">{sub}</p>}
+        <p className="line-clamp-2 text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+        <p className="mt-0.5 break-words text-lg font-semibold text-slate-900 sm:text-xl">{value}</p>
+        {sub && <p className="line-clamp-2 text-xs text-slate-500">{sub}</p>}
       </div>
     </Card>
   );

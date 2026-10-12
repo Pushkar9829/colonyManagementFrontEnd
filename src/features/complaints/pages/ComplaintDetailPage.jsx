@@ -102,7 +102,7 @@ export default function ComplaintDetailPage() {
             <StatusBadge status={c.priority} />
             <Badge>{c.categoryName || label(c.category)}</Badge>
             <Badge>{c.area === 'common' ? 'Common area' : c.unit?.label || 'Unit'}</Badge>
-            {c.isOverdue && <Badge tone="red">SLA breached</Badge>}
+            {c.isOverdue && <Badge tone="red">Past deadline</Badge>}
             {c.escalationLevel > 0 && <Badge tone="amber">Escalated · level {c.escalationLevel}</Badge>}
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function ComplaintDetailPage() {
         <div className="space-y-6">
           <Card className="space-y-4 p-5 text-sm">
             <div>
-              <p className="text-xs uppercase tracking-wide text-slate-500">SLA due</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Deadline</p>
               <p className={cn('font-medium', c.isOverdue ? 'text-red-600' : 'text-slate-800')}>{dateTime(c.slaDueAt)}</p>
             </div>
             <div>

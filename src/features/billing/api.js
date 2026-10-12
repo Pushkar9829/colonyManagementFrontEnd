@@ -114,4 +114,35 @@ async function payOnline(target) {
   });
 }
 
+// Autopay sign-up: the resident authorises the mandate once in the provider checkout (UPI AutoPay
+// debits ₹1, kept as advance; e-NACH debits nothing and the bank confirms it in a few days).
+async function setupAutopay({ maxAmount, method }) {
+  const o = await api.post('/payments/autopay/start', { maxAmount, method });
+  const limit = `₹${(maxAmount / 100).toLocaleString('en-IN')}`;
+  if (o.provider === 'mock') {
+    if (!window.confirm(`Test mandate up to ${limit} per bill. Simulate the bank authorisation?`)) throw new Error('Autopay set-up cancelled');
+    const signed = await api.post('/payments/mock/sign', { orderId: o.orderId });
+    return api.post('/payments/autopay/confirm', signed);
+  }
+  await loadRazorpay();
+  return new Promise((resolve, reject) => {
+    const rzp = new window.Razorpay({
+      key: o.keyId,
+      order_id: o.orderId,
+      customer_id: o.customerId,
+      recurring: '1',
+      name: 'Autopay mandate',
+      description: `Maintenance bills up to ${limit} each`,
+      prefill: { name: o.name, email: o.email, contact: o.contact },
+      handler: (resp) =>
+        api.post('/payments/autopay/confirm', { orderId: resp.razorpay_order_id, paymentId: resp.razorpay_payment_id, signature: resp.razorpay_signature }).then(resolve, reject),
+      modal: { ondismiss: () => reject(new Error('Autopay set-up cancelled')) },
+    });
+    rzp.open();
+  });
+}
+
+export const useSetupAutopay = (o) =>
+  useApiMutation(setupAutopay, { invalidate: ['finance'], success: (m) => (m.status === 'active' ? 'Autopay is on' : 'Waiting for your bank to approve the mandate'), ...o });
+
 export const usePayOnline = (o) => useApiMutation(payOnline, { ...inv, success: (p) => `Payment successful · ${p.receiptNumber}`, ...o });

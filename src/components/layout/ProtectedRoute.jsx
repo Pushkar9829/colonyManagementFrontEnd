@@ -8,6 +8,8 @@ export function RequireAuth() {
   const location = useLocation();
   if (booting) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  // The society requires two-step verification for this role and it isn't on yet: nothing else until it is.
+  if (user.mfaSetupRequired && location.pathname !== '/setup-two-step') return <Navigate to="/setup-two-step" replace />;
   return <Outlet />;
 }
 

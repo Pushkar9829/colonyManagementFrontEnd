@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, Plus } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, CardHeader, Checkbox, Input, Pagination, Select, Table, Tabs } from '../../../components/ui';
+import { Badge, Button, Card, CardHeader, Checkbox, FilterBar, Input, Pagination, Select, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { date, label, money, toPaise, toRupees } from '../../../lib/format';
@@ -13,26 +13,25 @@ import { DEPARTMENTS, EmployeeModal } from '../components/EmployeeModal';
 const PV_TONES = { verified: 'green', submitted: 'amber', failed: 'red', not_started: 'slate' };
 const grossOf = (s = {}) => (s.basic || 0) + (s.hra || 0) + (s.allowances || []).reduce((t, a) => t + a.amount, 0);
 
-function EmployeesTab({ manager }) {
+function EmployeesTab({ manager, creating, setCreating }) {
   const [f, setF] = useState({ search: '', department: '', status: 'active', page: 1 });
   const { data, isLoading } = useEmployees(Object.fromEntries(Object.entries(f).filter(([, v]) => v)));
   const [edit, setEdit] = useState(null);
-  const [creating, setCreating] = useState(false);
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-4">
-        <Input placeholder="Search name, code…" value={f.search} onChange={set('search')} />
-        <Select placeholder="All departments" options={DEPARTMENTS} value={f.department} onChange={set('department')} />
-        <Select placeholder="Any status" options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Left' }]} value={f.status} onChange={set('status')} />
-        {manager && <Button icon={Plus} onClick={() => setCreating(true)}>Add employee</Button>}
-      </div>
+      <FilterBar cols={3} active={[f.department, f.status !== 'active' && f.status].filter(Boolean).length}
+        search={<Input aria-label="Search employees" placeholder="Search name, code…" value={f.search} onChange={set('search')} />}>
+        <Select aria-label="Department" placeholder="All departments" options={DEPARTMENTS} value={f.department} onChange={set('department')} />
+        <Select aria-label="Status" placeholder="Any status" options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Left' }]} value={f.status} onChange={set('status')} />
+      </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No employees yet" onRowClick={manager ? setEdit : undefined}
+        emptyAction={manager && <Button icon={Plus} onClick={() => setCreating(true)}>Add employee</Button>}
         columns={[
-          { key: 'employeeCode', header: 'Code', render: (e) => <span className="font-mono text-xs font-semibold">{e.employeeCode}</span> },
           { key: 'name', header: 'Name', render: (e) => <div><p className="font-medium text-slate-900">{e.user?.name}</p><p className="text-xs text-slate-500">{e.designation || label(e.membership?.role)} · {label(e.department)}</p></div> },
-          { key: 'doj', header: 'Joined', render: (e) => (e.dateOfJoining ? date(e.dateOfJoining) : '—') },
-          { key: 'shift', header: 'Shift', render: (e) => (e.defaultShift ? `${e.defaultShift.name} ${e.defaultShift.start}–${e.defaultShift.end}` : '—') },
+          { key: 'employeeCode', header: 'Code', render: (e) => <span className="font-mono text-xs font-semibold">{e.employeeCode}</span> },
+          { key: 'doj', header: 'Joined', mobile: false, render: (e) => (e.dateOfJoining ? date(e.dateOfJoining) : '—') },
+          { key: 'shift', header: 'Shift', mobile: false, render: (e) => (e.defaultShift ? `${e.defaultShift.name} ${e.defaultShift.start}–${e.defaultShift.end}` : '—') },
           { key: 'gross', header: 'Gross / month', render: (e) => money(grossOf(e.salary)) },
           { key: 'bank', header: 'Bank', render: (e) => (e.bank?.accountLast4 ? `•••• ${e.bank.accountLast4}` : <span className="text-amber-600">Missing</span>) },
           { key: 'pv', header: 'Police verification', render: (e) => <Badge tone={PV_TONES[e.policeVerification?.status || 'not_started']}>{label(e.policeVerification?.status || 'not_started')}</Badge> },
@@ -136,11 +135,13 @@ export default function EmployeesPage() {
   const manager = isManager(user);
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'employees';
+  const [creating, setCreating] = useState(false);
   return (
     <div>
-      <PageHeader title="Employees" description="HR profiles of society staff: salary structure, bank, documents and police verification." />
+      <PageHeader title="Employees" description="HR profiles of society staff: salary structure, bank, documents and police verification."
+        actions={manager && tab === 'employees' && <Button icon={Plus} onClick={() => setCreating(true)}>Add employee</Button>} />
       {manager && <Tabs className="mb-4" value={tab} onChange={(t) => setParams({ tab: t })} tabs={[{ value: 'employees', label: 'Employees' }, { value: 'shifts', label: 'Shifts' }, { value: 'settings', label: 'HR settings' }]} />}
-      {tab === 'employees' && <EmployeesTab manager={manager} />}
+      {tab === 'employees' && <EmployeesTab manager={manager} creating={creating} setCreating={setCreating} />}
       {manager && tab === 'shifts' && <ShiftsTab />}
       {manager && tab === 'settings' && <SettingsTab />}
     </div>

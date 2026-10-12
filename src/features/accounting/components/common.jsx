@@ -46,10 +46,10 @@ export function DateRange({ value, onChange, className }) {
   const active = presets.find((p) => p.from === value.from && p.to === value.to)?.key || '';
   return (
     <div className={cn('grid gap-3 sm:grid-cols-[1fr_1fr_1fr]', className)}>
-      <Select aria-label="Period" placeholder="Custom range" value={active} onChange={(e) => { const p = presets.find((x) => x.key === e.target.value); if (p) onChange({ from: p.from, to: p.to }); }}
+      <Select label="Period" placeholder="Custom dates" value={active} onChange={(e) => { const p = presets.find((x) => x.key === e.target.value); if (p) onChange({ from: p.from, to: p.to }); }}
         options={presets.map((p) => ({ value: p.key, label: p.label }))} />
-      <Input type="date" aria-label="From" value={value.from} max={value.to} onChange={(e) => onChange({ ...value, from: e.target.value })} />
-      <Input type="date" aria-label="To" value={value.to} min={value.from} onChange={(e) => onChange({ ...value, to: e.target.value })} />
+      <Input type="date" label="From" value={value.from} max={value.to} onChange={(e) => onChange({ ...value, from: e.target.value })} />
+      <Input type="date" label="To" value={value.to} min={value.from} onChange={(e) => onChange({ ...value, to: e.target.value })} />
     </div>
   );
 }

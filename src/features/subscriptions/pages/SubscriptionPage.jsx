@@ -90,7 +90,7 @@ export default function SubscriptionPage() {
           <p>{overdueInvoices} invoice{overdueInvoices > 1 ? 's are' : ' is'} overdue. Access for all members will be suspended on {date(suspendsOn)} unless paid.</p>
         </div>
       )}
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Layers} label="Plan" value={label(society.plan?.name || 'free')} sub={`${units} units · ${society.plan?.unitLimit ? `limit ${society.plan.unitLimit}` : 'no unit limit'}`} />
         <StatCard icon={CalendarClock} tone="green" label="Paid until" value={sub.paidUntil ? date(sub.paidUntil) : '—'} sub={label(sub.status)} />
         <StatCard icon={IndianRupee} tone={outstanding ? 'amber' : 'slate'} label="Outstanding" value={money(outstanding)} />

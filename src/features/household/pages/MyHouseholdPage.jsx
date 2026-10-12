@@ -226,8 +226,8 @@ const TABS = [
   { value: 'pets', label: 'Pets' },
   { value: 'contacts', label: 'Emergency contacts' },
   { value: 'medical', label: 'Medical' },
-  { value: 'kyc', label: 'KYC' },
-  { value: 'lease', label: 'Lease' },
+  { value: 'kyc', label: 'ID proof' },
+  { value: 'lease', label: 'Rent agreement' },
 ];
 
 export default function MyHouseholdPage() {
@@ -236,7 +236,7 @@ export default function MyHouseholdPage() {
   const { data: h, isLoading } = useMyHousehold();
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="My household" description={h?.unit ? `${h.unit.label} — family, pets, emergency details, KYC and lease` : 'Family, pets, emergency details, KYC and lease'} />
+      <PageHeader title="My household" description={h?.unit ? `${h.unit.label} — family, pets, emergency details, ID proof and rent agreement` : 'Family, pets, emergency details, ID proof and rent agreement'} />
       <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={(t) => setParams({ tab: t }, { replace: true })} tabs={TABS} />
       {isLoading || !h ? <div className="flex justify-center py-12"><Spinner /></div> : (
         <>

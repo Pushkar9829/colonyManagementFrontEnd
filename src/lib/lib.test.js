@@ -5,9 +5,10 @@ import { navFor } from '../app/navigation';
 
 describe('format', () => {
   it('formats paise as Indian rupees', () => {
-    expect(money(370000)).toBe('₹3,700.00');
-    expect(money(14480000)).toBe('₹1,44,800.00'); // lakh grouping
-    expect(money(undefined)).toBe('₹0.00');
+    expect(money(370000)).toBe('₹3,700');
+    expect(money(14480000)).toBe('₹1,44,800'); // lakh grouping
+    expect(money(370050)).toBe('₹3,700.50');
+    expect(money(undefined)).toBe('₹0');
   });
 
   it('converts rupees and paise without float drift', () => {
@@ -18,6 +19,7 @@ describe('format', () => {
 
   it('humanises enum values', () => {
     expect(label('in_progress')).toBe('In Progress');
+    expect(label('amc')).toBe('AMC');
     expect(label('')).toBe('');
   });
 
@@ -60,8 +62,9 @@ describe('roles', () => {
 describe('translations', () => {
   it('every sidebar label and section has Hindi and Marathi text', async () => {
     const { DICTIONARIES } = await import('./i18n');
-    const { NAV_ITEMS, SECTIONS } = await import('../app/navigation');
-    const keys = [...new Set([...NAV_ITEMS.map((i) => i.label), ...SECTIONS])];
+    const { NAV_ITEMS, SECTIONS, ROLE_SECTIONS } = await import('../app/navigation');
+    const roleLabels = NAV_ITEMS.flatMap((i) => Object.values(i.labels || {}));
+    const keys = [...new Set([...NAV_ITEMS.map((i) => i.label), ...roleLabels, ...SECTIONS, ...ROLE_SECTIONS])];
     for (const lang of ['hi', 'mr']) {
       const missing = keys.filter((k) => !DICTIONARIES[lang][k]);
       expect(missing, `${lang} missing`).toEqual([]);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner, Table, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Spinner, Table, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { POOLS, SLOT_TYPES, slotTypeLabel } from '../constants';
@@ -45,7 +45,7 @@ function AreasCard({ areas, isLoading }) {
   const remove = useDeleteArea();
   return (
     <Card className="mb-4">
-      <CardHeader title="Parking areas" subtitle="Basements, stilts and open lots" action={<Button size="sm" icon={Plus} onClick={() => setEditing({})}>Add area</Button>} />
+      <CardHeader title="Parking areas" subtitle="Basements, stilts and open lots" action={<Button size="sm" variant="secondary" icon={Plus} onClick={() => setEditing({})}>Add area</Button>} />
       {isLoading ? (
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : !areas.length ? (
@@ -105,7 +105,7 @@ function AddSlotsModal({ areas, onClose }) {
           </div>
         )}
         <Select label="Type" options={SLOT_TYPES} {...bind('type')} />
-        <Select label="Pool" options={POOLS} {...bind('pool')} />
+        <Select label="Type" options={POOLS} {...bind('pool')} />
         <Checkbox className="sm:col-span-2" label="Covered" checked={values.covered} onChange={(e) => set('covered', e.target.checked)} />
         <Input className="sm:col-span-2" label="Notes" {...bind('notes')} />
       </div>
@@ -131,7 +131,7 @@ function EditSlotModal({ slot, areas, onClose }) {
         <Input label="Number" required {...bind('number')} />
         <Select label="Area" options={areas.map((a) => ({ value: a._id, label: a.name }))} {...bind('area')} />
         <Select label="Type" options={SLOT_TYPES} {...bind('type')} />
-        <Select label="Pool" options={POOLS} {...bind('pool')} hint={slot.unit ? 'Release the slot before moving it to the visitor pool' : undefined} />
+        <Select label="Type" options={POOLS} {...bind('pool')} hint={slot.unit ? 'Release the slot before making it a visitor slot' : undefined} />
         <Input className="sm:col-span-2" label="Notes" {...bind('notes')} />
         <Checkbox label="Covered" checked={values.covered} onChange={(e) => set('covered', e.target.checked)} />
         <Checkbox label="In use (uncheck to deactivate)" checked={values.active} onChange={(e) => set('active', e.target.checked)} />
@@ -203,17 +203,23 @@ function SlotActions({ s, onAllot, onEdit }) {
           Release
         </Button>
       )}
-      <Button size="sm" variant="ghost" icon={Pencil} onClick={() => onEdit(s)} aria-label={`Edit slot ${s.number}`} />
+      <Button size="sm" variant="ghost" icon={Pencil} onClick={() => onEdit(s)} aria-label={`Edit slot ${s.number}`}>Edit</Button>
       {!s.unit && (
-        <Button size="sm" variant="ghost" icon={Trash2} loading={remove.isPending && remove.variables === s._id} onClick={() => window.confirm(`Delete slot ${s.number}?`) && remove.mutate(s._id)} aria-label={`Delete slot ${s.number}`} />
+        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" icon={Trash2} loading={remove.isPending && remove.variables === s._id} onClick={() => window.confirm(`Delete slot ${s.number}? This cannot be undone.`) && remove.mutate(s._id)} aria-label={`Delete slot ${s.number}`} title="Delete slot" />
       )}
     </div>
   );
 }
 
+// Slots are either reserved for flats ("resident" pool) or kept for visitors.
+const POOL_FILTER = [
+  { value: 'resident', label: 'Reserved (for flats)' },
+  { value: 'visitor', label: 'Visitor' },
+];
+
 const occupant = (s) =>
   s.pool === 'visitor' ? (
-    <Badge tone="blue">Visitor pool</Badge>
+    <Badge tone="blue">Visitor parking</Badge>
   ) : s.unit ? (
     <span className="font-medium text-slate-900">{s.unit.label}</span>
   ) : (
@@ -235,13 +241,13 @@ export function SlotsTab() {
       <AreasCard areas={areas} isLoading={areasLoading} />
       <Card>
         <CardHeader title="Slots" subtitle={data?.meta ? `${data.meta.total} slots` : undefined} action={<Button size="sm" icon={Plus} disabled={!areas.length} onClick={() => setAdding(true)}>Add slots</Button>} />
-        <div className="grid grid-cols-2 gap-3 border-b border-slate-100 p-4 sm:grid-cols-3 lg:grid-cols-5">
-          <Input className="col-span-2 sm:col-span-1" placeholder="Search number" value={filters.search} onChange={setF('search')} />
-          <Select placeholder="All areas" options={areas.map((a) => ({ value: a._id, label: a.name }))} value={filters.area} onChange={setF('area')} />
-          <Select placeholder="All pools" options={POOLS} value={filters.pool} onChange={setF('pool')} />
-          <Select placeholder="All types" options={SLOT_TYPES} value={filters.type} onChange={setF('type')} />
-          <Select placeholder="Any status" options={[{ value: 'free', label: 'Free' }, { value: 'allotted', label: 'Allotted' }]} value={filters.status} onChange={setF('status')} />
-        </div>
+        <FilterBar cols={5} active={[filters.area, filters.pool, filters.type, filters.status].filter(Boolean).length}
+          search={<Input label="Slot number" placeholder="Search number" value={filters.search} onChange={setF('search')} />}>
+          <Select label="Area" placeholder="All areas" options={areas.map((a) => ({ value: a._id, label: a.name }))} value={filters.area} onChange={setF('area')} />
+          <Select label="Type" placeholder="Reserved and visitor" options={POOL_FILTER} value={filters.pool} onChange={setF('pool')} />
+          <Select label="Vehicle" placeholder="All vehicles" options={SLOT_TYPES} value={filters.type} onChange={setF('type')} />
+          <Select label="Status" placeholder="Any status" options={[{ value: 'free', label: 'Free' }, { value: 'allotted', label: 'Allotted' }]} value={filters.status} onChange={setF('status')} />
+        </FilterBar>
 
         {/* Phones get stacked cards; the table needs more room than 375px. */}
         <div className="sm:hidden">

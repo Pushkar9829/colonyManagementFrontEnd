@@ -33,7 +33,7 @@ function HealthTab() {
       <div className="flex flex-wrap items-end gap-4">
         <Input className="w-44" label="Month" type="month" value={period} max={currentPeriod()} onChange={(e) => e.target.value && setPeriod(e.target.value)} />
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard icon={Activity} tone={data.grade === 'A' ? 'green' : data.grade === 'B' ? 'sky' : data.grade === 'C' ? 'amber' : 'red'} label={`Health · ${periodLabel(period)}`} value={`${data.score} / 100 (${data.grade})`} sub={`${delta >= 0 ? '+' : ''}${delta} vs ${periodLabel(data.previousPeriod)}`} />
         <StatCard label="Collection" value={m.billing.collectionRate !== null ? `${m.billing.collectionRate}%` : '—'} sub={`${money(m.billing.collectedAgainstBills)} of ${money(m.billing.billed)}`} tone="green" />
         <StatCard label="Complaints" value={`${m.complaints.opened} raised`} sub={`${m.complaints.resolved} resolved · ${m.complaints.slaMetRate ?? '—'}% within SLA`} tone="amber" />
@@ -101,7 +101,7 @@ function RiskTab() {
     <div className="space-y-4">
       {data && <Heuristic>{data.note} Based on the last {data.windowMonths} months.</Heuristic>}
       {data && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
           {['high', 'medium', 'low'].map((b) => <StatCard key={b} icon={ShieldAlert} tone={b === 'high' ? 'red' : b === 'medium' ? 'amber' : 'green'} label={`${label(b)} risk`} value={data.counts[b]} sub="units" />)}
         </div>
       )}
@@ -225,7 +225,7 @@ export default function InsightsPage() {
   const [tab, setTab] = useState(tabs[0]?.value);
   return (
     <div>
-      <PageHeader title="Insights" description="Rule-based helpers built on your society’s own data. They are heuristics — simple, explainable rules, not machine learning." />
+      <PageHeader title="Insights" description="Simple alerts from your society's data, e.g. flats likely to pay late." />
       <Tabs className="mb-6 w-fit" value={tab} onChange={setTab} tabs={tabs} />
       {tab === 'health' && <HealthTab />}
       {tab === 'risk' && <RiskTab />}

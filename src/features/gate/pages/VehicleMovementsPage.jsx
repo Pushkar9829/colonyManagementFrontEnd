@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { ArrowDownLeft, ArrowUpRight, Car } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Card, EmptyState, Input, Pagination, Spinner } from '../../../components/ui';
+import { Badge, Card, EmptyState, FilterBar, Input, Pagination, Select, Spinner } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { dateTime, dayBounds, label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
@@ -30,29 +30,24 @@ export default function VehicleMovementsPage() {
   return (
     <div>
       <PageHeader title="Vehicle movements" description="Every car and bike seen at the gates — number-plate cameras, RFID tags, guard checks and visitor entries." />
-      <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
-        <Card className="min-w-0">
-          <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Input placeholder="Plate" value={f.plate} onChange={set('plate')} />
-            <Input type="date" value={f.date} onChange={set('date')} />
-            <select value={f.match} onChange={set('match')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-              <option value="">All vehicles</option>
-              {Object.entries(MATCH_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-            <select value={f.direction} onChange={set('direction')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-              <option value="">In & out</option>
-              <option value="in">In</option>
-              <option value="out">Out</option>
-            </select>
-            <select value={f.source} onChange={set('source')} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-              <option value="">All sources</option>
-              {['anpr', 'rfid', 'manual', 'visitor'].map((s) => <option key={s} value={s}>{s === 'anpr' ? 'Camera (ANPR)' : s === 'rfid' ? 'RFID' : label(s)}</option>)}
-            </select>
-          </div>
+      {/* Phones: "Check a vehicle" comes first, the log below. Wide screens: log on the left, tools on the right. */}
+      <div className="grid gap-6 xl:grid-cols-[1fr_360px] xl:grid-rows-[auto_1fr]">
+        {guard && <div className="xl:col-start-2 xl:row-start-1 xl:self-start"><ManualLog /></div>}
+        <Card className="min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
+          <FilterBar
+            cols={5}
+            active={[f.date, f.match, f.direction, f.source].filter(Boolean).length}
+            search={<Input label="Plate" placeholder="MH12AB1234" value={f.plate} onChange={set('plate')} />}
+          >
+            <Input label="Date" type="date" value={f.date} onChange={set('date')} />
+            <Select label="Vehicle" value={f.match} onChange={set('match')} placeholder="All vehicles" options={Object.entries(MATCH_LABEL).map(([value, l]) => ({ value, label: l }))} />
+            <Select label="Direction" value={f.direction} onChange={set('direction')} placeholder="In & out" options={[{ value: 'in', label: 'In' }, { value: 'out', label: 'Out' }]} />
+            <Select label="Source" value={f.source} onChange={set('source')} placeholder="All sources" options={['anpr', 'rfid', 'manual', 'visitor'].map((v) => ({ value: v, label: v === 'anpr' ? 'Camera (ANPR)' : v === 'rfid' ? 'RFID' : label(v) }))} />
+          </FilterBar>
           {isLoading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !rows.length ? (
-            <EmptyState icon={Car} title="No movements" />
+            <EmptyState icon={Car} title="No movements" description={f.plate || f.date || f.match || f.direction || f.source ? 'Nothing matches these filters.' : undefined} />
           ) : (
             <ul className="divide-y divide-slate-100">
               {rows.map((m) => (
@@ -88,12 +83,7 @@ export default function VehicleMovementsPage() {
           )}
           <Pagination meta={data?.meta} onPage={(page) => setF((x) => ({ ...x, page }))} />
         </Card>
-        {guard && (
-          <div className="space-y-6">
-            <ManualLog />
-            <BarrierControl />
-          </div>
-        )}
+        {guard && <div className="xl:col-start-2 xl:row-start-2 xl:self-start"><BarrierControl /></div>}
       </div>
     </div>
   );

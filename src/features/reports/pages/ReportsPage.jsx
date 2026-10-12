@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileSpreadsheet, FileText, MailCheck, Sheet } from 'lucide-react';
+import { FileSpreadsheet, MailCheck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, ErrorState, Input, PageLoader, Select } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
@@ -15,10 +15,13 @@ const STATUS_OPTIONS = {
   bills: ['unpaid', 'partial', 'paid', 'cancelled'],
   bookings: ['pending', 'confirmed', 'rejected', 'cancelled'],
 };
-const FORMAT_BUTTONS = [
-  { format: 'csv', label: 'CSV', icon: FileText },
-  { format: 'xlsx', label: 'Excel', icon: FileSpreadsheet },
-  { format: 'pdf', label: 'PDF', icon: Sheet },
+// Plain-English names where the server's catalogue uses jargon.
+const LABELS = { complaints: 'Complaints & resolution time' };
+const DESCRIPTIONS = { complaints: 'Helpdesk complaints raised in a date range, whether each was fixed on time, and how long it took.' };
+// Excel is what most committees open; CSV and PDF stay one tap away as small links.
+const OTHER_FORMATS = [
+  { format: 'csv', label: 'CSV' },
+  { format: 'pdf', label: 'PDF' },
 ];
 const monthAgo = () => new Date(Date.now() - 29 * 86400000).toLocaleDateString('en-CA');
 
@@ -30,10 +33,11 @@ function ReportCard({ report, download, busyKey }) {
     ...(report.params.includes('period') && p.period ? { period: p.period } : {}),
     ...(report.params.includes('status') && p.status ? { status: p.status } : {}),
   };
+  const get = (format) => download(`/reports/${report.key}/export`, { ...query, format }, `${report.key}.${format}`, `${report.key}-${format}`);
   return (
     <Card className="flex flex-col p-5">
-      <h3 className="font-semibold text-slate-900">{report.label}</h3>
-      <p className="mt-1 text-sm text-slate-500">{report.description}</p>
+      <h3 className="font-semibold text-slate-900">{LABELS[report.key] || report.label}</h3>
+      <p className="mt-1 text-sm text-slate-500">{DESCRIPTIONS[report.key] || report.description}</p>
       <div className="mt-4 grid flex-1 gap-3 sm:grid-cols-2">
         {report.params.includes('from') && (
           <>
@@ -46,11 +50,19 @@ function ReportCard({ report, download, busyKey }) {
           <Select label="Status" placeholder="Any" value={p.status} onChange={set('status')} options={STATUS_OPTIONS[report.key].map((s) => ({ value: s, label: s.replace(/_/g, ' ') }))} />
         )}
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        {FORMAT_BUTTONS.map(({ format, label, icon }) => {
-          const key = `${report.key}-${format}`;
-          return <Button key={format} size="sm" variant="secondary" icon={icon} loading={busyKey === key} disabled={Boolean(busyKey) && busyKey !== key} onClick={() => download(`/reports/${report.key}/export`, { ...query, format }, `${report.key}.${format}`, key)}>{label}</Button>;
-        })}
+      <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Button size="sm" icon={FileSpreadsheet} loading={busyKey === `${report.key}-xlsx`} disabled={Boolean(busyKey) && busyKey !== `${report.key}-xlsx`} onClick={() => get('xlsx')}>Download Excel</Button>
+        <span className="text-xs text-slate-500">
+          or{' '}
+          {OTHER_FORMATS.map(({ format, label }, i) => (
+            <span key={format}>
+              {i > 0 && ' · '}
+              <button type="button" className="font-medium text-brand-700 hover:underline disabled:opacity-50" disabled={Boolean(busyKey)} onClick={() => get(format)}>
+                {busyKey === `${report.key}-${format}` ? `${label}…` : label}
+              </button>
+            </span>
+          ))}
+        </span>
       </div>
     </Card>
   );
@@ -64,7 +76,7 @@ export default function ReportsPage() {
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   return (
     <div>
-      <PageHeader title="Reports" description="Download society data as CSV, Excel or PDF. Large exports are capped at 50,000 rows (PDF: 2,000) — narrow the dates for more."
+      <PageHeader title="Reports" description="Download society data. Very large reports may need a shorter date range."
         actions={user.role === ROLES.ADMIN && <Link to="/reports/schedules"><Button variant="secondary" icon={MailCheck}>Scheduled emails</Button></Link>} />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {data.map((r) => <ReportCard key={r.key} report={r} download={download} busyKey={busyKey} />)}

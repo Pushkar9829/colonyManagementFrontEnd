@@ -6,7 +6,7 @@ export const SLOT_TYPES = [
 export const slotTypeLabel = (t) => SLOT_TYPES.find((s) => s.value === t)?.label || t;
 
 export const POOLS = [
-  { value: 'resident', label: 'Resident' },
+  { value: 'resident', label: 'Reserved (for flats)' },
   { value: 'visitor', label: 'Visitor' },
 ];
 

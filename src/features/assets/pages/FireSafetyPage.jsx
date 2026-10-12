@@ -112,9 +112,10 @@ export default function FireSafetyPage() {
         )}
       />
       {summary && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard icon={FireExtinguisher} label="Extinguishers" value={summary.extinguishers} />
-          <StatCard icon={RefreshCcw} tone={summary.overdue ? 'red' : 'amber'} label="Refill due / overdue" value={`${summary.refillDue} / ${summary.overdue}`} />
+          <StatCard icon={RefreshCcw} tone={summary.refillDue ? 'amber' : 'slate'} label="Due in 30 days" value={summary.refillDue} sub="Refill or expiry" />
+          <StatCard icon={RefreshCcw} tone={summary.overdue ? 'red' : 'slate'} label="Overdue" value={summary.overdue} sub="Refill or expiry passed" />
           <StatCard icon={Users} tone="sky" label="Last drill" value={summary.lastDrill ? date(summary.lastDrill.date) : 'None'} sub={summary.lastDrill ? `${summary.lastDrill.attendance} attended` : undefined} />
           <StatCard icon={FileBadge} tone={summary.noc ? (summary.noc.state === 'ok' ? 'green' : 'red') : 'slate'} label="Fire NOC" value={summary.noc ? date(summary.noc.expiryDate) : 'Not recorded'} sub={summary.noc ? (summary.noc.daysLeft < 0 ? 'Expired' : `${summary.noc.daysLeft} days left`) : undefined} />
         </div>
@@ -124,7 +125,7 @@ export default function FireSafetyPage() {
         {tab === 'extinguishers' && (
           <>
             <div className="border-b border-slate-100 p-4 sm:w-64">
-              <Select placeholder="All" options={[{ value: '0', label: 'Overdue' }, { value: '30', label: 'Due in 30 days' }]} value={due} onChange={(e) => { setDue(e.target.value); setPage(1); }} />
+              <Select label="Show" placeholder="All extinguishers" options={[{ value: '0', label: 'Overdue' }, { value: '30', label: 'Due in 30 days' }]} value={due} onChange={(e) => { setDue(e.target.value); setPage(1); }} />
             </div>
             <Table loading={ext.isLoading} rows={ext.data?.data} empty="No extinguishers registered"
               columns={[
@@ -135,8 +136,13 @@ export default function FireSafetyPage() {
                 { key: 'active', header: '', render: (e) => (!e.active ? <Badge>Removed</Badge> : null) },
                 { key: 'act', header: '', render: (e) => e.active && (
                   <div className="flex gap-1">
-                    <Button size="sm" variant="secondary" onClick={() => setRefill(e)}>Refilled</Button>
-                    {manager && <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: e._id, active: false })}>Remove</Button>}
+                    <Button size="sm" variant="secondary" onClick={() => setRefill(e)}>Mark refilled</Button>
+                    {manager && (
+                      <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" loading={update.isPending && update.variables?.id === e._id}
+                        onClick={() => window.confirm(`Remove extinguisher ${e.code} (${e.location}) from the register? Reminders for it will stop.`) && update.mutate({ id: e._id, active: false })}>
+                        Remove
+                      </Button>
+                    )}
                   </div>
                 ) },
               ]} />

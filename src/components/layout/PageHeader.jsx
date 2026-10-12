@@ -1,4 +1,11 @@
+import { useT } from '../../context/LanguageContext';
+
+const tr = (t, v) => (typeof v === 'string' ? t(v) : v);
+
 export function PageHeader({ title, description, actions }) {
+  const { t } = useT();
+  title = tr(t, title);
+  description = tr(t, description);
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">

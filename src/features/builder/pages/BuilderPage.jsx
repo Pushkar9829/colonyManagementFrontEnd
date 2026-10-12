@@ -96,7 +96,7 @@ function PossessionTab({ canManage }) {
   const { data, isLoading } = usePossessions({ status: status || undefined, page });
   return (
     <Card>
-      <CardHeader title="Possession appointments" action={<div className="flex gap-2"><Select className="w-36" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} placeholder="All" options={opts(['scheduled', 'completed', 'cancelled'])} />{canManage && <Button icon={Plus} onClick={() => setCreating(true)}>Schedule</Button>}</div>} />
+      <CardHeader title="Possession appointments" action={<div className="flex flex-wrap gap-2"><Select className="w-36" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} placeholder="All" options={opts(['scheduled', 'completed', 'cancelled'])} />{canManage && <Button icon={Plus} onClick={() => setCreating(true)}>Schedule</Button>}</div>} />
       <Table loading={isLoading} rows={data?.data} empty="No appointments" onRowClick={setOpen}
         columns={[
           { key: 'date', header: 'When', render: (p) => <div><p className="font-medium text-slate-900">{date(p.date)}</p><p className="text-xs text-slate-500">{p.startTime}–{p.endTime}</p></div> },
@@ -133,7 +133,7 @@ function NewSnagModal({ canManage, onClose }) {
       { onError: applyServerErrors },
     );
   return (
-    <Modal open onClose={onClose} title="Record a snag" footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} disabled={canManage && !unit} onClick={submit}>Save</Button></>}>
+    <Modal open onClose={onClose} title="Record a defect (snag)" footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} disabled={canManage && !unit} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         {canManage && <div className="sm:col-span-2"><UnitPicker value={unit} onChange={setUnit} required /></div>}
         <Input className="sm:col-span-2" label="What is wrong" required placeholder="e.g. Cracked tile near shower" {...bind('title')} />
@@ -160,7 +160,7 @@ function SnagModal({ id, canManage, onClose }) {
   const reopen = useReopenSnag(id);
   const [fixPhotos, setFixPhotos] = useState([]);
   const [contractor, setContractor] = useState(null);
-  if (isLoading || !s) return <Modal open onClose={onClose} title="Snag"><PageLoader /></Modal>;
+  if (isLoading || !s) return <Modal open onClose={onClose} title="Defect"><PageLoader /></Modal>;
   const c = contractor ?? { name: s.contractor?.name || '', phone: s.contractor?.phone || '' };
   const markFixed = () => update.mutate({ status: 'fixed', fixPhotos: fixPhotos.length ? fixPhotos.map((p) => p._id) : undefined }, { onSuccess: () => setFixPhotos([]) });
 
@@ -210,7 +210,7 @@ function SnagsTab({ canManage }) {
     <div className="space-y-6">
       {canManage && summary?.length > 0 && (
         <Card>
-          <CardHeader title="Snags by unit" subtitle="Units with open snags first" />
+          <CardHeader title="Defects by flat" subtitle="Flats with open defects first" />
           <div className="flex flex-wrap gap-2 p-4">
             {summary.slice(0, 40).map((r) => (
               <span key={r.unit._id} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs">
@@ -221,17 +221,17 @@ function SnagsTab({ canManage }) {
         </Card>
       )}
       <Card>
-        <CardHeader title={canManage ? 'Snag list' : 'Snags in my home'} action={<Button icon={Plus} onClick={() => setCreating(true)}>Add snag</Button>} />
+        <CardHeader title={canManage ? 'Defect list' : 'Defects in my home'} action={<Button icon={Plus} onClick={() => setCreating(true)}>Add defect</Button>} />
         <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Select value={f.status || (f.open ? 'open_all' : '')} onChange={(e) => setF({ ...f, open: e.target.value === 'open_all' ? 'true' : '', status: e.target.value === 'open_all' ? '' : e.target.value, page: 1 })} placeholder="All snags"
+          <Select value={f.status || (f.open ? 'open_all' : '')} onChange={(e) => setF({ ...f, open: e.target.value === 'open_all' ? 'true' : '', status: e.target.value === 'open_all' ? '' : e.target.value, page: 1 })} placeholder="All defects"
             options={[{ value: 'open_all', label: 'Still open' }, ...opts(['open', 'in_progress', 'fixed', 'verified', 'reopened'])]} />
           <Select value={f.category} onChange={(e) => setF({ ...f, category: e.target.value, page: 1 })} placeholder="Any category" options={opts(SNAG_CATEGORIES)} />
         </div>
-        <Table loading={isLoading} rows={data?.data} empty="No snags" onRowClick={(s) => setOpenId(s._id)}
+        <Table loading={isLoading} rows={data?.data} empty="No defects recorded" onRowClick={(s) => setOpenId(s._id)}
           columns={[
-            { key: 'title', header: 'Snag', render: (s) => <div><p className="font-medium text-slate-900">{s.title}</p><p className="text-xs text-slate-500">{s.number} · {label(s.category)}{s.location ? ` · ${s.location}` : ''}</p></div> },
+            { key: 'title', header: 'Defect', render: (s) => <div><p className="font-medium text-slate-900">{s.title}</p><p className="text-xs text-slate-500">{s.number} · {label(s.category)}{s.location ? ` · ${s.location}` : ''}</p></div> },
             { key: 'unit', header: 'Unit', render: (s) => s.unit?.label },
-            { key: 'contractor', header: 'Contractor', render: (s) => s.contractor?.name || '—' },
+            { key: 'contractor', header: 'Contractor', mobile: false, render: (s) => s.contractor?.name || '—' },
             { key: 'status', header: 'Status', render: (s) => <Badge tone={SNAG_TONES[s.status]}>{label(s.status)}</Badge> },
             { key: 'createdAt', header: 'Raised', render: (s) => timeAgo(s.createdAt) },
           ]} />
@@ -380,7 +380,7 @@ export default function BuilderPage() {
   const [params, setParams] = useSearchParams();
   const tabs = [
     { value: 'possession', label: 'Possession' },
-    { value: 'snags', label: 'Snags' },
+    { value: 'snags', label: 'Defects (snags)' },
     { value: 'progress', label: 'Construction updates' },
     ...(canManage ? [{ value: 'handover', label: 'Handover' }] : []),
   ];
@@ -399,7 +399,7 @@ export default function BuilderPage() {
 
   return (
     <div>
-      <PageHeader title="Builder handover" description={canManage ? 'Possession scheduling, snag lists, construction updates and the handover to the residents’ association.' : 'Your possession appointment, snags in your home and construction updates.'} />
+      <PageHeader title="Builder handover" description={canManage ? 'Possession scheduling, defect (snag) lists, construction updates and the handover to the residents’ association.' : 'Your possession appointment, defects in your home and construction updates.'} />
       <Tabs className="mb-6 w-fit" value={tab} onChange={(v) => setParams({ tab: v })} tabs={tabs.map((t) => ({ ...t, label: t.value === 'possession' ? <span className="inline-flex items-center gap-1"><CalendarClock className="size-4" />{t.label}</span> : t.value === 'snags' ? <span className="inline-flex items-center gap-1"><ClipboardList className="size-4" />{t.label}</span> : t.label }))} />
       {tab === 'possession' && <PossessionTab canManage={canManage} />}
       {tab === 'snags' && <SnagsTab canManage={canManage} />}

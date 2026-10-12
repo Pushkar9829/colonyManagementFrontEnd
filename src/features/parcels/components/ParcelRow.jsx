@@ -5,15 +5,17 @@ import { dateTime, label } from '../../../lib/format';
 import { formatAge, OPEN_STATUSES } from '../api';
 
 const STATUS_TONE = { received: 'amber', notified: 'blue', collected: 'green', returned: 'slate' };
+// "Notified" told nobody what to do; the parcel is sitting at the gate until someone collects it.
+export const STATUS_LABEL = { notified: 'Waiting at gate' };
 
 export function ParcelStatus({ status }) {
-  return <Badge tone={STATUS_TONE[status] || 'slate'}>{label(status)}</Badge>;
+  return <Badge tone={STATUS_TONE[status] || 'slate'}>{STATUS_LABEL[status] || label(status)}</Badge>;
 }
 
 export function AgeBadge({ hours }) {
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold', hours >= 24 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600')}>
-      {formatAge(hours)}
+      Waiting {formatAge(hours)}
     </span>
   );
 }

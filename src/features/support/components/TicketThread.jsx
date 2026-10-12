@@ -2,8 +2,15 @@ import { Attachments, Badge, StatusBadge } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { dateTime, label } from '../../../lib/format';
 
+// Priority in words a committee member would use.
+export const PRIORITY_TEXT = { urgent: 'Urgent', high: 'High', medium: 'Normal', low: 'Low' };
+const PRIORITY_TONE = { urgent: 'red', high: 'amber', medium: 'slate', low: 'slate' };
+export function PriorityText({ priority }) {
+  return <Badge tone={PRIORITY_TONE[priority] || 'slate'}>{PRIORITY_TEXT[priority] || label(priority)} priority</Badge>;
+}
+
 export function SlaBadge({ ticket }) {
-  if (ticket.slaBreached) return <Badge tone="red">SLA missed</Badge>;
+  if (ticket.slaBreached) return <Badge tone="red">Reply overdue</Badge>;
   if (!ticket.firstResponseAt && ['open', 'in_progress', 'waiting_on_customer'].includes(ticket.status)) return <Badge tone="amber">Reply due {dateTime(ticket.slaDueAt)}</Badge>;
   return null;
 }
@@ -15,7 +22,7 @@ export function TicketThread({ ticket, viewer }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <StatusBadge status={ticket.status} />
-        <StatusBadge status={ticket.priority} />
+        <PriorityText priority={ticket.priority} />
         <Badge>{label(ticket.category)}</Badge>
         <SlaBadge ticket={ticket} />
       </div>

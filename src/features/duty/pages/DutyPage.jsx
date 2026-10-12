@@ -18,12 +18,12 @@ export default function DutyPage() {
   const tabs = [
     { value: 'handover', label: 'Shift handover', count: open?.meta?.total },
     { value: 'incidents', label: 'Incidents' },
-    { value: 'book', label: 'Occurrence book' },
+    { value: 'book', label: 'Daily register (OB)' },
   ];
 
   return (
     <div>
-      <PageHeader title="Guard duty" description="Shift handovers, incident reports and the daily occurrence book." />
+      <PageHeader title="Guard duty" description="Shift handovers, incident reports and the daily register (occurrence book)." />
       <Tabs className="mb-4" tabs={tabs} value={tab} onChange={setTab} />
       {tab === 'handover' && <HandoverTab />}
       {tab === 'incidents' && <IncidentsTab />}

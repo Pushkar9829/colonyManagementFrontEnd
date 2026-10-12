@@ -4,8 +4,8 @@ import { Button, Input } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useT } from '../../../context/LanguageContext';
 
-// Two steps: phone -> 6-digit code sent by SMS -> logged in.
-export function OtpLoginForm({ onDone }) {
+// Two steps: phone -> 6-digit code sent by SMS -> logged in (or on to the two-step verification code).
+export function OtpLoginForm({ onDone, onMfa }) {
   const { t } = useT();
   const { loginWithOtp } = useAuth();
   const [phone, setPhone] = useState('');
@@ -44,8 +44,9 @@ export function OtpLoginForm({ onDone }) {
     setError('');
     setLoading(true);
     try {
-      await loginWithOtp(phone.trim(), code.trim());
-      onDone();
+      const pending = await loginWithOtp(phone.trim(), code.trim());
+      if (pending?.mfaRequired) onMfa(pending.mfaToken);
+      else onDone();
     } catch (err) {
       setError(err.message);
     } finally {

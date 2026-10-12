@@ -10,7 +10,7 @@ function BuyModal({ plan, onClose }) {
   const buy = useBuyPass({ onSuccess: onClose });
   return (
     <Modal open onClose={onClose} title={`${plan.amenity?.name} · ${plan.name}`} description={`${plan.durationDays} days · ${plan.price ? money(plan.price) : 'Free'}`} size="sm"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={buy.isPending} onClick={() => buy.mutate({ plan: plan._id, validFrom })}>{plan.price ? `Buy for ${money(plan.price)}` : 'Get pass'}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={buy.isPending} onClick={() => buy.mutate({ plan: plan._id, validFrom })}>{plan.price ? `Buy for ${money(plan.price)}` : 'Join'}</Button></>}>
       <Input label="Starts on" type="date" min={todayISO()} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
       {plan.description && <p className="mt-3 text-sm text-slate-600">{plan.description}</p>}
     </Modal>
@@ -31,7 +31,7 @@ export function MyPasses() {
     <div className="space-y-6">
       <Card>
         <CardHeader title="Memberships on offer" subtitle="Monthly gym, pool and other passes" />
-        {loadingPlans ? <div className="flex justify-center py-8"><Spinner /></div> : !plans.length ? <EmptyState icon={Ticket} title="No passes on sale" /> : (
+        {loadingPlans ? <div className="flex justify-center py-8"><Spinner /></div> : !plans.length ? <EmptyState icon={Ticket} title="No memberships on sale" /> : (
           <ul className="divide-y divide-slate-100">
             {plans.map((p) => (
               <li key={p._id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -46,8 +46,8 @@ export function MyPasses() {
         )}
       </Card>
       <Card>
-        <CardHeader title="Our passes" />
-        {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : !passes?.data.length ? <EmptyState title="No passes yet" /> : (
+        <CardHeader title="Our memberships" />
+        {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : !passes?.data.length ? <EmptyState title="No memberships yet" /> : (
           <ul className="divide-y divide-slate-100">
             {passes.data.map((p) => {
               const live = p.status === 'active' && p.validFrom <= today && p.validTo >= today;

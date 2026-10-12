@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Truck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Checkbox, EmptyState, FileUpload, Input, Modal, PageLoader, Pagination, Select, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, Checkbox, EmptyState, FileUpload, FilterBar, Input, Modal, PageLoader, Pagination, Select, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, dateTime, todayISO, toPaise } from '../../../lib/format';
@@ -96,8 +96,8 @@ function MovesBoard() {
   const { data, isLoading } = useMoves(day);
   return (
     <Card>
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-4">
-        <Input type="date" value={day} onChange={(e) => setDay(e.target.value)} className="w-44" />
+      <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 p-4">
+        <Input label="Date" type="date" value={day} onChange={(e) => setDay(e.target.value)} className="w-44" />
         <span className="text-sm text-slate-500">Approved move-ins and move-outs — allow these movers at the gate.</span>
       </div>
       {isLoading ? <PageLoader /> : data?.items?.length ? (
@@ -128,12 +128,14 @@ function RequestTable({ params, manage }) {
   return (
     <Card>
       {manage && (
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Select placeholder="All types" options={KINDS} value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value, page: 1 })} />
-          {!params.open && <Select placeholder="All statuses" options={STATUSES} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })} />}
-        </div>
+        <FilterBar cols={3} active={[filters.kind, filters.status].filter(Boolean).length}>
+          <Select label="Request type" placeholder="All types" options={KINDS} value={filters.kind} onChange={(e) => setFilters({ ...filters, kind: e.target.value, page: 1 })} />
+          {!params.open && <Select label="Status" placeholder="All statuses" options={STATUSES} value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })} />}
+        </FilterBar>
       )}
-      <Table loading={isLoading} rows={data?.data} empty="No requests" onRowClick={(r) => navigate(`/requests/${r._id}`)}
+      <Table loading={isLoading} rows={data?.data} empty="No requests"
+        emptyHint={manage ? undefined : 'Need an NOC for a bank loan, sale or rent, or permission to move in or out? Tap New request.'}
+        onRowClick={(r) => navigate(`/requests/${r._id}`)}
         columns={[
           { key: 'number', header: 'No.', render: (r) => <span className="font-mono text-xs font-semibold text-slate-600">{r.number}</span> },
           { key: 'title', header: 'Request', className: 'max-w-xs', render: (r) => <div className="truncate"><p className="truncate font-medium text-slate-900">{requestTitle(r)}</p>{manage && <p className="text-xs text-slate-500">{r.unitLabel} · {r.applicantName}</p>}</div> },
@@ -166,8 +168,8 @@ export default function RequestsPage() {
   return (
     <div>
       <PageHeader
-        title={manage ? 'NOC & move requests' : 'My requests'}
-        description={manage ? 'Review NOCs and move-in / move-out requests, check dues and issue letters.' : 'Ask for NOCs and permission to move in or out.'}
+        title={manage ? 'NOC & move requests' : 'Letters & move requests'}
+        description={manage ? 'Review NOCs and move-in / move-out requests, check dues and issue letters.' : 'Ask the society for a No-Objection Certificate (NOC) for a bank loan, sale or rent, or permission to move in or out.'}
         actions={resident && <Button icon={Plus} onClick={() => setCreating(true)}>New request</Button>}
       />
       {manage ? (

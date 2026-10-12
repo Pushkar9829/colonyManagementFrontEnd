@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, Download, FileText, RefreshCw } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Input, Modal, PageLoader, Pagination, Select, StatCard, StatusBadge, Table } from '../../../components/ui';
+import { Badge, Button, Card, Checkbox, FilterBar, Input, Modal, PageLoader, Pagination, Select, StatCard, StatusBadge, Table } from '../../../components/ui';
 import { date, dateTime, label, money, todayISO } from '../../../lib/format';
 import { useDownload } from '../../reports/download';
+import { plural } from '../lib';
 import { useInvoiceSummary, useMarkInvoicePaid, usePlatformInvoice, usePlatformInvoices, useRunBilling, useVoidInvoice } from '../billingApi';
 
 function InvoiceModal({ id, onClose }) {
@@ -63,24 +64,25 @@ export default function PlatformInvoicesPage() {
   return (
     <div>
       <PageHeader title="Platform invoices" description="Subscription invoices raised to societies. The billing job runs every 6 hours; reminders go out before and after the due date, and societies are suspended after the grace period."
-        actions={<Button variant="secondary" icon={RefreshCw} loading={run.isPending} onClick={() => run.mutate()}>Run billing now</Button>} />
+        actions={<Button variant="secondary" className="whitespace-nowrap" icon={RefreshCw} loading={run.isPending} onClick={() => run.mutate()}>Run billing</Button>} />
       {sum && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
-          <StatCard icon={CheckCircle2} tone="green" label="Paid" value={money(sum.paid.total)} sub={`${sum.paid.count} invoices`} />
-          <StatCard icon={FileText} tone="amber" label="Unpaid" value={money(sum.unpaid.total)} sub={`${sum.unpaid.count} invoices`} />
-          <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={money(sum.overdue.total)} sub={`${sum.overdue.count} invoices`} />
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
+          {/* "Unpaid" from the API includes overdue invoices; split it so the tiles don't overlap */}
+          <StatCard icon={CheckCircle2} tone="green" label="Paid" value={money(sum.paid.total)} sub={plural(sum.paid.count, 'invoice')} />
+          <StatCard icon={FileText} tone="amber" label="Due soon" value={money(Math.max(0, sum.unpaid.total - sum.overdue.total))} sub={`${plural(Math.max(0, sum.unpaid.count - sum.overdue.count), 'invoice')} not yet due`} />
+          <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={money(sum.overdue.total)} sub={`${plural(sum.overdue.count, 'invoice')} past due date`} />
         </div>
       )}
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-          <Select placeholder="Any status" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value, page: 1 })} options={['unpaid', 'paid', 'void'].map((s) => ({ value: s, label: label(s) }))} />
-          <label className="inline-flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.overdue === 'true'} onChange={(e) => setF({ ...f, overdue: e.target.checked ? 'true' : '', page: 1 })} /> Overdue only</label>
-        </div>
+        <FilterBar cols={3} active={[f.status, f.overdue].filter(Boolean).length}>
+          <Select aria-label="Status" placeholder="Any status" value={f.status} onChange={(e) => setF({ ...f, status: e.target.value, page: 1 })} options={['unpaid', 'paid', 'void'].map((s) => ({ value: s, label: label(s) }))} />
+          <Checkbox className="sm:h-10" label="Overdue only" checked={f.overdue === 'true'} onChange={(e) => setF({ ...f, overdue: e.target.checked ? 'true' : '', page: 1 })} />
+        </FilterBar>
         <Table loading={isLoading} rows={data?.data} empty="No invoices" onRowClick={(i) => setOpenId(i._id)}
           columns={[
             { key: 'number', header: 'Invoice', render: (i) => <span className="font-medium text-slate-900">{i.number}</span> },
             { key: 'society', header: 'Society', render: (i) => <div><p>{i.society?.name}</p><p className="text-xs text-slate-500">{i.society?.code}{i.society && !i.society.active ? ' · suspended' : ''}</p></div> },
-            { key: 'plan', header: 'Plan', render: (i) => `${label(i.plan)} · ${i.billingCycle}` },
+            { key: 'plan', header: 'Plan', mobile: false, render: (i) => `${label(i.plan)} · ${i.billingCycle}` },
             { key: 'total', header: 'Total', render: (i) => money(i.total) },
             { key: 'dueDate', header: 'Due', render: (i) => <span className={i.status === 'unpaid' && new Date(i.dueDate) < new Date() ? 'font-medium text-red-600' : ''}>{date(i.dueDate)}</span> },
             { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },

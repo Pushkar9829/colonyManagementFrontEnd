@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Pencil, Plus, Search, ShieldAlert, ShieldX, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, EmptyState, FileUpload, FilterBar, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
@@ -68,13 +68,13 @@ function QuickCheck() {
   const tone = { block: 'border-red-200 bg-red-50 text-red-800', watch: 'border-amber-200 bg-amber-50 text-amber-800', clear: 'border-emerald-200 bg-emerald-50 text-emerald-800' };
   return (
     <Card className="mb-6 p-4">
-      <form onSubmit={run} className="flex flex-col gap-2 sm:flex-row">
-        <Input className="flex-1" placeholder="Check a phone, vehicle number or name" value={q} onChange={(e) => { setQ(e.target.value); setResult(null); }} />
-        <Button type="submit" icon={Search} loading={busy}>Check</Button>
+      <form onSubmit={run} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <Input className="flex-1" label="Is this person or vehicle blocked?" placeholder="Phone, vehicle number or name" value={q} onChange={(e) => { setQ(e.target.value); setResult(null); }} />
+        <Button type="submit" size="lg" icon={Search} loading={busy} disabled={!q.trim()} className="sm:h-10">Check</Button>
       </form>
       {result && (
         <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${tone[result.status]}`}>
-          {result.status === 'clear' ? 'Not on the list.' : result.matches.map((m) => <p key={m.entry}><strong>{m.type === 'block' ? 'BLOCKED' : 'WATCH'}</strong>{m.name ? ` · ${m.name}` : ''} — {m.reason}</p>)}
+          {result.status === 'clear' ? 'Not on the list — no match found.' : result.matches.map((m) => <p key={m.entry}><strong>{m.type === 'block' ? 'BLOCKED' : 'WATCH'}</strong>{m.name ? ` · ${m.name}` : ''} — {m.reason}</p>)}
         </div>
       )}
     </Card>
@@ -101,15 +101,16 @@ export default function WatchlistPage() {
       />
       <QuickCheck />
       <Card>
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center">
+        <div className="px-4 pt-4">
           <Tabs className="w-fit" value={filters.type} onChange={(type) => setFilters((f) => ({ ...f, type, page: 1 }))} tabs={[{ value: '', label: 'All' }, { value: 'block', label: 'Blocked' }, { value: 'watch', label: 'Watch' }]} />
-          <Input className="lg:max-w-xs" placeholder="Search" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />
-          <select value={filters.active} onChange={(e) => setFilters((f) => ({ ...f, active: e.target.value, page: 1 }))} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm lg:ml-auto">
-            <option value="true">Active</option>
-            <option value="false">Expired / inactive</option>
-            <option value="">All</option>
-          </select>
         </div>
+        <FilterBar
+          cols={2}
+          active={filters.active !== 'true' ? 1 : 0}
+          search={<Input placeholder="Filter list" aria-label="Filter list" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value, page: 1 }))} />}
+        >
+          <Select aria-label="Show" value={filters.active} onChange={(e) => setFilters((f) => ({ ...f, active: e.target.value, page: 1 }))} options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Expired / inactive' }, { value: '', label: 'All' }]} />
+        </FilterBar>
         {isLoading ? (
           <div className="flex justify-center py-12"><Spinner /></div>
         ) : !rows.length ? (

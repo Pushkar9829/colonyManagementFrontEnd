@@ -3,16 +3,25 @@ import { Save } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, CardHeader, Input, Select, Spinner, Tabs } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
-import { money, toPaise, todayISO } from '../../../lib/format';
+import { date, money, toPaise, todayISO } from '../../../lib/format';
 import { useAccounts, useBudget, useBudgetReport, useSaveBudget } from '../api';
-import { fyLabel, fyOf, rupeesInput } from '../lib';
-import { Amount, DownloadButtons } from '../components/common';
+import { fyLabel, fyOf, rupeesInput, varianceToDate } from '../lib';
+import { DownloadButtons } from '../components/common';
+
+// Amount and % share one colour: green when the account is doing better than planned so far.
+const tone = (v) => (v.variance === 0 ? 'text-slate-500' : v.good ? 'text-emerald-700' : 'text-red-600');
+
+function VarianceAmount({ row }) {
+  const v = varianceToDate(row);
+  if (!row.budgetToDate && !row.actual) return <span className="text-slate-400">—</span>;
+  const word = v.variance === 0 ? 'on budget' : v.variance > 0 ? 'over' : 'under';
+  return <span className={cn('tabular-nums font-medium', tone(v))}>{money(Math.abs(v.variance))} <span className="text-xs font-normal">{word}</span></span>;
+}
 
 function VarianceCell({ row }) {
-  if (row.variancePct === null) return <span className="text-slate-400">—</span>;
-  // For income, beating the budget is good; for expenses, spending more is bad.
-  const good = row.type === 'income' ? row.variance >= 0 : row.variance <= 0;
-  return <span className={cn('tabular-nums font-medium', good ? 'text-emerald-700' : 'text-red-600')}>{row.variancePct > 0 ? '+' : ''}{row.variancePct}%</span>;
+  const v = varianceToDate(row);
+  if (v.pct === null) return <span className="text-slate-400">—</span>;
+  return <span className={cn('tabular-nums font-medium', tone(v))}>{v.pct > 0 ? '+' : ''}{v.pct}%</span>;
 }
 
 function Meter({ actual, budget, type }) {
@@ -38,7 +47,7 @@ function Report({ fy }) {
           <td className="px-4 py-2 text-right tabular-nums">{money(r.budget)}</td>
           <td className="px-4 py-2 text-right tabular-nums text-slate-500">{money(r.budgetToDate)}</td>
           <td className="px-4 py-2 text-right tabular-nums">{money(r.actual)}</td>
-          <td className="px-4 py-2 text-right"><Amount value={r.variance} /></td>
+          <td className="px-4 py-2 text-right"><VarianceAmount row={r} /></td>
           <td className="px-4 py-2 text-right"><VarianceCell row={r} /></td>
         </tr>
       ))}
@@ -48,19 +57,19 @@ function Report({ fy }) {
         <td className="px-4 py-2 text-right tabular-nums">{money(totals.budget)}</td>
         <td className="px-4 py-2 text-right tabular-nums">{money(totals.budgetToDate)}</td>
         <td className="px-4 py-2 text-right tabular-nums">{money(totals.actual)}</td>
-        <td className="px-4 py-2 text-right"><Amount value={totals.variance} /></td>
+        <td className="px-4 py-2 text-right"><VarianceAmount row={{ ...totals, type: title === 'Income' ? 'income' : 'expense' }} /></td>
         <td className="px-4 py-2 text-right"><VarianceCell row={{ ...totals, type: title === 'Income' ? 'income' : 'expense' }} /></td>
       </tr>
     </>
   );
   return (
     <Card>
-      <CardHeader title={`Budget vs actual · ${fyLabel(fy)}`} subtitle={`Actuals to ${data.to} · ${data.elapsedPct}% of the year elapsed`}
+      <CardHeader title={`Budget vs actual · ${fyLabel(fy)}`} subtitle={`Actuals to ${date(data.to)} · ${data.elapsedPct}% of the year gone, so "budget to date" is ${data.elapsedPct}% of the annual budget. Green = better than planned so far.`}
         action={<DownloadButtons path={`/accounting/budgets/${fy}/report`} query={{}} filename={`budget-vs-actual-${fy}`} />} />
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-100 text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr><th className="px-4 py-2.5 text-left">Account</th><th className="px-4 py-2.5 text-right">Budget</th><th className="px-4 py-2.5 text-right">Budget to date</th><th className="px-4 py-2.5 text-right">Actual</th><th className="px-4 py-2.5 text-right">Variance</th><th className="px-4 py-2.5 text-right">%</th></tr>
+            <tr><th className="px-4 py-2.5 text-left">Account</th><th className="px-4 py-2.5 text-right">Annual budget</th><th className="px-4 py-2.5 text-right">Budget to date</th><th className="px-4 py-2.5 text-right">Actual</th><th className="px-4 py-2.5 text-right">Under / over (to date)</th><th className="px-4 py-2.5 text-right">% (to date)</th></tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {section('Income', data.income, data.totals.income)}

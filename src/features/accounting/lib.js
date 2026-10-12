@@ -51,5 +51,15 @@ export function rangePresets() {
 
 export const defaultRange = () => rangePresets()[0];
 
+// The API's variance compares actuals with the whole year's budget, which makes every account look
+// "under budget" early in the year. Compare with the pro-rated budget to date instead.
+// good = beating the budget: more income, or less spending.
+export function varianceToDate(row) {
+  const variance = row.actual - (row.budgetToDate || 0);
+  const pct = row.budgetToDate ? Math.round((variance / row.budgetToDate) * 1000) / 10 : null;
+  const good = row.type === 'income' ? variance >= 0 : variance <= 0;
+  return { variance, pct, good };
+}
+
 // Positive/negative paise to a number input value in rupees and back.
 export const rupeesInput = (paise) => (paise ? String(paise / 100) : '');

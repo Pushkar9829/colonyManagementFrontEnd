@@ -143,7 +143,7 @@ function Summary({ code }) {
   return (
     <Card className="mb-6">
       <CardHeader title="Reconciliation" subtitle={`${s.account.code} ${s.account.name}`} action={<Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} />} />
-      <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Balance as per books" value={<Amount value={s.bookBalance} />} />
         <StatCard label="Balance as per statement" value={s.statementBalance === null ? '—' : <Amount value={s.statementBalance} />} sub={s.statementBalanceDate ? `on ${date(s.statementBalanceDate)}` : 'Import a statement with a balance column'} />
         <StatCard label="Expected statement balance" value={<Amount value={s.expectedBankBalance} />} sub="books adjusted for open items" />

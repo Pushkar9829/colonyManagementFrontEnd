@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CalendarDays, Check, MapPin, MessageCircle, PackageSearch, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Attachments, Badge, Button, Card, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
+import { Attachments, Badge, Button, Card, EmptyState, FileUpload, FilterBar, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, label, timeAgo, todayISO } from '../../../lib/format';
@@ -141,13 +141,16 @@ export default function LostFoundPage() {
         <Tabs className="w-fit" value={mine ? 'mine' : kind} onChange={(v) => { setMine(v === 'mine'); setKind(v === 'mine' ? '' : v); setPage(1); }}
           tabs={[{ value: '', label: 'All' }, { value: 'found', label: 'Found' }, { value: 'lost', label: 'Lost' }, { value: 'mine', label: 'My posts' }]} />
       </div>
-      <div className="mb-4 grid gap-2 sm:grid-cols-[1fr_12rem]">
+      <Card className="mb-4">
+        <FilterBar cols={2} active={category ? 1 : 0} className="border-b-0" search={(
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search items or places" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search items or places" aria-label="Search items or places" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
         </div>
-        <Select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} placeholder="All categories" options={CATEGORIES.map((c) => ({ value: c, label: label(c) }))} />
-      </div>
+        )}>
+          <Select label="Category" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} placeholder="All categories" options={CATEGORIES.map((c) => ({ value: c, label: label(c) }))} />
+        </FilterBar>
+      </Card>
       {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
         <Card><EmptyState icon={PackageSearch} title="Nothing here" description={mine ? "You haven't posted anything." : 'No open lost or found posts right now.'} action={<Button icon={Plus} onClick={() => setPosting(true)}>Post an item</Button>} /></Card>
       ) : (

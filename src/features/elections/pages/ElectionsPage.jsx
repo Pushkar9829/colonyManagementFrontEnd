@@ -70,13 +70,10 @@ export default function ElectionsPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           {items.map((e) => (
             <Card key={e._id} className="cursor-pointer p-5 transition hover:border-brand-200 hover:shadow" onClick={() => navigate(`/elections/${e._id}`)}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-mono text-xs text-slate-500">{e.number}</p>
-                  <p className="truncate font-semibold text-slate-900">{e.title}</p>
-                </div>
-                <ElectionStatus status={e.status} />
-              </div>
+              {/* title first and allowed to wrap; status under it; the reference number is the least important */}
+              <p className="break-words font-semibold text-slate-900">{e.title}</p>
+              <div className="mt-1.5"><ElectionStatus status={e.status} /></div>
+              <p className="mt-1 font-mono text-[11px] text-slate-400">{e.number}</p>
               <p className="mt-2 text-sm text-slate-600">{e.positions.map((p) => `${p.title}${p.seats > 1 ? ` ×${p.seats}` : ''}`).join(' · ')}</p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
                 {e.status === 'voting' && e.votingEnd && <span>Voting closes {dateTime(e.votingEnd)}</span>}

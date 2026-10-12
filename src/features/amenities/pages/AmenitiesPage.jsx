@@ -158,7 +158,7 @@ function BookingPanel({ amenity }) {
           <h3 className="font-semibold text-slate-900">Book {amenity.name}</h3>
           <p className="text-sm text-slate-500">{amenity.slotMinutes} min slots · {amenity.requiresApproval ? 'needs approval' : 'instant confirmation'}{priceLine(amenity) ? ` · ${priceLine(amenity)}` : ''}</p>
         </div>
-        <Input type="date" min={todayISO()} value={day} onChange={(e) => { setDay(e.target.value); setSlot(null); }} />
+        <Input title="Booking date" type="date" min={todayISO()} value={day} onChange={(e) => { setDay(e.target.value); setSlot(null); }} />
       </div>
       {amenity.photos?.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">
@@ -324,7 +324,7 @@ export default function AmenitiesPage() {
 
   const tabs = manager
     ? [{ value: 'amenities', label: 'Amenities' }, { value: 'requests', label: 'Requests', count: pending?.meta?.total }, { value: 'deposits', label: 'Deposits held', count: deposits?.meta?.total }, { value: 'all', label: 'All bookings' }]
-    : [{ value: 'book', label: 'Book' }, { value: 'mine', label: 'My bookings' }, { value: 'passes', label: 'Passes' }];
+    : [{ value: 'book', label: 'Book' }, { value: 'mine', label: 'My bookings' }, { value: 'passes', label: 'Memberships' }];
 
   const current = amenities.find((a) => a._id === selected) || (!manager ? amenities.find((a) => a.active) : null);
 
@@ -335,7 +335,7 @@ export default function AmenitiesPage() {
         description={manager ? 'Manage facilities, payments and booking requests.' : 'Book the clubhouse, courts, gym and more.'}
         actions={manager && (
           <>
-            <Link to="/amenities/passes"><Button variant="secondary" icon={Ticket}>Passes</Button></Link>
+            <Link to="/amenities/passes"><Button variant="secondary" icon={Ticket}>Memberships</Button></Link>
             <Link to="/amenities/reports"><Button variant="secondary" icon={BarChart3}>Reports</Button></Link>
             <Button icon={Plus} onClick={() => setEditing({})}>Add amenity</Button>
           </>

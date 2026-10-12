@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Ambulance, ArrowUpDown, Building, ChevronDown, ChevronUp, Flame, Fuel, Hospital, MapPin, Pencil, Phone, PhoneCall, Pill, Plus, ShieldCheck, Siren, Stethoscope, Trash2, Wrench, Zap,
+  Ambulance, ArrowUpDown, Building, ChevronDown, ChevronUp, Flame, Fuel, Hospital, MapPin, MoreHorizontal, Pencil, Phone, PhoneCall, Pill, Plus, ShieldCheck, Siren, Stethoscope, Trash2, Wrench, Zap,
 } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, EmptyState, ErrorState, Input, Modal, PageLoader, Select, Textarea } from '../../../components/ui';
@@ -73,8 +73,37 @@ function CallButton({ phone, primary }) {
   );
 }
 
+// Manager tools sit behind a "⋯" menu at the top of the card, well away from the big call buttons.
+function ManageMenu({ c, isFirst, isLast, busy, onEdit, onMove, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const item = 'flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40';
+  const pick = (fn) => () => { setOpen(false); fn(); };
+  return (
+    <div className="relative shrink-0">
+      <button type="button" aria-label={`Manage ${c.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}
+        className="flex size-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700">
+        <MoreHorizontal className="size-5" />
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-label="Close menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <div role="menu" className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            <button type="button" role="menuitem" className={item} onClick={pick(onEdit)}><Pencil className="size-4 text-slate-400" />Edit</button>
+            <button type="button" role="menuitem" className={item} aria-label={`Move ${c.name} up`} disabled={isFirst || busy} onClick={pick(() => onMove(-1))}><ChevronUp className="size-4 text-slate-400" />Move up</button>
+            <button type="button" role="menuitem" className={item} aria-label={`Move ${c.name} down`} disabled={isLast || busy} onClick={pick(() => onMove(1))}><ChevronDown className="size-4 text-slate-400" />Move down</button>
+            <button type="button" role="menuitem" className={cn(item, 'border-t border-slate-100 text-red-600 hover:bg-red-50')} onClick={pick(onDelete)}><Trash2 className="size-4" />Delete</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ContactCard({ c, manager, isFirst, isLast, onEdit, onMove, onDelete, busy }) {
   const Icon = ICONS[c.category] || Phone;
+  // The icon already shows the kind; spell it out only when the name does not say it.
+  const kind = label(c.category);
+  const showKind = c.category !== 'other' && !c.name.toLowerCase().includes(kind.toLowerCase());
   return (
     <Card className={cn('flex flex-col p-4', c.active === false && 'opacity-60')}>
       <div className="flex items-start gap-3">
@@ -87,7 +116,7 @@ function ContactCard({ c, manager, isFirst, isLast, onEdit, onMove, onDelete, bu
             {c.available24x7 && <Badge tone="green">24x7</Badge>}
             {c.active === false && <Badge>Hidden</Badge>}
           </div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label(c.category)}</p>
+          {showKind && <p className="text-sm text-slate-500">{kind}</p>}
           {c.notes && <p className="mt-1 text-sm text-slate-600">{c.notes}</p>}
           {c.address && (
             <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
@@ -96,20 +125,12 @@ function ContactCard({ c, manager, isFirst, isLast, onEdit, onMove, onDelete, bu
             </p>
           )}
         </div>
+        {manager && <ManageMenu c={c} isFirst={isFirst} isLast={isLast} busy={busy} onEdit={onEdit} onMove={onMove} onDelete={onDelete} />}
       </div>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+      <div className="mt-auto flex flex-col gap-2 pt-4 sm:flex-row">
         <CallButton phone={c.phone} primary />
         {c.altPhone && <CallButton phone={c.altPhone} />}
       </div>
-      {manager && (
-        <div className="mt-3 flex items-center gap-1 border-t border-slate-100 pt-3">
-          <Button size="sm" variant="ghost" icon={ChevronUp} aria-label="Move up" disabled={isFirst || busy} onClick={() => onMove(-1)} />
-          <Button size="sm" variant="ghost" icon={ChevronDown} aria-label="Move down" disabled={isLast || busy} onClick={() => onMove(1)} />
-          <div className="flex-1" />
-          <Button size="sm" variant="ghost" icon={Pencil} onClick={onEdit}>Edit</Button>
-          <Button size="sm" variant="ghost" icon={Trash2} className="text-red-600 hover:bg-red-50" onClick={onDelete}>Delete</Button>
-        </div>
-      )}
     </Card>
   );
 }
@@ -119,6 +140,7 @@ export default function EmergencyDirectoryPage() {
   const manager = hasRole(user, ROLES.FACILITY_MANAGER);
   const { data = [], isLoading, error, refetch } = useContacts(manager);
   const [editing, setEditing] = useState(null); // null = closed, {} = new, contact = edit
+  const [deleting, setDeleting] = useState(null);
   const remove = useRemoveContact();
   const reorder = useReorderContacts();
 
@@ -154,11 +176,25 @@ export default function EmergencyDirectoryPage() {
               busy={reorder.isPending}
               onMove={(dir) => move(i, dir)}
               onEdit={() => setEditing(c)}
-              onDelete={() => window.confirm(`Delete ${c.name} from the emergency directory?`) && remove.mutate(c._id)}
+              onDelete={() => setDeleting(c)}
             />
           ))}
         </div>
       )}
+      <Modal
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        size="sm"
+        title={`Delete ${deleting?.name}?`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
+            <Button variant="danger" loading={remove.isPending} onClick={() => remove.mutate(deleting._id, { onSuccess: () => setDeleting(null) })}>Delete</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">The number is removed from the emergency directory for everyone.</p>
+      </Modal>
       {manager && editing && <ContactModal key={editing._id || 'new'} contact={editing._id ? editing : null} open onClose={() => setEditing(null)} />}
     </div>
   );

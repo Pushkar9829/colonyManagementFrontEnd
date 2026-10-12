@@ -66,7 +66,7 @@ function AckModal({ notice, onClose }) {
   return (
     <Modal open={Boolean(notice)} onClose={onClose} title="Acknowledgements" description={notice?.title}
       footer={<><Button variant="secondary" onClick={onClose}>Close</Button>{data?.pending.length > 0 && <Button icon={BellRing} loading={remind.isPending} onClick={() => remind.mutate(notice._id)}>Remind {data.pending.length}</Button>}</>}>
-      {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : (
+      {isLoading || !data ? <div className="flex justify-center py-8"><Spinner /></div> : (
         <>
           <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full bg-emerald-500" style={{ width: `${data.total ? (data.acknowledged.length / data.total) * 100 : 0}%` }} />
@@ -101,11 +101,15 @@ export default function NoticesPage() {
   const [expanded, setExpanded] = useState(null);
   const [acksFor, setAcksFor] = useState(null);
   const { data, isLoading } = useNotices({ category: category || undefined, page, pendingAck: filter === 'ack' || undefined, scheduled: filter === 'scheduled' || undefined });
+  // Count for the "To acknowledge (n)" tab; residents only.
+  const { data: pendingAck } = useNotices(manager ? { scheduled: true, limit: 1 } : { pendingAck: true, limit: 1 });
+  const ackCount = manager ? 0 : pendingAck?.meta?.total || 0;
   const markRead = useMarkNoticeRead();
   const ack = useAckNotice();
   const update = useUpdateNotice();
   const remove = useDeleteNotice();
 
+  const needsAck = (n) => n.requiresAck && !n.isAcknowledged && !n.scheduled && n.createdBy?._id !== user._id;
   const open = (n) => {
     setExpanded(expanded === n._id ? null : n._id);
     if (!n.isRead && !n.scheduled) markRead.mutate(n._id);
@@ -117,7 +121,7 @@ export default function NoticesPage() {
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <Tabs className="w-fit max-w-full" value={category} onChange={(v) => { setCategory(v); setPage(1); }} tabs={[{ value: '', label: 'All' }, ...CATEGORIES.map((c) => ({ value: c, label: label(c) }))]} />
         <Tabs className="w-fit" value={filter} onChange={(v) => { setFilter(v); setPage(1); }}
-          tabs={[{ value: '', label: 'Everything' }, manager ? { value: 'scheduled', label: 'Scheduled' } : { value: 'ack', label: 'Needs my OK' }]} />
+          tabs={[{ value: '', label: 'All notices' }, manager ? { value: 'scheduled', label: 'Scheduled' } : { value: 'ack', label: `To acknowledge${ackCount ? ` (${ackCount})` : ''}` }]} />
       </div>
       {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
         <Card><EmptyState icon={Megaphone} title={filter === 'ack' ? 'Nothing to acknowledge' : filter === 'scheduled' ? 'No scheduled notices' : 'No notices'} description={filter ? undefined : 'Announcements from the committee will appear here.'} /></Card>
@@ -125,37 +129,45 @@ export default function NoticesPage() {
         <div className="space-y-3">
           {data.data.map((n) => (
             <Card key={n._id} className={cn('p-4 sm:p-5', !n.isRead && !n.scheduled && 'border-l-4 border-l-brand-500', n.requiresAck && !n.isAcknowledged && !manager && 'border-l-4 border-l-amber-500')}>
-              <div className="flex items-start gap-3">
-                <button type="button" onClick={() => open(n)} className="min-w-0 flex-1 text-left">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {n.pinned && <Pin className="size-4 text-brand-600" />}
-                    <h3 className="font-semibold text-slate-900">{n.title}</h3>
-                    <Badge tone={TONES[n.category]}>{label(n.category)}</Badge>
-                    {n.scheduled && <Badge tone="blue"><CalendarClock className="mr-1 size-3" />Scheduled {dateTime(n.publishAt)}</Badge>}
-                    {!n.isRead && !n.scheduled && <Badge tone="brand">New</Badge>}
-                    {n.requiresAck && <Badge tone={n.isAcknowledged ? 'green' : 'amber'}>{n.isAcknowledged ? 'Acknowledged' : 'Please acknowledge'}</Badge>}
-                    {n.sendEmail && manager && <Badge><Mail className="mr-1 size-3" />Emailed</Badge>}
-                    {n.audience?.type !== 'all' && <Badge>{n.audience.type === 'roles' ? n.audience.roles.map(label).join(', ') : 'Selected blocks'}</Badge>}
-                  </div>
-                  <p className={cn('mt-2 whitespace-pre-wrap break-words text-sm text-slate-600', expanded !== n._id && 'line-clamp-2')}>{n.body}</p>
-                  <p className="mt-2 text-xs text-slate-400">
-                    {n.createdBy?.name}{n.createdBy?.designation ? ` (${n.createdBy.designation})` : ''} · {dateTime(n.publishAt || n.createdAt)}
-                    {manager && n.readCount !== undefined ? ` · read by ${n.readCount}` : ''}
-                  </p>
-                </button>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => open(n)} className="block w-full text-left">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {n.pinned && <Pin className="size-4 text-brand-600" />}
+                      <h3 className="font-semibold text-slate-900">{n.title}</h3>
+                      <Badge tone={TONES[n.category]}>{label(n.category)}</Badge>
+                      {n.scheduled && <Badge tone="blue"><CalendarClock className="mr-1 size-3" />Scheduled {dateTime(n.publishAt)}</Badge>}
+                      {!n.isRead && !n.scheduled && <Badge tone="brand">New</Badge>}
+                      {n.requiresAck && <Badge tone={n.isAcknowledged ? 'green' : 'amber'}>{n.isAcknowledged ? 'Acknowledged' : 'Please acknowledge'}</Badge>}
+                      {n.sendEmail && manager && <Badge><Mail className="mr-1 size-3" />Emailed</Badge>}
+                      {n.audience?.type !== 'all' && <Badge>{n.audience.type === 'roles' ? n.audience.roles.map(label).join(', ') : 'Selected blocks'}</Badge>}
+                    </div>
+                  </button>
+                  {/* Phones: the acknowledge button sits right under the title so it is seen without scrolling. */}
+                  {needsAck(n) && (
+                    <Button size="sm" className="mt-2 w-full sm:hidden" icon={CheckCircle2} loading={ack.isPending && ack.variables === n._id} onClick={() => ack.mutate(n._id)}>I&apos;ve read this</Button>
+                  )}
+                  <button type="button" onClick={() => open(n)} className="block w-full text-left">
+                    <p className={cn('mt-2 whitespace-pre-wrap break-words text-sm text-slate-600', expanded !== n._id && 'line-clamp-2')}>{n.body}</p>
+                    <p className="mt-2 text-xs text-slate-400">
+                      {n.createdBy?.name}{n.createdBy?.designation ? ` (${n.createdBy.designation})` : ''} · {dateTime(n.publishAt || n.createdAt)}
+                      {manager && n.readCount !== undefined ? ` · Seen by ${n.readCount}` : ''}
+                    </p>
+                  </button>
+                </div>
                 {manager && (
-                  <div className="flex shrink-0 gap-1">
+                  <div className="flex shrink-0 flex-wrap gap-1">
                     {n.requiresAck && (
-                      <button type="button" title="Who has acknowledged" onClick={() => setAcksFor(n)} className="flex items-center gap-1 rounded-md p-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"><ClipboardCheck className="size-4" />{n.ackCount}</button>
+                      <button type="button" title="Who has acknowledged" onClick={() => setAcksFor(n)} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:min-h-0 sm:p-1.5"><ClipboardCheck className="size-4" />{n.ackCount} acknowledged</button>
                     )}
-                    <button type="button" title={n.pinned ? 'Unpin' : 'Pin'} onClick={() => update.mutate({ id: n._id, pinned: !n.pinned })} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><Pin className="size-4" /></button>
-                    <button type="button" title="Delete" onClick={() => window.confirm('Delete this notice?') && remove.mutate(n._id)} className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="size-4" /></button>
+                    <button type="button" title={n.pinned ? 'Unpin' : 'Pin to top'} onClick={() => update.mutate({ id: n._id, pinned: !n.pinned })} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:min-h-0 sm:p-1.5"><Pin className="size-4" />{n.pinned ? 'Unpin' : 'Pin'}</button>
+                    <button type="button" title="Delete" onClick={() => window.confirm('Delete this notice?') && remove.mutate(n._id)} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-red-50 hover:text-red-600 sm:min-h-0 sm:p-1.5"><Trash2 className="size-4" />Delete</button>
                   </div>
                 )}
               </div>
               {n.attachments?.length > 0 && <div className="mt-3"><Attachments items={n.attachments} /></div>}
-              {n.requiresAck && !n.isAcknowledged && !n.scheduled && n.createdBy?._id !== user._id && (
-                <div className="mt-3 flex flex-col gap-2 rounded-lg bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+              {needsAck(n) && (
+                <div className="mt-3 hidden gap-2 rounded-lg bg-amber-50 p-3 sm:flex sm:items-center sm:justify-between">
                   <p className="text-sm text-amber-800">The committee asks everyone to confirm they have read this notice.</p>
                   <Button size="sm" icon={CheckCircle2} loading={ack.isPending && ack.variables === n._id} onClick={() => ack.mutate(n._id)}>I&apos;ve read this</Button>
                 </div>

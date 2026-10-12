@@ -11,7 +11,7 @@ export function useSosAlerts(params) {
 export const useRaiseSos = (opts) =>
   useApiMutation((body) => api.post('/sos', body), { invalidate: ['sos'], success: 'SOS sent. Security has been alerted.', ...opts });
 
-export const useAcknowledgeSos = () => useApiMutation((id) => api.post(`/sos/${id}/acknowledge`), { invalidate: ['sos', 'dashboard'], success: 'Acknowledged' });
+export const useAcknowledgeSos = () => useApiMutation((id) => api.post(`/sos/${id}/acknowledge`), { invalidate: ['sos', 'dashboard'], success: 'Marked as responding' });
 
 export const useResolveSos = () =>
-  useApiMutation(({ id, resolutionNote }) => api.post(`/sos/${id}/resolve`, { resolutionNote }), { invalidate: ['sos', 'dashboard'], success: 'Marked resolved' });
+  useApiMutation(({ id, resolutionNote }) => api.post(`/sos/${id}/resolve`, { resolutionNote }), { invalidate: ['sos', 'dashboard'], success: 'Alert closed' });

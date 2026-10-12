@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CalendarPlus, ClipboardCheck, FileText, Hammer, ScanLine, Wrench } from 'lucide-react';
+import { CalendarPlus, FileText, Hammer, ScanLine, Wrench } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, EmptyState, Input, Pagination, Spinner, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
@@ -17,6 +17,7 @@ import { useCancelLeave, useLeaveBalances, useLeaves, useMyAttendance, usePaysli
 import { ATT_TONES } from '../constants';
 import { ApplyLeaveModal, BalanceCards, LEAVE_TONES } from '../components/LeaveModals';
 import { PunchCard } from '../components/PunchCard';
+import { MyTicketsCard } from '../components/MyTicketsCard';
 
 const isTech = (role) => ['staff', 'facility_manager', 'admin'].includes(role);
 
@@ -37,23 +38,27 @@ function TodayTab() {
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="space-y-6">
         <PunchCard />
-        <Card>
-          <CardHeader title="Checklists today" subtitle="Housekeeping / area rounds with photo proof" />
-          {runs.isLoading ? <div className="flex justify-center p-6"><Spinner /></div> : !runs.data?.data?.length ? <EmptyState icon={ClipboardCheck} title="No checklists today" /> : (
-            <ul className="divide-y divide-slate-100">
-              {runs.data.data.map((r) => (
-                <li key={r._id}>
-                  <button type="button" onClick={() => setRun(r)} className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left hover:bg-slate-50">
-                    <div className="min-w-0"><p className="truncate font-medium text-slate-900">{r.name}</p><p className="text-xs text-slate-500">{r.slot} · by {time(r.dueAt)}</p></div>
-                    <Badge tone={RUN_TONES[r.status]}>{label(r.status)}</Badge>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        {/* Only people with rounds today see this card; for guards the rounds are their patrol/area checks. */}
+        {(runs.isLoading || runs.data?.data?.length > 0) && (
+          <Card>
+            <CardHeader title={user.role === 'guard' ? 'My rounds' : 'Checklists today'} subtitle={user.role === 'guard' ? 'Area rounds to finish today, with photo proof' : 'Housekeeping / area rounds with photo proof'} />
+            {runs.isLoading ? <div className="flex justify-center p-6"><Spinner /></div> : (
+              <ul className="divide-y divide-slate-100">
+                {runs.data.data.map((r) => (
+                  <li key={r._id}>
+                    <button type="button" onClick={() => setRun(r)} className="flex w-full items-center justify-between gap-3 px-5 py-3 text-left hover:bg-slate-50">
+                      <div className="min-w-0"><p className="truncate font-medium text-slate-900">{r.name}</p><p className="text-xs text-slate-500">{r.slot} · by {time(r.dueAt)}</p></div>
+                      <Badge tone={RUN_TONES[r.status]}>{label(r.status)}</Badge>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        )}
       </div>
       <div className="space-y-6">
+        {isTech(user.role) && <MyTicketsCard />}
         <Card>
           <CardHeader title="My maintenance tasks" subtitle="Due today, tomorrow or overdue" action={<Link to="/assets/scan"><Button size="sm" variant="secondary" icon={ScanLine}>Scan asset</Button></Link>} />
           {tasks.isLoading ? <div className="flex justify-center p-6"><Spinner /></div> : !tasks.data?.data?.length ? <EmptyState icon={Wrench} title="Nothing due" /> : (
@@ -109,7 +114,7 @@ function AttendanceTab() {
   const t = data?.totals;
   return (
     <Card>
-      <CardHeader title={periodLabel(period)} subtitle={t ? `${t.present + t.late} present · ${t.late} late · ${t.halfDay} half day · ${t.absent} absent · ${t.paidLeave + t.unpaidLeave} leave` : undefined} action={<Input type="month" value={period} max={currentPeriod()} onChange={(e) => setPeriod(e.target.value)} />} />
+      <CardHeader title={periodLabel(period)} subtitle={t ? `${t.present + t.late} present · ${t.late} late · ${t.halfDay} half day · ${t.absent} absent · ${t.paidLeave + t.unpaidLeave} leave` : undefined} action={<Input title="Month" type="month" value={period} max={currentPeriod()} onChange={(e) => setPeriod(e.target.value)} />} />
       <Table loading={isLoading} rows={data?.records} empty="No attendance this month"
         columns={[
           { key: 'date', header: 'Date', render: (r) => date(r.date) },

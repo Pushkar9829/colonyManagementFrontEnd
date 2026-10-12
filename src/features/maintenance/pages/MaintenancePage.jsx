@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, CalendarCheck2, CheckCircle2, Plus, Siren, Wrench } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Button, Card, Input, Modal, Pagination, Select, StatCard, Table, Tabs, Textarea } from '../../../components/ui';
+import { Badge, Button, Card, FilterBar, Input, Modal, Pagination, Select, StatCard, Table, Tabs, Textarea } from '../../../components/ui';
 import { date, dateTime, label, todayISO } from '../../../lib/format';
 import { ASSIGNEE_ROLES, addDays, usePeople } from '../../assets/shared';
 import { useAssignTask, useBreakdowns, useMaintenanceStats, usePpmReport, useSchedules, useSkipTask, useTasks } from '../api';
@@ -49,11 +49,11 @@ function TasksTab({ initialStatus, initialTask }) {
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value, page: 1 }));
   return (
     <Card>
-      <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-        <Select placeholder="All statuses" options={TASK_STATUSES} value={f.status} onChange={set('status')} />
-        <Input type="date" value={f.from} onChange={set('from')} disabled={f.status === 'overdue'} />
-        <Input type="date" value={f.to} onChange={set('to')} disabled={f.status === 'overdue'} />
-      </div>
+      <FilterBar cols={3} active={f.status ? 1 : 0}>
+        <Select label="Status" placeholder="All statuses" options={TASK_STATUSES} value={f.status} onChange={set('status')} />
+        <Input label="Due from" type="date" value={f.from} max={f.to || undefined} onChange={set('from')} disabled={f.status === 'overdue'} hint={f.status === 'overdue' ? 'All overdue tasks are shown' : undefined} />
+        <Input label="Due to" type="date" value={f.to} min={f.from || undefined} onChange={set('to')} disabled={f.status === 'overdue'} />
+      </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No tasks in this range" onRowClick={(t) => setOpen(t._id)}
         columns={[
           { key: 'dueDate', header: 'Due', render: (t) => date(t.dueDate) },
@@ -101,7 +101,7 @@ function BreakdownsTab() {
   return (
     <Card>
       <div className="border-b border-slate-100 p-4 sm:w-64">
-        <Select placeholder="All statuses" options={BD_STATUSES} value={f.status} onChange={(e) => setF({ status: e.target.value, page: 1 })} />
+        <Select label="Status" placeholder="All statuses" options={BD_STATUSES} value={f.status} onChange={(e) => setF({ status: e.target.value, page: 1 })} />
       </div>
       <Table loading={isLoading} rows={data?.data} empty="No breakdowns" onRowClick={(b) => setOpen(b._id)}
         columns={[
@@ -125,12 +125,12 @@ function ReportTab() {
   const t = data?.totals;
   return (
     <div className="space-y-4">
-      <Card className="grid gap-3 p-4 sm:grid-cols-3">
-        <Input label="From" type="date" value={range.from} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
-        <Input label="To" type="date" value={range.to} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+      <Card className="grid grid-cols-2 gap-3 sm:gap-3 p-4 sm:grid-cols-3">
+        <Input label="From" type="date" value={range.from} max={range.to} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
+        <Input label="To" type="date" value={range.to} min={range.from} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
       </Card>
       {t && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={CalendarCheck2} label="Completion rate" value={t.completionRate === null ? '—' : `${t.completionRate}%`} sub={`${t.completed} of ${t.total - t.pending - t.skipped} due`} />
           <StatCard icon={CheckCircle2} tone="green" label="On time" value={t.onTime} sub={`${t.late} late`} />
           <StatCard icon={AlertTriangle} tone="red" label="Missed" value={t.missed} sub={`${t.overdue} still overdue`} />
@@ -163,8 +163,8 @@ export default function MaintenancePage() {
   return (
     <div>
       <PageHeader
-        title="Maintenance (PPM)"
-        description="Preventive maintenance plans, the task calendar they generate, and equipment breakdowns."
+        title="Repair schedule (AMC/PPM)"
+        description="Regular servicing of the society's equipment — lifts, pumps, DG sets, fire systems — and breakdown repairs. (Maintenance bills to flats are under Billing.)"
         actions={
           <>
             <Button variant="danger" icon={Siren} onClick={() => setModal('breakdown')}>Report breakdown</Button>
@@ -173,7 +173,7 @@ export default function MaintenancePage() {
         }
       />
       {stats && (
-        <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard icon={CalendarCheck2} label="Due today" value={stats.dueToday} />
           <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={stats.overdue} to="/maintenance?tab=tasks&status=overdue" />
           <StatCard icon={CheckCircle2} tone="green" label="Done today" value={stats.completedToday} />

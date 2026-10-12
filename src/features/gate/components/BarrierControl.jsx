@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DoorOpen } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
-import { Button, Card, CardHeader, Input, StatusBadge } from '../../../components/ui';
+import { Button, Card, CardHeader, Input, Modal, StatusBadge } from '../../../components/ui';
 import { timeAgo } from '../../../lib/format';
 import { useBarrierCommands, useGates, useOpenBarrier } from '../api';
 
@@ -11,7 +11,8 @@ export function BarrierControl({ compact = false }) {
   const { data: gates = ['Main gate'] } = useGates();
   const [gate, setGate] = useState('Main gate');
   const [reason, setReason] = useState('');
-  const open = useOpenBarrier({ onSuccess: () => setReason('') });
+  const [confirming, setConfirming] = useState(false);
+  const open = useOpenBarrier({ onSuccess: () => { setReason(''); setConfirming(false); } });
   const { data } = useBarrierCommands({ limit: compact ? 3 : 8 }, { refetchInterval: live });
   return (
     <Card>
@@ -23,7 +24,7 @@ export function BarrierControl({ compact = false }) {
           </select>
           <Input placeholder="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
-        <Button size="lg" icon={DoorOpen} className="w-full" loading={open.isPending} onClick={() => open.mutate({ gate, reason: reason || undefined })}>
+        <Button size="lg" icon={DoorOpen} className="w-full" onClick={() => setConfirming(true)}>
           Open barrier
         </Button>
         {data?.data.length > 0 && (
@@ -38,6 +39,22 @@ export function BarrierControl({ compact = false }) {
           </ul>
         )}
       </div>
+      {/* A barrier opening by mistake lets an unchecked vehicle in, so it is confirmed first. */}
+      <Modal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        size="sm"
+        title={`Open the ${gate} barrier?`}
+        description={reason ? `Reason: ${reason}` : 'The barrier opens within a few seconds.'}
+        footer={
+          <>
+            <Button variant="secondary" size="lg" onClick={() => setConfirming(false)}>Cancel</Button>
+            <Button size="lg" icon={DoorOpen} loading={open.isPending} onClick={() => open.mutate({ gate, reason: reason || undefined })}>Confirm</Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">Only open it after you have checked the vehicle.</p>
+      </Modal>
     </Card>
   );
 }

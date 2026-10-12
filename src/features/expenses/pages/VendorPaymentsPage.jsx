@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { HandCoins } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Button, Card, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Textarea } from '../../../components/ui';
+import { Button, Card, FilterBar, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Textarea } from '../../../components/ui';
 import { date, label, money, toPaise, todayISO } from '../../../lib/format';
 import { AccountSelect } from '../../accounting/components/common';
 import { useCancelVendorPayment, useCreateVendorPayment, useVendorBills, useVendorPayment, useVendorPayments } from '../api';
@@ -104,14 +104,14 @@ export default function VendorPaymentsPage() {
     <div>
       <PageHeader title="Vendor payments" description="Money paid to vendors against their bills." actions={<Button icon={HandCoins} onClick={() => setAdding(true)}>Pay vendor</Button>} />
       <Card>
-        <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2 lg:grid-cols-3">
-          <VendorPicker label={undefined} placeholder="All vendors" includeInactive value={filters.vendor} onChange={set('vendor')} />
-          <Select placeholder="Any mode" options={PAYMENT_METHODS} value={filters.method} onChange={set('method')} />
-          <Select placeholder="Posted and cancelled" options={[{ value: 'posted', label: 'Posted' }, { value: 'cancelled', label: 'Cancelled' }]} value={filters.status} onChange={set('status')} />
-          <Input type="date" aria-label="From" value={filters.from} onChange={set('from')} />
-          <Input type="date" aria-label="To" value={filters.to} onChange={set('to')} />
-          <Input placeholder="Payment no. or reference" value={filters.search} onChange={set('search')} />
-        </div>
+        <FilterBar cols={3} active={[filters.vendor, filters.method, filters.status, filters.from, filters.to].filter(Boolean).length}
+          search={<Input label="Search" placeholder="Payment no. or reference" value={filters.search} onChange={set('search')} />}>
+          <VendorPicker label="Vendor" placeholder="All vendors" includeInactive value={filters.vendor} onChange={set('vendor')} />
+          <Select label="Mode" placeholder="Any mode" options={PAYMENT_METHODS} value={filters.method} onChange={set('method')} />
+          <Select label="Status" placeholder="Posted and cancelled" options={[{ value: 'posted', label: 'Posted' }, { value: 'cancelled', label: 'Cancelled' }]} value={filters.status} onChange={set('status')} />
+          <Input label="From" type="date" value={filters.from} max={filters.to || undefined} onChange={set('from')} />
+          <Input label="To" type="date" value={filters.to} min={filters.from || undefined} onChange={set('to')} />
+        </FilterBar>
         <Table loading={isLoading} rows={data?.data} empty="No vendor payments" onRowClick={(p) => setOpenId(p._id)}
           columns={[
             { key: 'number', header: 'Payment', render: (p) => <span className="font-mono text-xs font-semibold">{p.number}</span> },
