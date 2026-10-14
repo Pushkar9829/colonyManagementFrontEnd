@@ -6,6 +6,7 @@ import { cn } from '../../../lib/cn';
 import { dateTime } from '../../../lib/format';
 import { useCreatePass } from '../api';
 import { QrImage, qrDataUrl } from './QrImage';
+import { GateMultiSelect } from '../../gates/components/GateMultiSelect';
 
 export const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -36,6 +37,7 @@ export function PassCard({ pass }) {
         {dateTime(pass.validFrom)} – {dateTime(pass.validTo)}
         {pass.kind !== 'recurring' ? ` · ${pass.maxUses} entr${pass.maxUses > 1 ? 'ies' : 'y'}` : ''}
       </p>
+      {pass.gates?.length > 0 && pass.gates[0]?.name && <p className="mt-1 text-xs font-medium text-slate-600">Only at {pass.gates.map((g) => g.name).join(' or ')}</p>}
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button size="sm" variant="secondary" onClick={() => navigator.clipboard?.writeText(share)}>Copy message</Button>
         {pass.qrToken && <Button size="sm" variant="secondary" icon={Download} onClick={download}>Save QR</Button>}
@@ -52,6 +54,7 @@ export function PassModal({ open, onClose, initial }) {
   const [created, setCreated] = useState(null);
   const [kind, setKind] = useState('one_time');
   const [days, setDays] = useState([1, 3]);
+  const [gates, setGates] = useState([]); // [] = any gate
   const { values, bind, applyServerErrors, reset, errors } = useForm({
     guestName: initial?.name || '',
     phone: initial?.phone || '',
@@ -69,11 +72,12 @@ export function PassModal({ open, onClose, initial }) {
     setCreated(null);
     reset();
     setKind('one_time');
+    setGates([]);
     onClose();
   };
 
   const submit = () => {
-    const base = { guestName: values.guestName, phone: values.phone || undefined, purpose: values.purpose };
+    const base = { guestName: values.guestName, phone: values.phone || undefined, purpose: values.purpose, gates };
     const body =
       kind === 'recurring'
         ? { ...base, validFrom: new Date().toISOString(), validTo: new Date(`${values.untilDate}T23:59:00`).toISOString(), recurrence: { days, startTime: values.startTime, endTime: values.endTime } }
@@ -124,6 +128,9 @@ export function PassModal({ open, onClose, initial }) {
             <Input label="Repeat until" type="date" {...bind('untilDate')} error={errors.validTo} />
           </>
         )}
+        <div className="sm:col-span-2">
+          <GateMultiSelect label="Valid at" value={gates} onChange={setGates} hint={gates.length ? 'The guard at any other gate will send your guest to one of these.' : undefined} />
+        </div>
       </div>
     </Modal>
   );

@@ -49,7 +49,10 @@ export function VisitorRow({ v, actions, showUnit = true, actionsBelow = false }
             {v.checkInAt ? ` · in ${time(v.checkInAt)}` : ''}
             {v.checkOutAt ? ` · out ${time(v.checkOutAt)}` : ''}
             {v.respondedBy ? ` · by ${v.respondedBy.name}` : ''}
+            {v.entryGateName ? ` · ${v.entryGateName}` : ''}
+            {v.exitGateName && v.exitGateName !== v.entryGateName ? ` → ${v.exitGateName}` : ''}
           </p>
+          {v.gateOverride?.reason && <p className="text-xs text-amber-700">Gate override: {v.gateOverride.reason}</p>}
         </div>
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}

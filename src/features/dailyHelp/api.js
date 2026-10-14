@@ -18,7 +18,8 @@ export const useCreateHelp = (o) => useApiMutation((b) => api.post('/daily-help'
 export const useUpdateHelp = () => useApiMutation(({ id, ...b }) => api.patch(`/daily-help/${id}`, b), { invalidate: ['dailyHelp'], success: 'Helper updated' });
 export const useRemoveHelpFromUnit = () => useApiMutation((id) => api.del(`/daily-help/${id}/my-unit`), { invalidate: ['dailyHelp'], success: 'Removed from your home' });
 export const useGateScan = (o) =>
-  useApiMutation((passcode) => api.post('/daily-help/gate-scan', { passcode }), {
+  // passcode, or { passcode, gateId } from the gate console
+  useApiMutation((b) => api.post('/daily-help/gate-scan', typeof b === 'string' ? { passcode: b } : b), {
     invalidate: ['dailyHelp', 'dashboard'],
     success: (r) => `${r.help.name} ${r.direction === 'in' ? 'entered' : 'left'}`,
     ...o,

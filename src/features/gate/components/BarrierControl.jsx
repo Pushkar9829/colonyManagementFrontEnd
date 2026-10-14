@@ -1,30 +1,34 @@
 import { useState } from 'react';
 import { DoorOpen } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
-import { Button, Card, CardHeader, Input, Modal, StatusBadge } from '../../../components/ui';
+import { Button, Card, CardHeader, Input, Modal, Select, StatusBadge } from '../../../components/ui';
 import { timeAgo } from '../../../lib/format';
-import { useBarrierCommands, useGates, useOpenBarrier } from '../api';
+import { useGates } from '../../gates/api';
+import { useBarrierCommands, useOpenBarrier } from '../api';
 
 // "Open barrier" for the guard: queues a command that the barrier controller picks up within seconds.
-export function BarrierControl({ compact = false }) {
+//   gate: the console's current gate — the barrier of that gate opens. Without it (management pages)
+//         the gate is picked from a list.
+export function BarrierControl({ compact = false, gate: fixedGate }) {
   const live = useLiveInterval(5000);
-  const { data: gates = ['Main gate'] } = useGates();
-  const [gate, setGate] = useState('Main gate');
+  const { data: gates = [] } = useGates(undefined, { enabled: !fixedGate });
+  const [picked, setPicked] = useState('');
+  const gate = fixedGate || gates.find((g) => g._id === picked) || gates[0] || null;
   const [reason, setReason] = useState('');
   const [confirming, setConfirming] = useState(false);
   const open = useOpenBarrier({ onSuccess: () => { setReason(''); setConfirming(false); } });
-  const { data } = useBarrierCommands({ limit: compact ? 3 : 8 }, { refetchInterval: live });
+  const { data } = useBarrierCommands({ limit: compact ? 3 : 8, gate: fixedGate?._id }, { refetchInterval: live });
   return (
     <Card>
-      <CardHeader title="Boom barrier" subtitle="Sends an open command to the gate controller" />
+      <CardHeader title={fixedGate ? `Boom barrier · ${fixedGate.name}` : 'Boom barrier'} subtitle="Sends an open command to the gate controller" />
       <div className="space-y-3 p-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <select aria-label="Gate" value={gate} onChange={(e) => setGate(e.target.value)} className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm">
-            {gates.map((g) => <option key={g} value={g}>{g}</option>)}
-          </select>
+        <div className={fixedGate ? '' : 'grid gap-3 sm:grid-cols-2'}>
+          {!fixedGate && gates.length > 1 && (
+            <Select aria-label="Gate" value={gate?._id || ''} onChange={(e) => setPicked(e.target.value)} options={gates.map((g) => ({ value: g._id, label: g.name }))} />
+          )}
           <Input placeholder="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
-        <Button size="lg" icon={DoorOpen} className="w-full" onClick={() => setConfirming(true)}>
+        <Button size="lg" icon={DoorOpen} className="w-full" disabled={!gate} onClick={() => setConfirming(true)}>
           Open barrier
         </Button>
         {data?.data.length > 0 && (
@@ -44,12 +48,12 @@ export function BarrierControl({ compact = false }) {
         open={confirming}
         onClose={() => setConfirming(false)}
         size="sm"
-        title={`Open the ${gate} barrier?`}
+        title={`Open the ${gate?.name || 'gate'} barrier?`}
         description={reason ? `Reason: ${reason}` : 'The barrier opens within a few seconds.'}
         footer={
           <>
             <Button variant="secondary" size="lg" onClick={() => setConfirming(false)}>Cancel</Button>
-            <Button size="lg" icon={DoorOpen} loading={open.isPending} onClick={() => open.mutate({ gate, reason: reason || undefined })}>Confirm</Button>
+            <Button size="lg" icon={DoorOpen} loading={open.isPending} onClick={() => open.mutate({ gateId: gate._id, reason: reason || undefined })}>Confirm</Button>
           </>
         }
       >

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { AlertTriangle, Baby, Car, CheckCircle2, KeyRound, LogOut, Package, Phone, QrCode, ShieldAlert, ShieldX, Undo2, UserPlus, WifiOff } from 'lucide-react';
+import { AlertTriangle, Baby, Car, CheckCircle2, DoorClosed, KeyRound, LogOut, Package, Phone, QrCode, ShieldAlert, ShieldX, Undo2, UserPlus, WifiOff } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FileUpload, Input, Modal, Spinner, Tabs } from '../../../components/ui';
@@ -22,11 +22,39 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { QrScanner } from '../components/QrScanner';
 import { ManualLog } from '../components/ManualLog';
 import { BarrierControl } from '../components/BarrierControl';
+import { useCurrentGate } from '../../gates/useCurrentGate';
+import { GateBar } from '../../gates/components/GatePicker';
+import { gateTakes } from '../../gates/gateRules';
 
 const PURPOSES = ['guest', 'delivery', 'cab', 'service', 'other'];
 const LESS_USED = [{ value: 'vehicles', label: 'Vehicles' }, { value: 'children', label: 'Children' }];
 const TAB_VALUES = ['entry', 'scan', 'parcels', 'vehicles', 'children', 'pending', 'inside'];
 const clean = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== '' && v !== undefined && v !== false));
+const visitorKind = (purpose) => (purpose === 'delivery' ? 'deliveries' : 'visitors');
+const KIND_WORD = { visitors: 'visitors', deliveries: 'deliveries', vehicles: 'vehicles', staff: 'daily help or staff' };
+
+// "This gate" / "All gates" for the waiting and inside lists (only when there is more than one gate).
+function ScopeToggle({ scope }) {
+  if (!scope.multi) return null;
+  return (
+    <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium" role="group" aria-label="Show">
+      {[['gate', 'This gate'], ['all', 'All gates']].map(([v, l]) => (
+        <button key={v} type="button" aria-pressed={scope.value === v} onClick={() => scope.set(v)} className={cn('rounded-md px-2.5 py-1.5', scope.value === v ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50')}>
+          {l}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Shown when the gate refused an entry: the guard may still let them in once the resident confirmed by phone.
+function OverrideButton({ onClick, loading }) {
+  return (
+    <Button size="sm" variant="secondary" className="mt-2" loading={loading} onClick={onClick}>
+      Resident confirmed by phone — let in here
+    </Button>
+  );
+}
 
 function useWide() {
   const query = '(min-width: 1024px)';
@@ -60,7 +88,7 @@ function Notice({ tone, icon: Icon, title, children, onClose }) {
 }
 
 // ---------- new entry ----------
-function NewEntry({ queue }) {
+function NewEntry({ queue, gate }) {
   const toast = useToast();
   const { values, set, bind, applyServerErrors, setValues } = useForm({ unit: '', name: '', phone: '', purpose: 'delivery', company: '', vehicleNumber: '', guardApproved: false });
   const [unitLabel, setUnitLabel] = useState('');
@@ -107,7 +135,7 @@ function NewEntry({ queue }) {
 
   const submit = (e) => {
     e.preventDefault();
-    const body = clean({ ...values });
+    const body = clean({ ...values, gateId: gate?._id });
     if (photo[0]) body.photo = photo[0]._id;
     const enqueue = () => {
       delete body.photo; // uploads need the network
@@ -121,10 +149,15 @@ function NewEntry({ queue }) {
       onError: (err) => {
         if (isNetworkError(err)) return enqueue();
         if (err.code === 'VISITOR_BLOCKED') setOutcome({ tone: 'red', icon: ShieldX, title: 'Do not allow entry', body: err.message });
+        if (err.code === 'GATE_NOT_ALLOWED') setOutcome({ tone: 'amber', icon: DoorClosed, title: 'Not at this gate', body: err.message, retry: body });
         return applyServerErrors(err);
       },
     });
   };
+  // Override of a gate refusal, recorded on the entry.
+  const override = () => log.mutate({ ...outcome.retry, guardApproved: true }, { onError: (err) => setOutcome({ tone: 'red', icon: AlertTriangle, title: 'Not allowed', body: err.message }) });
+  const kind = visitorKind(values.purpose);
+  const wrongGate = gate && !gateTakes(gate, kind) ? `${gate.name} does not take ${KIND_WORD[kind]}` : gate?.isPedestrianOnly && values.vehicleNumber ? `${gate.name} is for people on foot only` : null;
 
   const pickFrequent = (f) => setValues((v) => ({ ...v, name: f.name, phone: f.phone || '', purpose: f.purpose || 'guest', company: f.company || '', vehicleNumber: f.vehicleNumber || '' }));
 
@@ -132,7 +165,12 @@ function NewEntry({ queue }) {
     <Card>
       <CardHeader title="New visitor" subtitle={queue.online ? 'Resident gets an approval request instantly' : 'Offline: saved on this device'} />
       <form onSubmit={submit} className="space-y-4 p-4 sm:p-5">
-        {outcome && <Notice tone={outcome.tone} icon={outcome.icon} title={outcome.title} onClose={() => setOutcome(null)}>{outcome.body}</Notice>}
+        {outcome && (
+          <Notice tone={outcome.tone} icon={outcome.icon} title={outcome.title} onClose={() => setOutcome(null)}>
+            {outcome.body}
+            {outcome.retry && <div><OverrideButton loading={log.isPending} onClick={override} /></div>}
+          </Notice>
+        )}
         <div className="flex flex-wrap gap-2">
           {PURPOSES.map((p) => (
             <button key={p} type="button" onClick={() => set('purpose', p)}
@@ -141,6 +179,9 @@ function NewEntry({ queue }) {
             </button>
           ))}
         </div>
+        {wrongGate && !outcome && (
+          <Notice tone="amber" icon={DoorClosed} title={wrongGate}>Send them to the right gate, or tick "resident confirmed" after a phone call to let them in here.</Notice>
+        )}
         <UnitPicker value={values.unit} onChange={(id, u) => { set('unit', id); setUnitLabel(u?.label || ''); }} required />
         {frequent?.data?.length > 0 && (
           <div>
@@ -171,9 +212,8 @@ function NewEntry({ queue }) {
             {pre.matches.map((m) => <p key={m.entry}>{m.name ? `${m.name}: ` : ''}{m.reason}</p>)}
           </Notice>
         )}
-        {queue.online ? (
-          <FileUpload folder="visitors" files={photo} onChange={setPhoto} max={1} camera label="Visitor photo" />
-        ) : (
+        {queue.online && <FileUpload folder="visitors" files={photo} onChange={setPhoto} max={1} camera label="Visitor photo" />}
+        {(!queue.online || wrongGate) && (
           <Checkbox label="Resident confirmed by phone — let them in" checked={values.guardApproved} onChange={(e) => set('guardApproved', e.target.checked)} />
         )}
         {/* Stays at the bottom of the screen on phones so the guard never has to scroll to send. */}
@@ -189,11 +229,12 @@ function NewEntry({ queue }) {
 }
 
 // ---------- scan / codes ----------
-function ScanPanel({ queue }) {
+function ScanPanel({ queue, gate }) {
   const toast = useToast();
   const [mode, setMode] = useState('pass');
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
+  const gateId = gate?._id;
   const onDone = (v) => {
     setResult(v.watch ? { tone: 'amber', icon: ShieldAlert, title: `${v.name} entered — watchlist`, body: `${v.watch.reason} · ${v.unit.label}` } : { tone: 'green', icon: CheckCircle2, title: `${v.name} may enter`, body: `${v.unit.label} · ${v.note || 'Pre-approved pass'}` });
     setCode('');
@@ -202,10 +243,13 @@ function ScanPanel({ queue }) {
   const scan = useGateScan({ onSuccess: (r) => { setResult({ tone: 'green', icon: CheckCircle2, title: `${r.help.name} ${r.direction === 'in' ? 'entered' : 'left'}`, body: 'Daily help' }); setCode(''); } });
   const busy = verify.isPending || scan.isPending;
 
-  const fail = (err) => {
+  // retry: the pass body to send again as an override when the refusal is about the gate.
+  const fail = (err, retry) => {
     if (err.code === 'VISITOR_BLOCKED') setResult({ tone: 'red', icon: ShieldX, title: 'Do not allow entry', body: err.message });
+    else if (err.code === 'GATE_NOT_ALLOWED') setResult({ tone: 'amber', icon: DoorClosed, title: 'Not at this gate', body: err.message, retry });
     else setResult({ tone: 'red', icon: AlertTriangle, title: 'Not allowed', body: err.message });
   };
+  const override = () => verify.mutate({ ...result.retry, guardApproved: true }, { onError: (err) => fail(err) });
 
   // Offline the guard checks the code against the guest's phone; the server verifies it on sync.
   const queuePass = (body, text) => {
@@ -214,9 +258,10 @@ function ScanPanel({ queue }) {
     setResult({ tone: 'amber', icon: WifiOff, title: 'Saved offline', body: 'Check the code against the guest’s phone before letting them in.' });
     setCode('');
   };
-  const submitPass = (body, text) => {
+  const submitPass = (raw, text) => {
+    const body = { ...raw, gateId };
     if (!queue.online) return queuePass(body, text);
-    return verify.mutate(body, { onError: (err) => (isNetworkError(err) ? queuePass(body, text) : fail(err)) });
+    return verify.mutate(body, { onError: (err) => (isNetworkError(err) ? queuePass(body, text) : fail(err, body)) });
   };
 
   const onScan = (text) => {
@@ -237,7 +282,7 @@ function ScanPanel({ queue }) {
       toast.success('Saved offline');
       return setCode('');
     }
-    return scan.mutate(code, { onError: (err) => (isNetworkError(err) ? queue.enqueue('help_scan', { passcode: code }, `Daily help ${code}`) : fail(err)) });
+    return scan.mutate({ passcode: code, gateId }, { onError: (err) => (isNetworkError(err) ? queue.enqueue('help_scan', { passcode: code }, `Daily help ${code}`) : fail(err)) });
   };
 
   return (
@@ -247,7 +292,12 @@ function ScanPanel({ queue }) {
         <div className="p-4"><QrScanner onScan={onScan} paused={busy} fallbackHint="Or type the 6-digit code from the guest’s phone in the box below." /></div>
       </Card>
       <div className="space-y-4">
-        {result && <Notice tone={result.tone} icon={result.icon} title={result.title} onClose={() => setResult(null)}>{result.body}</Notice>}
+        {result && (
+          <Notice tone={result.tone} icon={result.icon} title={result.title} onClose={() => setResult(null)}>
+            {result.body}
+            {result.retry && <div><OverrideButton loading={verify.isPending} onClick={override} /></div>}
+          </Notice>
+        )}
         <Card>
           <CardHeader title="Or type a code" />
           <form onSubmit={submitCode} className="space-y-4 p-4">
@@ -322,10 +372,10 @@ function DecisionModal({ decision, onClose, onConfirm, busy }) {
   );
 }
 
-function PendingList({ online }) {
+function PendingList({ online, scope }) {
   const { user } = useAuth();
   const live5 = useLiveInterval(5000);
-  const { data } = useVisitors({ status: 'pending', limit: 30 }, { refetchInterval: live5, enabled: online });
+  const { data } = useVisitors({ status: 'pending', limit: 30, gate: scope.gateId }, { refetchInterval: live5, enabled: online });
   const allow = useGuardCheckIn();
   const adminDeny = useDenyVisitor();
   const guardDeny = useGuardSendBack();
@@ -342,7 +392,7 @@ function PendingList({ online }) {
   };
   return (
     <Card>
-      <CardHeader title={`Waiting for approval (${rows.length})`} subtitle={online ? 'Updates live · if the resident does not answer, call them' : 'Offline — list may be out of date'} />
+      <CardHeader title={`Waiting for approval (${rows.length})`} subtitle={online ? 'Updates live · if the resident does not answer, call them' : 'Offline — list may be out of date'} action={<ScopeToggle scope={scope} />} />
       {!rows.length ? (
         <EmptyState title="No one waiting" description="Visitors you log wait here until the resident answers." />
       ) : (
@@ -365,15 +415,18 @@ function PendingList({ online }) {
   );
 }
 
-function InsideList({ queue }) {
+// gate: the console's gate (visitors leave by it); scope.gateId: list only those who came in by it.
+function InsideList({ queue, gate, scope }) {
   const toast = useToast();
   const live15 = useLiveInterval(15000);
-  const { data } = useVisitors({ status: 'checked_in', limit: 50 }, { refetchInterval: live15, enabled: queue.online });
-  const { data: help } = useDailyHelp({ inside: true, limit: 50 }, { refetchInterval: live15, enabled: queue.online });
+  const { data } = useVisitors({ status: 'checked_in', limit: 50, gate: scope.gateId }, { refetchInterval: live15, enabled: queue.online });
+  const { data: help } = useDailyHelp({ inside: true, limit: 50, gate: scope.gateId }, { refetchInterval: live15, enabled: queue.online });
   const out = useCheckOut();
   const rows = data?.data || [];
   // Entries made offline (allowed in by the guard) that have not reached the server yet.
-  const offlineInside = queue.queued.filter((o) => o.kind === 'entry' && o.data.guardApproved && !queue.queued.some((c) => c.kind === 'checkout' && c.data.entryKey === o.key));
+  const offlineInside = queue.queued.filter(
+    (o) => o.kind === 'entry' && o.data.guardApproved && (!scope.gateId || o.gateId === scope.gateId) && !queue.queued.some((c) => c.kind === 'checkout' && c.data.entryKey === o.key),
+  );
   const checkedOutOffline = new Set(queue.queued.filter((o) => o.kind === 'checkout' && o.data.visitorId).map((o) => o.data.visitorId));
 
   const checkOut = (v) => {
@@ -382,14 +435,14 @@ function InsideList({ queue }) {
       toast.success('Check-out saved offline');
     };
     if (!queue.online) return enqueue();
-    return out.mutate(v._id, { onError: (err) => isNetworkError(err) && enqueue() });
+    return out.mutate({ id: v._id, gateId: gate?._id }, { onError: (err) => isNetworkError(err) && enqueue() });
   };
 
   const visible = rows.filter((v) => !checkedOutOffline.has(v._id));
   const count = visible.length + offlineInside.length + (help?.data.length || 0);
   return (
     <Card>
-      <CardHeader title={`Inside now (${count})`} />
+      <CardHeader title={`Inside now (${count})`} subtitle={scope.gateId && gate ? `Came in by ${gate.name}` : undefined} action={<ScopeToggle scope={scope} />} />
       {!count && <EmptyState title="Nobody inside" />}
       <ul className="divide-y divide-slate-100">
         {offlineInside.map((o) => (
@@ -401,7 +454,7 @@ function InsideList({ queue }) {
           </li>
         ))}
         {visible.map((v) => (
-          <VisitorRow key={v._id} v={v} actions={<Button size="sm" variant="secondary" icon={LogOut} loading={out.isPending && out.variables === v._id} onClick={() => checkOut(v)}>Check out</Button>} />
+          <VisitorRow key={v._id} v={v} actions={<Button size="sm" variant="secondary" icon={LogOut} loading={out.isPending && out.variables?.id === v._id} onClick={() => checkOut(v)}>Check out</Button>} />
         ))}
         {help?.data.map((h) => (
           <li key={h._id} className="flex items-center gap-3 px-4 py-3 text-sm">
@@ -417,38 +470,52 @@ function InsideList({ queue }) {
 }
 
 // ---------- parcels / vehicles ----------
-function ParcelsPanel({ online }) {
+function ParcelsPanel({ online, gate, gates }) {
   if (!online) return <Card><EmptyState icon={WifiOff} title="Parcels need a connection" description="Keep the parcel aside and log it when the network is back." /></Card>;
+  if (gate && !gateTakes(gate, 'deliveries')) {
+    const to = gates.filter((g) => gateTakes(g, 'deliveries')).map((g) => g.name).join(' or ');
+    return <Card><EmptyState icon={DoorClosed} title={`${gate.name} does not take deliveries`} description={to ? `Send couriers to ${to}.` : undefined} /></Card>;
+  }
   return (
     <div className="space-y-4">
-      <LogParcelForm />
+      <LogParcelForm gateId={gate?._id} />
       <Link to="/parcels" className="block text-center text-sm font-medium text-brand-600 hover:underline">Open the parcel register to hand over parcels →</Link>
     </div>
   );
 }
 
-function VehiclesPanel({ online }) {
+function VehiclesPanel({ online, gate }) {
   if (!online) return <Card><EmptyState icon={WifiOff} title="Vehicle checks need a connection" /></Card>;
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      <ManualLog />
-      <BarrierControl compact />
+      {gate && !gateTakes(gate, 'vehicles') ? (
+        <Card><EmptyState icon={DoorClosed} title={`${gate.name} takes no vehicles`} description="Vehicle checks are logged at the vehicle gates." /></Card>
+      ) : (
+        <ManualLog gate={gate} />
+      )}
+      <BarrierControl compact gate={gate} />
     </div>
   );
 }
 
 export default function GateConsolePage() {
   const { user } = useAuth();
-  const queue = useGateQueue(user.society?._id || user.society);
+  const current = useCurrentGate();
+  const { gate } = current;
+  const queue = useGateQueue(user.society?._id || user.society, gate);
   const wide = useWide();
+  // Waiting / inside lists default to this gate when the society has several.
+  const [scopeValue, setScope] = useState('gate');
+  const multi = current.gates.length > 1 && Boolean(gate);
+  const scope = { multi, value: scopeValue, set: setScope, gateId: multi && scopeValue === 'gate' ? gate._id : undefined };
   const [params] = useSearchParams();
   // ?tab= lets the home screen open the console on a given job (scan, parcels, waiting list…).
   const [tab, setTab] = useState(() => (TAB_VALUES.includes(params.get('tab')) ? params.get('tab') : 'entry'));
   const [moreTab, setMoreTab] = useState('vehicles');
   const live = { enabled: !wide && queue.online, refetchInterval: 10000 };
-  const { data: pending } = useVisitors({ status: 'pending', limit: 1 }, live);
-  const { data: inside } = useVisitors({ status: 'checked_in', limit: 1 }, live);
-  const { data: helpInside } = useDailyHelp({ inside: true, limit: 1 }, live);
+  const { data: pending } = useVisitors({ status: 'pending', limit: 1, gate: scope.gateId }, live);
+  const { data: inside } = useVisitors({ status: 'checked_in', limit: 1, gate: scope.gateId }, live);
+  const { data: helpInside } = useDailyHelp({ inside: true, limit: 1, gate: scope.gateId }, live);
   const waitingCount = pending?.meta?.total || 0;
   const insideCount = (inside?.meta?.total || 0) + (helpInside?.meta?.total || 0);
 
@@ -464,19 +531,19 @@ export default function GateConsolePage() {
         { value: 'parcels', label: 'Parcels' },
         { value: 'more', label: 'More' },
       ];
-  const current = wide && ['pending', 'inside'].includes(tab) ? 'entry' : tab;
-  const inMore = !wide && LESS_USED.some((t) => t.value === current);
+  const currentTab = wide && ['pending', 'inside'].includes(tab) ? 'entry' : tab;
+  const inMore = !wide && LESS_USED.some((t) => t.value === currentTab);
   const openTab = (v) => setTab(v === 'more' ? moreTab : v);
 
   const panel = {
-    entry: <NewEntry queue={queue} />,
-    scan: <ScanPanel queue={queue} />,
-    parcels: <ParcelsPanel online={queue.online} />,
-    vehicles: <VehiclesPanel online={queue.online} />,
-    children: queue.online ? <ChildExitPanel /> : <Card><EmptyState icon={Baby} title="Child alerts need a connection" description="Call the parents directly." /></Card>,
-    pending: <PendingList online={queue.online} />,
-    inside: <InsideList queue={queue} />,
-  }[current];
+    entry: <NewEntry queue={queue} gate={gate} />,
+    scan: <ScanPanel queue={queue} gate={gate} />,
+    parcels: <ParcelsPanel online={queue.online} gate={gate} gates={current.gates} />,
+    vehicles: <VehiclesPanel online={queue.online} gate={gate} />,
+    children: queue.online ? <ChildExitPanel gate={gate} /> : <Card><EmptyState icon={Baby} title="Child alerts need a connection" description="Call the parents directly." /></Card>,
+    pending: <PendingList online={queue.online} scope={scope} />,
+    inside: <InsideList queue={queue} gate={gate} scope={scope} />,
+  }[currentTab];
 
   return (
     <div>
@@ -490,6 +557,7 @@ export default function GateConsolePage() {
           </>
         }
       />
+      <GateBar current={current} />
       <OfflineBanner queue={queue} />
       {!wide && queue.online && (
         <div className="sticky top-16 z-10 -mx-4 mb-3 flex border-y border-slate-200 bg-white/95 text-sm font-semibold backdrop-blur sm:mx-0 sm:rounded-lg sm:border">
@@ -504,16 +572,16 @@ export default function GateConsolePage() {
       )}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <div className="min-w-0 space-y-4">
-          <Tabs className="w-full sm:w-fit" value={inMore ? 'more' : current} onChange={openTab} tabs={tabs} />
+          <Tabs className="w-full sm:w-fit" value={inMore ? 'more' : currentTab} onChange={openTab} tabs={tabs} />
           {inMore && (
-            <Tabs className="w-fit" value={current} onChange={(v) => { setMoreTab(v); setTab(v); }} tabs={LESS_USED} />
+            <Tabs className="w-fit" value={currentTab} onChange={(v) => { setMoreTab(v); setTab(v); }} tabs={LESS_USED} />
           )}
           {panel}
         </div>
         {wide && (
           <div className="space-y-6">
-            <PendingList online={queue.online} />
-            <InsideList queue={queue} />
+            <PendingList online={queue.online} scope={scope} />
+            <InsideList queue={queue} gate={gate} scope={scope} />
           </div>
         )}
       </div>

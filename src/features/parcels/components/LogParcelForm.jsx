@@ -21,7 +21,8 @@ function useDebounced(value, ms = 300) {
 // Guard's parcel intake form. Also embedded in the gate console, hence the standalone export.
 //   onDone(parcel) — called after a successful log
 //   visitorId     — optional delivery visitor entry to link the parcel to
-export function LogParcelForm({ onDone, visitorId }) {
+//   gateId        — the gate console's current gate (omitted = the guard's gate on the server)
+export function LogParcelForm({ onDone, visitorId, gateId }) {
   const { values, set, bind, errors, applyServerErrors, setValues } = useForm(INITIAL);
   const [files, setFiles] = useState([]);
   const [formKey, setFormKey] = useState(0);
@@ -51,6 +52,7 @@ export function LogParcelForm({ onDone, visitorId }) {
         note: opt(values.note),
         photo: files[0]?._id,
         visitorId,
+        gateId,
       },
       { onError: applyServerErrors },
     );

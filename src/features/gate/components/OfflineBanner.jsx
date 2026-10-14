@@ -29,7 +29,7 @@ export function OfflineBanner({ queue }) {
           {queued.map((o) => (
             <li key={o.key} className="flex items-center gap-3 px-4 py-2">
               <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">{KIND[o.kind]}</span>
-              <span className="flex-1 truncate text-slate-800">{o.label}</span>
+              <span className="flex-1 truncate text-slate-800">{o.label}{o.gateName ? ` · ${o.gateName}` : ''}</span>
               <span className="text-xs text-slate-400">{time(o.occurredAt)}</span>
             </li>
           ))}
@@ -42,7 +42,7 @@ export function OfflineBanner({ queue }) {
             {conflicts.map((o) => (
               <li key={o.key} className="flex flex-wrap items-start gap-2 rounded-lg bg-white/70 p-2">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{KIND[o.kind]}: {o.label}</p>
+                  <p className="font-medium">{KIND[o.kind]}: {o.label}{o.gateName ? ` · ${o.gateName}` : ''}</p>
                   <p className="text-xs">{o.message} · at {dateTime(o.occurredAt)}</p>
                 </div>
                 {o.code !== 'VISITOR_BLOCKED' && <Button size="sm" variant="ghost" onClick={() => retry(o.key)}>Retry</Button>}

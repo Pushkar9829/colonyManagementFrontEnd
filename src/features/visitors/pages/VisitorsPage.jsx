@@ -21,6 +21,7 @@ import {
   useVisitors,
 } from '../api';
 import { VisitorRow } from '../components/VisitorRow';
+import { useGates } from '../../gates/api';
 import { PassCard, PassModal, passWindow } from '../components/PassModal';
 
 const PURPOSES = ['guest', 'delivery', 'cab', 'service', 'other'];
@@ -72,6 +73,7 @@ function PassesTab() {
           { key: 'guestName', header: 'Guest', render: (p) => <span className="font-medium text-slate-900">{p.guestName}</span> },
           { key: 'code', header: 'Code', render: (p) => <span className="font-mono font-semibold tracking-widest">{p.code}</span> },
           { key: 'when', header: 'When', render: (p) => passWindow(p) || `until ${dateTime(p.validTo)}` },
+          { key: 'gates', header: 'Gates', render: (p) => (p.gates?.length ? p.gates.map((g) => g.name).join(', ') : 'Any gate') },
           { key: 'uses', header: 'Used', render: (p) => (p.kind === 'recurring' ? p.usedCount : `${p.usedCount}/${p.maxUses}`) },
           { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
           {
@@ -165,11 +167,14 @@ function FrequentTab() {
 function HistoryTab({ initialFlagged }) {
   const { user } = useAuth();
   const isResident = user.role === ROLES.RESIDENT;
-  const [filters, setFilters] = useState({ status: '', purpose: '', date: '', search: '', flagged: initialFlagged, page: 1 });
+  const [filters, setFilters] = useState({ status: '', purpose: '', gate: '', date: '', search: '', flagged: initialFlagged, page: 1 });
   const bounds = filters.date ? dayBounds(filters.date) : {};
+  // Residents see their own visitors only; the gate filter is for the gate staff and management.
+  const { data: gates = [] } = useGates({ includeInactive: true }, { enabled: !isResident });
   const { data, isLoading } = useVisitors({
     status: filters.status || undefined,
     purpose: filters.purpose || undefined,
+    gate: filters.gate || undefined,
     search: filters.search || undefined,
     flagged: filters.flagged || undefined,
     page: filters.page,
@@ -180,18 +185,22 @@ function HistoryTab({ initialFlagged }) {
   return (
     <Card>
       <FilterBar
-        active={[filters.status, filters.purpose, filters.date, filters.flagged].filter(Boolean).length}
+        cols={!isResident && gates.length > 1 ? 5 : 4}
+        active={[filters.status, filters.purpose, filters.gate, filters.date, filters.flagged].filter(Boolean).length}
         search={<Input label="Search" placeholder="Name, phone or vehicle" value={filters.search} onChange={set('search')} />}
       >
         <Input label="Visit date" type="date" value={filters.date} onChange={set('date')} />
         <Select label="Status" placeholder="All statuses" value={filters.status} onChange={set('status')} options={['pending', 'checked_in', 'checked_out', 'denied'].map((v) => ({ value: v, label: label(v) }))} />
         <Select label="Purpose" placeholder="All purposes" value={filters.purpose} onChange={set('purpose')} options={PURPOSES.map((v) => ({ value: v, label: label(v) }))} />
+        {!isResident && gates.length > 1 && (
+          <Select label="Entry gate" placeholder="All gates" value={filters.gate} onChange={set('gate')} options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : `${g.name} (closed)` }))} />
+        )}
         {!isResident && <Checkbox label="Only watchlist / blocklist hits" checked={filters.flagged} onChange={set('flagged')} />}
       </FilterBar>
       {isLoading ? (
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : !data?.data.length ? (
-        <EmptyState icon={DoorOpen} title="No visitors found" description={filters.search || filters.date || filters.status || filters.purpose || filters.flagged ? 'Try clearing the search or filters.' : undefined} />
+        <EmptyState icon={DoorOpen} title="No visitors found" description={filters.search || filters.date || filters.status || filters.purpose || filters.gate || filters.flagged ? 'Try clearing the search or filters.' : undefined} />
       ) : (
         <ul className="divide-y divide-slate-100">
           {data.data.map((v) => (

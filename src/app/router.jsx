@@ -100,6 +100,7 @@ export const router = createBrowserRouter([
           ]),
           guarded([A], [{ path: 'devices', element: page(() => import('../features/devices/pages/DevicesPage')) }]),
           // ---- feature module routes (add below this line; use guarded([roles], [...]) and page(() => import(...))) ----
+          guarded([FM], [{ path: 'gates', element: page(() => import('../features/gates/pages/GatesPage')) }]),
           {
             element: <RequirePlatform />,
             children: [

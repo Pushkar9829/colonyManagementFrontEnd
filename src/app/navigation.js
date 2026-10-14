@@ -30,6 +30,7 @@ import { UserX as DeletionRequestsIcon } from 'lucide-react';
 import { Boxes as AssetsIcon, CalendarClock as PpmIcon, Warehouse as InventoryIcon, Activity as UtilityLogsIcon, ClipboardCheck as ChecklistsIcon, FlameKindling as FireSafetyIcon, Hammer as WorkOrdersIcon, Contact as EmployeesIcon, CalendarRange as RosterIcon, Plane as LeaveIcon, Banknote as PayrollIcon, BriefcaseBusiness as MyWorkIcon } from 'lucide-react';
 import { Gift as LuckyDrawIcon } from 'lucide-react';
 import { UsersRound as PlatformTeamIcon, ShieldUser as PlatformRolesIcon, History as PlatformActivityIcon } from 'lucide-react';
+import { DoorClosed as GatesIcon } from 'lucide-react';
 
 export const A = 'admin';
 export const ACC = 'accountant';
@@ -105,6 +106,7 @@ export const NAV_ITEMS = [
   { to: '/settings', label: 'Society settings', icon: Settings, roles: [A], section: 'Settings' },
 
   // ---- feature module nav items (add below this line; keep the section field) ----
+  { to: '/gates', label: 'Gates', icon: GatesIcon, roles: [A, FM], section: 'Security' },
   { to: '/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [A, ACC, FM, R], section: 'Community' },
   { to: '/platform/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [SA], section: 'Platform', permission: 'luckydraw.oversee' },
   { to: '/privacy/requests', label: 'Account deletion', icon: DeletionRequestsIcon, roles: [A], section: 'Settings' },

@@ -19,7 +19,9 @@ export const useApproveVisitor = () => useApiMutation((id) => api.post(`/visitor
 export const useDenyVisitor = () => useApiMutation((id) => api.post(`/visitors/${id}/deny`), { ...inv, success: 'Visitor denied' });
 export const useGuardSendBack = () => useApiMutation((id) => api.post(`/visitors/${id}/send-back`), { ...inv, success: 'Visitor sent back' });
 export const useGuardCheckIn = () => useApiMutation((id) => api.post(`/visitors/${id}/check-in`, { note: 'Allowed by guard after phone confirmation' }), { ...inv, success: 'Entry allowed' });
-export const useCheckOut = () => useApiMutation((id) => api.post(`/visitors/${id}/check-out`), { ...inv, success: 'Checked out' });
+// id, or { id, gateId } (the gate they leave by)
+export const useCheckOut = () =>
+  useApiMutation((v) => (typeof v === 'string' ? api.post(`/visitors/${v}/check-out`) : api.post(`/visitors/${v.id}/check-out`, { gateId: v.gateId })), { ...inv, success: 'Checked out' });
 export const useHouseholdContacts = (id) => useQuery({ queryKey: ['visitors', 'contacts', id], queryFn: () => api.get(`/visitors/${id}/contacts`), enabled: Boolean(id) });
 
 export const useCreatePass = (o) => useApiMutation((b) => api.post('/visitors/passes', b), { invalidate: ['visitors'], ...o });

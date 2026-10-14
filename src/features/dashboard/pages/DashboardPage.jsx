@@ -22,6 +22,7 @@ import {
   Wallet,
   Wrench,
 } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { api } from '../../../api/client';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -90,7 +91,7 @@ function RecentGate({ d }) {
             <li key={v._id} className="flex items-center justify-between px-5 py-3 text-sm">
               <div>
                 <p className="font-medium text-slate-800">{v.name}</p>
-                <p className="text-xs text-slate-500">{label(v.purpose)} · {v.unit?.label} · {timeAgo(v.createdAt)}</p>
+                <p className="text-xs text-slate-500">{label(v.purpose)} · {v.unit?.label}{v.entryGateName ? ` · ${v.entryGateName}` : ''} · {timeAgo(v.createdAt)}</p>
               </div>
               <StatusBadge status={v.status} />
             </li>
@@ -291,6 +292,14 @@ function Guard({ d }) {
   return (
     <div className="space-y-6">
       <SosBanner count={d.activeSos} urgent />
+      <Link to="/gate" className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
+        <MapPin className="size-6 shrink-0 text-brand-600" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Your gate</p>
+          <p className="truncate text-lg font-bold text-slate-900">{d.gate ? d.gate.name : 'Choose your gate in the gate console'}</p>
+        </div>
+        {d.atGate && <span className="shrink-0 text-right text-xs text-slate-600">{d.atGate.today} today<br />{d.atGate.inside} inside</span>}
+      </Link>
       <div className="grid gap-3 sm:grid-cols-3">
         <BigAction to="/gate" icon={UserPlus} primary className="text-lg">New visitor</BigAction>
         <BigAction to="/gate?tab=scan" icon={QrCode} className="text-lg">Scan pass / code</BigAction>

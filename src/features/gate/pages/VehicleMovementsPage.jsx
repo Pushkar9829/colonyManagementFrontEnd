@@ -8,6 +8,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { dateTime, dayBounds, label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
 import { useMovements } from '../api';
+import { useGates } from '../../gates/api';
 import { ManualLog } from '../components/ManualLog';
 import { BarrierControl } from '../components/BarrierControl';
 
@@ -17,10 +18,11 @@ const MATCH_LABEL = { resident: 'Registered', visitor: 'Visitor', unknown: 'Unkn
 export default function VehicleMovementsPage() {
   const { user } = useAuth();
   const [params] = useSearchParams();
-  const [f, setF] = useState({ match: params.get('match') || '', direction: '', source: '', plate: '', date: '', page: 1 });
+  const [f, setF] = useState({ match: params.get('match') || '', direction: '', source: '', gate: '', plate: '', date: '', page: 1 });
+  const { data: gates = [] } = useGates({ includeInactive: true });
   const live = useLiveInterval(10000);
   const { data, isLoading } = useMovements(
-    { match: f.match || undefined, direction: f.direction || undefined, source: f.source || undefined, plate: f.plate || undefined, page: f.page, limit: 25, ...(f.date ? dayBounds(f.date) : {}) },
+    { match: f.match || undefined, direction: f.direction || undefined, source: f.source || undefined, gate: f.gate || undefined, plate: f.plate || undefined, page: f.page, limit: 25, ...(f.date ? dayBounds(f.date) : {}) },
     { refetchInterval: live },
   );
   const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value, page: 1 }));
@@ -36,18 +38,19 @@ export default function VehicleMovementsPage() {
         <Card className="min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
           <FilterBar
             cols={5}
-            active={[f.date, f.match, f.direction, f.source].filter(Boolean).length}
+            active={[f.date, f.match, f.direction, f.source, f.gate].filter(Boolean).length}
             search={<Input label="Plate" placeholder="MH12AB1234" value={f.plate} onChange={set('plate')} />}
           >
             <Input label="Date" type="date" value={f.date} onChange={set('date')} />
             <Select label="Vehicle" value={f.match} onChange={set('match')} placeholder="All vehicles" options={Object.entries(MATCH_LABEL).map(([value, l]) => ({ value, label: l }))} />
             <Select label="Direction" value={f.direction} onChange={set('direction')} placeholder="In & out" options={[{ value: 'in', label: 'In' }, { value: 'out', label: 'Out' }]} />
             <Select label="Source" value={f.source} onChange={set('source')} placeholder="All sources" options={['anpr', 'rfid', 'manual', 'visitor'].map((v) => ({ value: v, label: v === 'anpr' ? 'Camera (ANPR)' : v === 'rfid' ? 'RFID' : label(v) }))} />
+            {gates.length > 1 && <Select label="Gate" value={f.gate} onChange={set('gate')} placeholder="All gates" options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : `${g.name} (closed)` }))} />}
           </FilterBar>
           {isLoading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !rows.length ? (
-            <EmptyState icon={Car} title="No movements" description={f.plate || f.date || f.match || f.direction || f.source ? 'Nothing matches these filters.' : undefined} />
+            <EmptyState icon={Car} title="No movements" description={f.plate || f.date || f.match || f.direction || f.source || f.gate ? 'Nothing matches these filters.' : undefined} />
           ) : (
             <ul className="divide-y divide-slate-100">
               {rows.map((m) => (

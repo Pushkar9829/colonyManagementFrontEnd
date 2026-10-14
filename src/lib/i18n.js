@@ -205,6 +205,7 @@ const hi = {
   'Back': 'वापस',
   // menu names matching page titles, role menus, filters
   'Gate console': 'गेट कंसोल',
+  'Gates': 'गेट',
   'Daily help': 'घरेलू सहायक',
   'SOS alerts': 'SOS अलर्ट',
   'My vehicles': 'मेरे वाहन',
@@ -434,6 +435,7 @@ const mr = {
   'Back': 'मागे',
   // menu names matching page titles, role menus, filters
   'Gate console': 'गेट कन्सोल',
+  'Gates': 'प्रवेशद्वारे',
   'Daily help': 'घरकामगार',
   'SOS alerts': 'SOS सूचना',
   'My vehicles': 'माझी वाहने',

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Ban, Clock, Download, PackageCheck, ShieldAlert, Users } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Button, Card, CardHeader, EmptyState, ErrorState, Input, PageLoader, StatCard, Table } from '../../../components/ui';
+import { Button, Card, CardHeader, EmptyState, ErrorState, Input, PageLoader, Select, StatCard, Table } from '../../../components/ui';
+import { useGates } from '../../gates/api';
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/cn';
 import { dateTime, label, todayISO } from '../../../lib/format';
@@ -78,11 +79,45 @@ function Heatmap({ rows }) {
   );
 }
 
+const hh = (h) => `${String(h).padStart(2, '0')}:00`;
+
+// Entries per entry gate, each with a 24-hour strip and its busiest hour.
+function ByGate({ rows, total }) {
+  const max = Math.max(1, ...rows.flatMap((r) => r.hours));
+  return (
+    <ul className="divide-y divide-slate-100">
+      {rows.map((g) => (
+        <li key={g.gate || 'none'} className="space-y-2 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+            <span className="font-medium text-slate-900">
+              {g.name}
+              {g.active === false && <span className="ml-1 text-xs font-normal text-slate-400">(closed)</span>}
+            </span>
+            <span className="text-slate-600">
+              <strong className="text-slate-900">{g.count}</strong> entr{g.count === 1 ? 'y' : 'ies'} · {Math.round((g.count / total) * 100)}%
+              {g.peakHour != null && ` · busiest ${hh(g.peakHour)}–${hh((g.peakHour + 1) % 24)}`}
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand-500" style={{ width: `${(g.count / total) * 100}%` }} /></div>
+          <div className="grid grid-cols-[repeat(24,minmax(0,1fr))] gap-px" role="img" aria-label={`${g.name}: entries by hour, busiest ${g.peakHour != null ? hh(g.peakHour) : 'none'}`}>
+            {g.hours.map((v, h) => (
+              <div key={h} title={`${hh(h)} — ${v}`} className={`h-4 rounded-sm ${heatClass(v, max)}`} />
+            ))}
+          </div>
+          <div className="flex justify-between text-[10px] text-slate-400"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function VisitorAnalyticsPage() {
   const toast = useToast();
   const [range, setRange] = useState({ from: isoDaysAgo(29), to: todayISO() });
+  const [gate, setGate] = useState('');
   const [busy, setBusy] = useState(false);
-  const params = { from: startOf(range.from), to: endOf(range.to) };
+  const { data: gates = [] } = useGates({ includeInactive: true });
+  const params = { from: startOf(range.from), to: endOf(range.to), gate: gate || undefined };
   const { data, isLoading, error, refetch } = useVisitorAnalytics(params);
 
   const exportXlsx = async () => {
@@ -106,6 +141,9 @@ export default function VisitorAnalyticsPage() {
       <Card className="mb-6 flex flex-wrap items-end gap-3 p-4">
         <Input label="From" type="date" value={range.from} max={range.to} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
         <Input label="To" type="date" value={range.to} min={range.from} max={todayISO()} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
+        {gates.length > 1 && (
+          <Select label="Gate" placeholder="All gates" value={gate} onChange={(e) => setGate(e.target.value)} options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : `${g.name} (closed)` }))} />
+        )}
         <div className="flex flex-wrap gap-2" role="group" aria-label="Quick periods">
           {[7, 30, 90].map((n) => {
             const on = range.to === todayISO() && range.from === isoDaysAgo(n - 1);
@@ -143,6 +181,12 @@ export default function VisitorAnalyticsPage() {
                 <CardHeader title="Busy hours" subtitle="Entries by weekday and hour of arrival" />
                 <Heatmap rows={data.heatmap} />
               </Card>
+              {data.byGate?.length > 0 && (
+                <Card>
+                  <CardHeader title="By gate" subtitle="Entries per gate and the hours each gate is busiest" />
+                  <ByGate rows={data.byGate} total={data.totals.total} />
+                </Card>
+              )}
               <div className="grid gap-6 lg:grid-cols-3">
                 <Card>
                   <CardHeader title="By purpose" />

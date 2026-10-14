@@ -4,8 +4,9 @@ import { Button, Card, EmptyState, Input, Modal, Spinner, Textarea } from '../..
 import { useRaiseExitAlert, useChildren } from '../api';
 import { ChildAvatar } from './ChildAlertsList';
 
-function ExitModal({ child, onClose }) {
-  const [gate, setGate] = useState('Main gate');
+// fixedGate: the gate console's current gate; elsewhere the guard types the gate name.
+function ExitModal({ child, onClose, fixedGate }) {
+  const [gate, setGate] = useState('');
   const [note, setNote] = useState('');
   const raise = useRaiseExitAlert({ onSuccess: onClose });
   return (
@@ -17,7 +18,7 @@ function ExitModal({ child, onClose }) {
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button variant="danger" size="lg" loading={raise.isPending} onClick={() => raise.mutate({ id: child._id, gate: gate.trim() || 'Main gate', note: note.trim() || undefined })}>
+          <Button variant="danger" size="lg" loading={raise.isPending} onClick={() => raise.mutate({ id: child._id, gateId: fixedGate?._id, gate: fixedGate ? undefined : gate.trim() || undefined, note: note.trim() || undefined })}>
             Alert parents
           </Button>
         </>
@@ -35,7 +36,11 @@ function ExitModal({ child, onClose }) {
               </p>
             </div>
           </div>
-          <Input label="Gate" value={gate} onChange={(e) => setGate(e.target.value)} />
+          {fixedGate ? (
+            <p className="text-sm text-slate-600">Leaving through <span className="font-semibold text-slate-900">{fixedGate.name}</span></p>
+          ) : (
+            <Input label="Gate" placeholder="Your gate (leave empty for your current gate)" value={gate} onChange={(e) => setGate(e.target.value)} />
+          )}
           <Textarea label="Note" rows={2} placeholder="Optional, e.g. with a friend, heading towards the market" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
       )}
@@ -43,8 +48,9 @@ function ExitModal({ child, onClose }) {
   );
 }
 
-// Guard's grid of registered children with a one-tap "Child exiting" alert. Embedded in the gate console. No props.
-export function ChildExitPanel() {
+// Guard's grid of registered children with a one-tap "Child exiting" alert. Embedded in the gate console,
+// which passes its current gate.
+export function ChildExitPanel({ gate }) {
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   const [exiting, setExiting] = useState(null);
@@ -105,7 +111,7 @@ export function ChildExitPanel() {
           ))}
         </div>
       )}
-      <ExitModal key={exiting?._id} child={exiting} onClose={() => setExiting(null)} />
+      <ExitModal key={exiting?._id} child={exiting} fixedGate={gate} onClose={() => setExiting(null)} />
     </Card>
   );
 }

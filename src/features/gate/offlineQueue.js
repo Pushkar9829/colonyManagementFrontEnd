@@ -60,10 +60,17 @@ export function useOnline() {
 // A request failed because the server could not be reached (not because it said no).
 export const isNetworkError = (err) => err?.status === 0 || err?.code === 'NETWORK_ERROR';
 
+// What goes to POST /visitors/sync for one queued op (labels stay on the device).
+export const toSyncOp = ({ key, kind, occurredAt, data, gateId }) => ({ key, kind, occurredAt, data, ...(gateId ? { gateId } : {}) });
+
 let syncing = false; // one sync at a time per tab
 
-export function useGateQueue(societyId) {
+// gate: the gate this console is at. Every queued op carries it, so the entry is recorded at the gate
+// where it happened even if the guard moves before the connection returns.
+export function useGateQueue(societyId, gate) {
   const key = queueKey(societyId);
+  const gateRef = useRef(gate);
+  gateRef.current = gate;
   const qc = useQueryClient();
   const online = useOnline();
   const [ops, setOps] = useState(() => read(key));
@@ -90,7 +97,8 @@ export function useGateQueue(societyId) {
   // kind: entry | checkout | pass | help_scan; label is what the guard sees in the queue list.
   const enqueue = useCallback(
     (kind, data, label) => {
-      const op = { key: newKey(), kind, occurredAt: new Date().toISOString(), data, label, status: 'queued' };
+      const g = gateRef.current;
+      const op = { key: newKey(), kind, occurredAt: new Date().toISOString(), data, label, status: 'queued', ...(g?._id ? { gateId: g._id, gateName: g.name } : {}) };
       update((cur) => [...cur, op]);
       return op;
     },
@@ -109,7 +117,7 @@ export function useGateQueue(societyId) {
       for (let i = 0; i < pending.length; i += BATCH) {
         const batch = pending.slice(i, i + BATCH);
         // eslint-disable-next-line no-await-in-loop
-        const res = await api.post('/visitors/sync', { ops: batch.map(({ key: k, kind, occurredAt, data }) => ({ key: k, kind, occurredAt, data })) });
+        const res = await api.post('/visitors/sync', { ops: batch.map(toSyncOp) });
         const byKey = new Map(res.results.map((r) => [r.key, r]));
         update((cur) =>
           cur.flatMap((o) => {

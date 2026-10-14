@@ -1,3 +1,4 @@
+import { useCurrentGate } from '../../gates/useCurrentGate';
 import { useState } from 'react';
 import { BadgeCheck, CalendarOff, FileText, IndianRupee, LogIn, LogOut, Plus, Star, UserCheck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -7,6 +8,7 @@ import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { currentPeriod, date as fmtDate, dateTime, label, money, time, toPaise, toRupees, todayISO } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
+import { GateMultiSelect } from '../../gates/components/GateMultiSelect';
 import {
   useAddLeave,
   useCreateHelp,
@@ -64,8 +66,8 @@ function AttendanceTab({ help }) {
     <ul className="divide-y divide-slate-100 text-sm">
       {data.data.map((a) => (
         <li key={a._id} className="flex justify-between py-2">
-          <span className="text-slate-700">{dateTime(a.inAt)}</span>
-          <span className="text-slate-500">{a.outAt ? `left ${time(a.outAt)}` : 'still inside'}</span>
+          <span className="text-slate-700">{dateTime(a.inAt)}{a.inGateName ? ` · ${a.inGateName}` : ''}</span>
+          <span className="text-right text-slate-500">{a.outAt ? `left ${time(a.outAt)}${a.outGateName && a.outGateName !== a.inGateName ? ` · ${a.outGateName}` : ''}` : 'still inside'}</span>
         </li>
       ))}
     </ul>
@@ -202,6 +204,19 @@ function DocumentsTab({ help, canManage }) {
   );
 }
 
+// Management decides which gates a helper may come in by (e.g. the service gate only).
+function GatesTab({ help }) {
+  const [gates, setGates] = useState(() => (help.allowedGates || []).map((g) => g._id || g));
+  const update = useUpdateHelp();
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-slate-500">The guard is told to send {help.name} to an allowed gate when they arrive at another one. Leaving is possible by any gate.</p>
+      <GateMultiSelect label="May enter by" value={gates} onChange={setGates} anyLabel="Any staff gate" />
+      <Button size="sm" loading={update.isPending} onClick={() => update.mutate({ id: help._id, allowedGates: gates })}>Save</Button>
+    </div>
+  );
+}
+
 function HelperModal({ help, onClose, isResident, canManage }) {
   const [tab, setTab] = useState('attendance');
   const tabs = [
@@ -210,6 +225,7 @@ function HelperModal({ help, onClose, isResident, canManage }) {
     ...(isResident ? [{ value: 'salary', label: 'Salary' }] : []),
     { value: 'leave', label: 'Leave' },
     { value: 'documents', label: 'Documents' },
+    ...(canManage ? [{ value: 'gates', label: 'Gates' }] : []),
   ];
   return (
     <Modal open onClose={onClose} title={help.name} description={`${label(help.type)}${help.phone ? ` · ${help.phone}` : ''}`} size="lg">
@@ -219,6 +235,7 @@ function HelperModal({ help, onClose, isResident, canManage }) {
       {tab === 'salary' && <SalaryTab help={help} />}
       {tab === 'leave' && <LeaveTab help={help} canMark={isResident} />}
       {tab === 'documents' && <DocumentsTab help={help} canManage={canManage} />}
+      {tab === 'gates' && <GatesTab help={help} />}
     </Modal>
   );
 }
@@ -236,6 +253,8 @@ export default function DailyHelpPage() {
   // Guards mark helpers in / out from the list (the same toggle as typing their gate code).
   const canMarkGate = [ROLES.GUARD, ROLES.ADMIN].includes(user.role);
   const gateScan = useGateScan();
+  // Guards record the entry at the gate they are standing at (chosen in the gate console).
+  const { gate: currentGate } = useCurrentGate();
   const viewing = data?.data.find((h) => h._id === viewingId);
 
   return (
@@ -266,6 +285,7 @@ export default function DailyHelpPage() {
                     {h.awayToday && <Badge tone="amber">{h.awayToday.kind === 'leave' ? 'On leave today' : 'Absent today'}</Badge>}
                     {h.policeVerification?.status === 'verified' && <Badge tone="green"><BadgeCheck className="mr-0.5 size-3" />Police verified</Badge>}
                     {!h.active && <Badge tone="red">Deactivated</Badge>}
+                    {h.allowedGates?.length > 0 && <Badge tone="blue">Only at {h.allowedGates.map((g) => g.name).join(' or ')}</Badge>}
                   </div>
                   <p className="text-sm text-slate-500">
                     {h.phone || 'No phone'} · works at {h.units.map((u) => u.label).join(', ') || '—'}
@@ -286,7 +306,7 @@ export default function DailyHelpPage() {
                 <div className="flex flex-wrap gap-2">
                   {canMarkGate && h.active && (
                     <Button size="lg" variant={h.isInside ? 'secondary' : 'success'} icon={h.isInside ? LogOut : LogIn} className="w-full sm:w-auto"
-                      loading={gateScan.isPending && gateScan.variables === h.passcode} onClick={() => gateScan.mutate(h.passcode)}>
+                      loading={gateScan.isPending && (gateScan.variables?.passcode ?? gateScan.variables) === h.passcode} onClick={() => gateScan.mutate(currentGate?._id ? { passcode: h.passcode, gateId: currentGate._id } : h.passcode)}>
                       {h.isInside ? 'Mark out' : 'Mark in'}
                     </Button>
                   )}

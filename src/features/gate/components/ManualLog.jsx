@@ -4,14 +4,15 @@ import { Button, Card, CardHeader, Input } from '../../../components/ui';
 import { useLogMovement } from '../api';
 
 // Guard types a plate (no camera): the server logs the movement and answers registered / unknown / blocked.
-export function ManualLog() {
+//   gate: the console's current gate (omitted = the guard's gate on the server)
+export function ManualLog({ gate }) {
   const [plate, setPlate] = useState('');
   const [direction, setDirection] = useState('in');
   const [result, setResult] = useState(null);
   const log = useLogMovement({ onSuccess: (m) => { setResult(m); setPlate(''); }, success: false });
   const submit = (e) => {
     e.preventDefault();
-    if (plate.trim().length >= 4) log.mutate({ plate, direction });
+    if (plate.trim().length >= 4) log.mutate({ plate, direction, gateId: gate?._id });
   };
   return (
     <Card>
