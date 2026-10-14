@@ -4,6 +4,7 @@ import { ChevronDown, Home, LogOut, Menu, UserCircle, WifiOff, X } from 'lucide-
 import { useAuth } from '../../context/AuthContext';
 import { BOTTOM_BAR, navFor, navGroupsFor } from '../../app/navigation';
 import { cn } from '../../lib/cn';
+import { permissionChecker } from '../../lib/platformPermissions';
 import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import { RaiseSosButton } from '../../features/sos/components/RaiseSosButton';
 import { RealtimeProvider, useRealtime } from '../../realtime/RealtimeProvider';
@@ -35,7 +36,7 @@ function Sidebar({ onNavigate }) {
   const { user, logout } = useAuth();
   const { t } = useT();
   const location = useLocation();
-  const groups = navGroupsFor(user.role, useNavItems());
+  const groups = navGroupsFor(user.role, useNavItems(), permissionChecker(user));
   const [open, setOpen] = useState(readOpen);
   const listRef = useRef(null);
 
@@ -125,7 +126,7 @@ function BottomBar({ onMenu }) {
   const { user } = useAuth();
   const { t } = useT();
   const location = useLocation();
-  const items = navFor(user.role, useNavItems());
+  const items = navFor(user.role, useNavItems(), permissionChecker(user));
   const shortcuts = (BOTTOM_BAR[user.role] || []).map((p) => items.find((i) => i.to === p)).filter(Boolean);
   if (!shortcuts.length) return null;
   const short = (label) => (label === 'Dashboard' ? 'Home' : label);

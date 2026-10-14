@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '../../../api/client';
 import { AlertTriangle, Inbox, LifeBuoy, MessageSquare } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Input, Modal, PageLoader, Pagination, Select, StatCard, StatusBadge, Table, Textarea } from '../../../components/ui';
 import { label, timeAgo } from '../../../lib/format';
 import { CATEGORIES, PRIORITIES, STATUSES, useAssignTicket, usePlatformReply, usePlatformStatus, usePlatformTicket, usePlatformTickets, useSupportStats } from '../api';
 import { SlaBadge, TicketThread } from '../components/TicketThread';
+import { PermissionGate } from '../../platform/components/PermissionGate';
+import { useCan } from '../../platform/useCan';
 
 const opts = (list) => list.map((v) => ({ value: v, label: label(v) }));
 
@@ -16,10 +20,15 @@ function ConsoleTicketModal({ id, onClose }) {
   const reply = usePlatformReply(id);
   const status = usePlatformStatus(id);
   const assign = useAssignTicket(id);
+  const can = useCan();
+  const canReply = can('support.reply');
+  const canAssign = can('support.assign');
+  // Members who can answer tickets (owners included): the only valid owners for a ticket.
+  const team = useQuery({ queryKey: ['platform', 'support', 'team'], queryFn: () => api.get('/platform/support/team'), enabled: canAssign });
 
   return (
     <Modal open onClose={onClose} size="lg" title={t ? `${t.number} · ${t.subject}` : 'Ticket'} description={t ? `${t.society?.name} (${t.society?.code}) · raised by ${t.raisedBy?.name} (${label(t.raisedByRole)}) · ${t.raisedBy?.email || t.raisedBy?.phone || ''}` : undefined}
-      footer={t && t.status !== 'closed' && (
+      footer={t && t.status !== 'closed' && canReply && (
         <>
           {!t.assignedTo && <Button variant="secondary" loading={assign.isPending} onClick={() => assign.mutate({})}>Assign to me</Button>}
           {t.status !== 'resolved' && <Button variant="success" loading={status.isPending} onClick={() => status.mutate({ status: 'resolved' })}>Mark resolved</Button>}
@@ -28,9 +37,12 @@ function ConsoleTicketModal({ id, onClose }) {
       )}>
       {isLoading || !t ? <PageLoader /> : (
         <div className="space-y-4">
-          {t.assignedTo && <p className="text-xs text-slate-500">Assigned to {t.assignedTo.name}</p>}
+          {canAssign && t.status !== 'closed' ? (
+            <Select className="sm:w-64" label="Owner" placeholder="Unassigned" value={t.assignedTo?._id || ''} disabled={assign.isPending}
+              options={(team.data || []).map((m) => ({ value: m._id, label: m.name }))} onChange={(e) => e.target.value && assign.mutate({ assignedTo: e.target.value })} />
+          ) : t.assignedTo && <p className="text-xs text-slate-500">Assigned to {t.assignedTo.name}</p>}
           <TicketThread ticket={t} viewer="platform" />
-          {t.status !== 'closed' && (
+          {t.status !== 'closed' && canReply && (
             <div className="space-y-2 border-t border-slate-100 pt-4">
               <Textarea label="Reply to the society" hint="Sent in-app and by email to the requester and the society’s admins" rows={4} value={text} onChange={(e) => setText(e.target.value)} />
               <div className="flex flex-wrap items-end gap-2">
@@ -46,6 +58,14 @@ function ConsoleTicketModal({ id, onClose }) {
 }
 
 export default function PlatformSupportPage() {
+  return (
+    <PermissionGate permission="support.view">
+      <SupportTickets />
+    </PermissionGate>
+  );
+}
+
+function SupportTickets() {
   const [params, setParams] = useSearchParams();
   const openId = params.get('ticket');
   const [f, setF] = useState({ status: '', priority: '', category: '', awaiting: 'platform', breached: '', search: '', page: 1 });

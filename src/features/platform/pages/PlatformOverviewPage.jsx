@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Ban, Building2, Clock, FileText, Hourglass, IndianRupee, TrendingUp, Users, Wallet } from 'lucide-react';
+import { AlertTriangle, Ban, Building2, Clock, FileText, Hourglass, IndianRupee, LayoutGrid, TrendingUp, Users, Wallet } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { Badge, Card, CardHeader, ErrorState, PageLoader, StatCard, Table } from '../../../components/ui';
+import { Badge, Card, CardHeader, EmptyState, ErrorState, PageLoader, StatCard, Table } from '../../../components/ui';
+import { useAuth } from '../../../context/AuthContext';
+import { useCan } from '../useCan';
 import { dateTime, label, money, timeAgo } from '../../../lib/format';
 import { usePlatformJobs, usePlatformSocieties, usePlatformStats } from '../api';
 import { useInvoiceSummary, usePlans } from '../billingApi';
@@ -33,9 +35,26 @@ function SubscriptionTiles({ stats }) {
   );
 }
 
+// Members whose role has no society access still land on "/": tell them where their pages are.
+function Welcome() {
+  const { user } = useAuth();
+  return (
+    <div>
+      <PageHeader title="Platform console" description={`Signed in as ${user.platformRoleName || 'platform team'}. Your role decides which pages appear in the menu.`} />
+      <Card><EmptyState icon={LayoutGrid} title="Open a page from the menu" description="Ask a platform owner if you need access to something that is not there." /></Card>
+    </div>
+  );
+}
+
 export default function PlatformOverviewPage() {
+  const can = useCan();
+  return can('societies.view') ? <Overview can={can} /> : <Welcome />;
+}
+
+function Overview({ can }) {
   const { data: s, isLoading, error, refetch } = usePlatformStats();
-  const { data: jobs = [] } = usePlatformJobs();
+  const showJobs = can('jobs.view');
+  const { data: jobs = [] } = usePlatformJobs(showJobs);
   if (isLoading) return <PageLoader />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   const failing = jobs.filter((j) => j.lastError).length;
@@ -43,10 +62,12 @@ export default function PlatformOverviewPage() {
     <div className="space-y-8">
       <PageHeader title="Platform overview" description="Subscriptions first, then how the societies on ColonyHub are doing." />
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Subscriptions</h2>
-        <SubscriptionTiles stats={s} />
-      </section>
+      {can('invoices.view') && can('plans.view') && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Subscriptions</h2>
+          <SubscriptionTiles stats={s} />
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Societies</h2>
@@ -63,7 +84,7 @@ export default function PlatformOverviewPage() {
         </div>
       </section>
 
-      <section className="space-y-3">
+      {showJobs && <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
           System health {failing > 0 && <Badge tone="red"><AlertTriangle className="mr-1 size-3" />{plural(failing, 'job')} failing</Badge>}
         </h2>
@@ -77,7 +98,7 @@ export default function PlatformOverviewPage() {
               { key: 'result', header: 'Result', className: 'max-w-xs truncate', render: (j) => (j.lastError ? <span className="text-red-600">{j.lastError}</span> : <span className="text-xs text-slate-500">{j.lastResult ? resultText(j.lastResult) : 'OK'}</span>) },
             ]} />
         </Card>
-      </section>
+      </section>}
       <p className="text-sm text-slate-500"><Link to="/platform/societies" className="font-medium text-brand-600 hover:underline">Manage societies →</Link></p>
     </div>
   );

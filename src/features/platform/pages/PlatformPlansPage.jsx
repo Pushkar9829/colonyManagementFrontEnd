@@ -4,12 +4,15 @@ import { Badge, Button, Card, CardHeader, Input, PageLoader } from '../../../com
 import { label, money, toPaise, toRupees } from '../../../lib/format';
 import { usePlans, useUpdatePlan } from '../billingApi';
 import { useFeatureCatalogue } from '../../features/api';
+import { PermissionGate } from '../components/PermissionGate';
+import { useCan } from '../useCan';
 
 const UNITS_EXAMPLE = 100;
 
 function PlanCard({ plan, features }) {
   const [form, setForm] = useState(null);
   const update = useUpdatePlan();
+  const canManage = useCan()('plans.manage');
   const v = form ?? { perUnit: toRupees(plan.perUnitMonthly), flat: toRupees(plan.flatMonthly), discount: plan.yearlyDiscountPercent || 0, description: plan.description || '' };
   const set = (k) => (e) => setForm({ ...v, [k]: e.target.value });
   const monthly = UNITS_EXAMPLE * toPaise(v.perUnit) + toPaise(v.flat);
@@ -22,14 +25,14 @@ function PlanCard({ plan, features }) {
     <Card>
       <CardHeader title={label(plan.plan)} subtitle={plan.custom ? 'Custom price' : 'Price for new societies'} action={<Badge tone="brand">{features?.length ? `${features.length} modules` : 'core only'}</Badge>} />
       <div className="grid gap-3 p-5 sm:grid-cols-3">
-        <Input label="Per unit / month (₹)" type="number" min={0} step="0.01" value={v.perUnit} onChange={set('perUnit')} />
-        <Input label="Flat fee / month (₹)" type="number" min={0} step="0.01" value={v.flat} onChange={set('flat')} />
-        <Input label="Yearly discount (%)" type="number" min={0} max={50} value={v.discount} onChange={set('discount')} />
-        <Input className="sm:col-span-3" label="Description" value={v.description} onChange={set('description')} placeholder="Shown to the sales team" />
+        <Input label="Per unit / month (₹)" disabled={!canManage} type="number" min={0} step="0.01" value={v.perUnit} onChange={set('perUnit')} />
+        <Input label="Flat fee / month (₹)" disabled={!canManage} type="number" min={0} step="0.01" value={v.flat} onChange={set('flat')} />
+        <Input label="Yearly discount (%)" disabled={!canManage} type="number" min={0} max={50} value={v.discount} onChange={set('discount')} />
+        <Input className="sm:col-span-3" label="Description" disabled={!canManage} value={v.description} onChange={set('description')} placeholder="Shown to the sales team" />
         <p className="text-xs text-slate-500 sm:col-span-2">
           Example for {UNITS_EXAMPLE} units: {money(monthly)} / month + 18% GST = {money(Math.round(monthly * 1.18))}
         </p>
-        <div className="sm:text-right"><Button size="sm" disabled={!form} loading={update.isPending} onClick={save}>Save</Button></div>
+        <div className="sm:text-right">{canManage && <Button size="sm" disabled={!form} loading={update.isPending} onClick={save}>Save</Button>}</div>
         {features?.length > 0 && <p className="text-xs text-slate-500 sm:col-span-3">Includes: {features.map(label).join(', ')}</p>}
       </div>
     </Card>
@@ -37,6 +40,14 @@ function PlanCard({ plan, features }) {
 }
 
 export default function PlatformPlansPage() {
+  return (
+    <PermissionGate permission="plans.view">
+      <PlansList />
+    </PermissionGate>
+  );
+}
+
+function PlansList() {
   const { data, isLoading } = usePlans();
   const { data: catalogue } = useFeatureCatalogue();
   if (isLoading) return <PageLoader />;

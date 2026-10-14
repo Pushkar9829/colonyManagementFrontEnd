@@ -28,6 +28,8 @@ import { BookOpen as AccountsIcon, BarChart3 as FinanceReportsIcon, Landmark as 
 import { House as MyHouseholdIcon, HeartPulse as EmergencyInfoIcon, ScanLine as PassCheckIcon, HousePlus as HouseholdsIcon, FileKey as TenanciesIcon, IdCard as KycIcon, Settings2 as HelpdeskSettingsIcon, TrendingUp as StaffPerformanceIcon, ChartColumn as AmenityReportsIcon, Ticket as AmenityPassesIcon } from 'lucide-react';
 import { UserX as DeletionRequestsIcon } from 'lucide-react';
 import { Boxes as AssetsIcon, CalendarClock as PpmIcon, Warehouse as InventoryIcon, Activity as UtilityLogsIcon, ClipboardCheck as ChecklistsIcon, FlameKindling as FireSafetyIcon, Hammer as WorkOrdersIcon, Contact as EmployeesIcon, CalendarRange as RosterIcon, Plane as LeaveIcon, Banknote as PayrollIcon, BriefcaseBusiness as MyWorkIcon } from 'lucide-react';
+import { Gift as LuckyDrawIcon } from 'lucide-react';
+import { UsersRound as PlatformTeamIcon, ShieldUser as PlatformRolesIcon, History as PlatformActivityIcon } from 'lucide-react';
 
 export const A = 'admin';
 export const ACC = 'accountant';
@@ -49,7 +51,7 @@ const ROLE_LAYOUTS = {
     top: ['/', '/billing', '/visitors', '/complaints', '/amenities'],
     groups: [
       ['My home', ['/household', '/vehicles', '/daily-help', '/parcels', '/parking', '/meters']],
-      ['Society', ['/notices', '/polls', '/elections', '/events', '/messages', '/directory']],
+      ['Society', ['/notices', '/polls', '/elections', '/events', '/lucky-draws', '/messages', '/directory']],
       ['Safety', ['/emergency', '/child-safety', '/sos']],
     ],
   },
@@ -79,7 +81,7 @@ export const BOTTOM_BAR = {
 // section: one of SECTIONS (or omitted for top-level items).
 export const NAV_ITEMS = [
   { to: '/', label: 'Platform overview', icon: LayoutGrid, roles: [SA], end: true },
-  { to: '/platform/societies', label: 'Societies', icon: Building, roles: [SA], section: 'Platform' },
+  { to: '/platform/societies', label: 'Societies', icon: Building, roles: [SA], section: 'Platform', permission: 'societies.view' },
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: EVERYONE, end: true },
 
   { to: '/gate', label: 'Gate console', icon: ShieldCheck, roles: [A, G], section: 'Security' },
@@ -103,8 +105,13 @@ export const NAV_ITEMS = [
   { to: '/settings', label: 'Society settings', icon: Settings, roles: [A], section: 'Settings' },
 
   // ---- feature module nav items (add below this line; keep the section field) ----
+  { to: '/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [A, ACC, FM, R], section: 'Community' },
+  { to: '/platform/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [SA], section: 'Platform', permission: 'luckydraw.oversee' },
   { to: '/privacy/requests', label: 'Account deletion', icon: DeletionRequestsIcon, roles: [A], section: 'Settings' },
-  { to: '/platform/privacy', label: 'Account deletion', icon: DeletionRequestsIcon, roles: [SA], section: 'Platform' },
+  { to: '/platform/privacy', label: 'Account deletion', icon: DeletionRequestsIcon, roles: [SA], section: 'Platform', permission: 'privacy.handle' },
+  { to: '/platform/team', label: 'Platform team', icon: PlatformTeamIcon, roles: [SA], section: 'Platform', permission: 'team.manage' },
+  { to: '/platform/roles', label: 'Roles & permissions', icon: PlatformRolesIcon, roles: [SA], section: 'Platform', permission: 'team.manage' },
+  { to: '/platform/activity', label: 'Platform activity', icon: PlatformActivityIcon, roles: [SA], section: 'Platform', permission: 'audit.view' },
   { to: '/my-work', label: 'My work', icon: MyWorkIcon, roles: [FM, ACC, S, G] },
   { to: '/assets', label: 'Assets', icon: AssetsIcon, roles: [A, FM, S], section: 'Facility' },
   { to: '/maintenance', label: 'Repair schedule (AMC/PPM)', icon: PpmIcon, roles: [A, FM], section: 'Facility' },
@@ -156,9 +163,9 @@ export const NAV_ITEMS = [
   { to: '/lost-found', label: 'Lost & found', icon: LostFoundIcon, roles: [A, FM, ACC, R], section: 'Community' },
   { to: '/marketplace', label: 'Marketplace', icon: MarketplaceIcon, roles: [A, FM, ACC, R], section: 'Community' },
   { to: '/messages', label: 'Messages', icon: MessagesIcon, roles: EVERYONE, section: 'Community' },
-  { to: '/platform/plans', label: 'Plans & pricing', icon: PlansIcon, roles: [SA], section: 'Platform' },
-  { to: '/platform/invoices', label: 'Platform invoices', icon: PlatformInvoicesIcon, roles: [SA], section: 'Platform' },
-  { to: '/platform/support', label: 'Support tickets', icon: PlatformSupportIcon, roles: [SA], section: 'Platform' },
+  { to: '/platform/plans', label: 'Plans & pricing', icon: PlansIcon, roles: [SA], section: 'Platform', permission: 'plans.view' },
+  { to: '/platform/invoices', label: 'Platform invoices', icon: PlatformInvoicesIcon, roles: [SA], section: 'Platform', permission: 'invoices.view' },
+  { to: '/platform/support', label: 'Support tickets', icon: PlatformSupportIcon, roles: [SA], section: 'Platform', permission: 'support.view' },
   { to: '/portfolio', label: 'Portfolio', icon: PortfolioIcon, roles: [A, FM], section: 'Settings' },
   { to: '/subscription', label: 'Subscription & invoices', icon: SubscriptionIcon, roles: [A, ACC], section: 'Settings' },
   { to: '/support', label: 'Support', icon: SupportIcon, roles: [A, FM, ACC], section: 'Settings' },
@@ -190,17 +197,19 @@ const FEATURE_BY_PATH = [
   ['/documents', 'documents'],
   ['/requests', 'requests'],
   ['/builder', 'builder'],
+  ['/lucky-draws', 'luckyDraw'],
 ];
 export const featureFor = (path) => FEATURE_BY_PATH.find(([p]) => path === p || path.startsWith(`${p}/`))?.[1] || null;
 
 // isEnabled(featureKey) — omit (or pass null) to show everything the role may see.
 // Labels can differ per role (`labels: { resident: 'My bills' }`).
-export const navFor = (role, isEnabled) =>
-  NAV_ITEMS.filter((i) => i.roles.includes(role) && (!isEnabled || !featureFor(i.to) || isEnabled(featureFor(i.to)))).map((i) => (i.labels?.[role] ? { ...i, label: i.labels[role] } : i));
+// can(permission) — platform console only: items with a `permission` show when it returns true (omit to show all).
+export const navFor = (role, isEnabled, can) =>
+  NAV_ITEMS.filter((i) => i.roles.includes(role) && (!isEnabled || !featureFor(i.to) || isEnabled(featureFor(i.to))) && (!can || !i.permission || can(i.permission))).map((i) => (i.labels?.[role] ? { ...i, label: i.labels[role] } : i));
 
 // Items grouped for the sidebar: [{ section: null | 'Finance', items: [...] }]
-export function navGroupsFor(role, isEnabled) {
-  const items = navFor(role, isEnabled);
+export function navGroupsFor(role, isEnabled, can) {
+  const items = navFor(role, isEnabled, can);
   const layout = ROLE_LAYOUTS[role];
   if (layout) {
     const visible = items.filter((i) => !layout.hide?.includes(i.to));

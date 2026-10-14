@@ -8,6 +8,7 @@ import { navFor } from '../../../app/navigation';
 import { useFeatures } from '../../features/api';
 import { Spinner } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
+import { permissionChecker } from '../../../lib/platformPermissions';
 import { useGlobalSearch } from '../api';
 
 const DEBOUNCE_MS = 250;
@@ -56,7 +57,7 @@ export function CommandPalette({ onClose }) {
   const search = useGlobalSearch(debounced, { enabled: canSearch });
 
   const pages = useMemo(() => {
-    const items = navFor(user.role, user.society && features.data ? features.isEnabled : null);
+    const items = navFor(user.role, user.society && features.data ? features.isEnabled : null, permissionChecker(user));
     const seen = new Set();
     const unique = items.filter((i) => (seen.has(i.to) ? false : seen.add(i.to)));
     const needle = query.toLowerCase();

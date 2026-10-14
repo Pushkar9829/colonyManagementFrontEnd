@@ -6,6 +6,7 @@ import { Button, Card, Modal, Pagination, StatusBadge, Table, Tabs, Textarea } f
 import { useAuth } from '../../../context/AuthContext';
 import { useApiMutation } from '../../../hooks/useApiMutation';
 import { dateTime, label } from '../../../lib/format';
+import { PermissionGate } from '../../platform/components/PermissionGate';
 
 const STATUSES = [
   { value: 'pending', label: 'Pending' },
@@ -14,8 +15,19 @@ const STATUSES = [
   { value: '', label: 'All' },
 ];
 
-// Society admins decide on their members' requests; the platform owner on requests from people with no society.
+// Society admins decide on their members' requests; the platform team (privacy.handle) on requests from
+// people with no society.
 export default function DeletionRequestsPage() {
+  const { user } = useAuth();
+  if (user.society) return <DeletionRequests />;
+  return (
+    <PermissionGate permission="privacy.handle">
+      <DeletionRequests />
+    </PermissionGate>
+  );
+}
+
+function DeletionRequests() {
   const { user } = useAuth();
   const [status, setStatus] = useState('pending');
   const [page, setPage] = useState(1);

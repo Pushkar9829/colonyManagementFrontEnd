@@ -5,6 +5,8 @@ import { Badge, Button, Card, Checkbox, FilterBar, Input, Modal, PageLoader, Pag
 import { date, dateTime, label, money, todayISO } from '../../../lib/format';
 import { useDownload } from '../../reports/download';
 import { plural } from '../lib';
+import { PermissionGate } from '../components/PermissionGate';
+import { useCan } from '../useCan';
 import { useInvoiceSummary, useMarkInvoicePaid, usePlatformInvoice, usePlatformInvoices, useRunBilling, useVoidInvoice } from '../billingApi';
 
 function InvoiceModal({ id, onClose }) {
@@ -13,12 +15,13 @@ function InvoiceModal({ id, onClose }) {
   const markPaid = useMarkInvoicePaid({ onSuccess: onClose });
   const voidIt = useVoidInvoice({ onSuccess: onClose });
   const { download, busyKey } = useDownload();
+  const canManage = useCan()('invoices.manage');
   return (
     <Modal open onClose={onClose} size="lg" title={inv ? `${inv.number} · ${inv.society?.name}` : 'Invoice'}
       footer={inv && (
         <>
           <Button variant="secondary" icon={Download} loading={busyKey === 'pdf'} onClick={() => download(`/platform/invoices/${inv._id}/pdf`, null, `${inv.number}.pdf`, 'pdf')}>PDF</Button>
-          {inv.status === 'unpaid' && <Button variant="danger" loading={voidIt.isPending} onClick={() => { const reason = window.prompt('Reason for voiding this invoice?'); if (reason) voidIt.mutate({ id, reason }); }}>Void</Button>}
+          {inv.status === 'unpaid' && canManage && <Button variant="danger" loading={voidIt.isPending} onClick={() => { const reason = window.prompt('Reason for voiding this invoice?'); if (reason) voidIt.mutate({ id, reason }); }}>Void</Button>}
         </>
       )}>
       {isLoading || !inv ? <PageLoader /> : (
@@ -37,7 +40,7 @@ function InvoiceModal({ id, onClose }) {
               <ul className="space-y-1 text-xs text-slate-600">{inv.payments.map((p) => <li key={p._id}>{dateTime(p.paidAt || p.createdAt)} · {money(p.amount)} · {p.method}{p.reference ? ` · ${p.reference}` : ''} · <StatusBadge status={p.status === 'success' ? 'paid' : p.status === 'failed' ? 'rejected' : 'pending'} />{p.notes ? ` · ${p.notes}` : ''}</li>)}</ul>
             </div>
           )}
-          {inv.status === 'unpaid' && (
+          {inv.status === 'unpaid' && canManage && (
             <div className="rounded-lg border border-slate-200 p-3">
               <p className="mb-2 font-medium text-slate-700">Record an offline payment</p>
               <div className="grid gap-3 sm:grid-cols-4">
@@ -55,16 +58,25 @@ function InvoiceModal({ id, onClose }) {
 }
 
 export default function PlatformInvoicesPage() {
+  return (
+    <PermissionGate permission="invoices.view">
+      <InvoicesList />
+    </PermissionGate>
+  );
+}
+
+function InvoicesList() {
   const [f, setF] = useState({ status: '', overdue: '', page: 1 });
   const [openId, setOpenId] = useState(null);
   const { data, isLoading } = usePlatformInvoices(Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '')));
   const { data: sum } = useInvoiceSummary();
   const run = useRunBilling();
+  const canRun = useCan()('billing.run');
 
   return (
     <div>
       <PageHeader title="Platform invoices" description="Subscription invoices raised to societies. The billing job runs every 6 hours; reminders go out before and after the due date, and societies are suspended after the grace period."
-        actions={<Button variant="secondary" className="whitespace-nowrap" icon={RefreshCw} loading={run.isPending} onClick={() => run.mutate()}>Run billing</Button>} />
+        actions={canRun && <Button variant="secondary" className="whitespace-nowrap" icon={RefreshCw} loading={run.isPending} onClick={() => run.mutate()}>Run billing</Button>} />
       {sum && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
           {/* "Unpaid" from the API includes overdue invoices; split it so the tiles don't overlap */}

@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { cn } from '../../../lib/cn';
+import { isPlatformMember } from '../../../lib/platformPermissions';
 import { AddHomeModal } from './AddHomeModal';
 
 const describe = (m) => [ROLE_LABELS[m.role], m.unit?.label].filter(Boolean).join(' · ');
@@ -47,7 +48,7 @@ export function HomeSwitcher({ onSwitched }) {
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-left hover:bg-slate-50" aria-haspopup="listbox" aria-expanded={open}>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-slate-800">{isPlatform ? 'Platform console' : user.society?.name}</p>
-          <p className="truncate text-xs text-slate-500">{isPlatform ? 'All societies' : describe(user)}</p>
+          <p className="truncate text-xs text-slate-500">{isPlatform ? (user.platformRoleName ? `${user.platformRoleName} · all societies` : 'All societies') : describe(user)}</p>
         </div>
         <ChevronsUpDown className="size-4 shrink-0 text-slate-400" />
       </button>
@@ -55,7 +56,7 @@ export function HomeSwitcher({ onSwitched }) {
       {open && (
         <div className="absolute inset-x-3 z-40 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg" role="listbox">
           <ul className="max-h-72 overflow-y-auto py-1">
-            {user.platformRole === 'super_admin' && (
+            {isPlatformMember(user) && (
               <li>
                 <button type="button" onClick={() => choose(null)} disabled={isPlatform || busy} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:cursor-default">
                   <LayoutGrid className="size-4 text-brand-600" />

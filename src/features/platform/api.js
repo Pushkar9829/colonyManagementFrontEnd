@@ -6,8 +6,7 @@ export const usePlatformStats = () => useQuery({ queryKey: ['platform', 'stats']
 export const usePlatformSocieties = (params) =>
   useQuery({ queryKey: ['platform', 'societies', params], queryFn: () => api.list('/platform/societies', params), placeholderData: (p) => p });
 export const usePlatformSociety = (id) => useQuery({ queryKey: ['platform', 'society', id], queryFn: () => api.get(`/platform/societies/${id}`), enabled: Boolean(id) });
-export const usePlatformJobs = () => useQuery({ queryKey: ['platform', 'jobs'], queryFn: () => api.get('/platform/jobs'), refetchInterval: 60000 });
-export const useUpdatePlatformSociety = (o) =>
+export const usePlatformJobs = (enabled = true) => useQuery({ queryKey: ['platform', 'jobs'], queryFn: () => api.get('/platform/jobs'), refetchInterval: 60000, enabled });export const useUpdatePlatformSociety = (o) =>
   useApiMutation(({ id, ...b }) => api.patch(`/platform/societies/${id}`, b), { invalidate: ['platform'], success: 'Society updated', ...o });
 
 export const PLANS = [

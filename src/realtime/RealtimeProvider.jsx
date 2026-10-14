@@ -20,6 +20,7 @@ const KEYS_BY_TYPE = {
   poll: ['polls', 'dashboard'],
   account: ['users', 'dashboard'],
   // ---- feature notification types (add below this line) ----
+  luckyDraw: ['luckyDraws'],
   facility: ['assets', 'ppm', 'breakdowns', 'workOrders', 'checklists', 'fire', 'utility'],
   inventory: ['inventory'],
   leave: ['leave', 'attendance'],

@@ -4,11 +4,13 @@ import { cn } from '../../../lib/cn';
 import { date, label, money } from '../../../lib/format';
 import { useSetSocietyFeatures, useSocietyFeatures } from '../../features/api';
 import { useSocietySubscription, useUpdateSocietySubscription } from '../billingApi';
+import { useCan } from '../useCan';
 
 // Per-society module switches. Each feature is on by plan default unless overridden here.
 export function FeatureFlagsPanel({ societyId }) {
   const { data, isLoading } = useSocietyFeatures(societyId);
   const set = useSetSocietyFeatures(societyId);
+  const canSwitch = useCan()('societies.features');
   if (isLoading || !data) return <div className="flex justify-center py-4"><Spinner /></div>;
   const change = (key, value) => set.mutate({ overrides: { [key]: value } });
   return (
@@ -22,8 +24,8 @@ export function FeatureFlagsPanel({ societyId }) {
               <p className="text-xs text-slate-500">{f.inPlan ? 'In plan' : 'Not in plan'}{f.source === 'override' ? ' · overridden' : ''}</p>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              {f.source === 'override' && <button type="button" className="text-xs text-slate-500 hover:underline" disabled={set.isPending} onClick={() => change(f.key, null)}>reset</button>}
-              <button type="button" role="switch" aria-checked={f.enabled} aria-label={`${f.label} ${f.enabled ? 'on' : 'off'}`} disabled={set.isPending} onClick={() => change(f.key, !f.enabled)}
+              {f.source === 'override' && canSwitch && <button type="button" className="text-xs text-slate-500 hover:underline" disabled={set.isPending} onClick={() => change(f.key, null)}>reset</button>}
+              <button type="button" role="switch" aria-checked={f.enabled} aria-label={`${f.label} ${f.enabled ? 'on' : 'off'}`} disabled={set.isPending || !canSwitch} title={canSwitch ? undefined : 'Your role cannot switch modules'} onClick={() => change(f.key, !f.enabled)}
                 className={cn('relative h-6 w-11 rounded-full transition disabled:opacity-50', f.enabled ? 'bg-emerald-500' : 'bg-slate-300')}>
                 <span className={cn('absolute top-0.5 size-5 rounded-full bg-white shadow transition', f.enabled ? 'left-5.5' : 'left-0.5')} />
               </button>
@@ -39,6 +41,7 @@ export function SubscriptionPanel({ societyId }) {
   const { data, isLoading } = useSocietySubscription(societyId);
   const update = useUpdateSocietySubscription(societyId);
   const [form, setForm] = useState(null);
+  const canManage = useCan()('invoices.manage');
   if (isLoading || !data) return <div className="flex justify-center py-4"><Spinner /></div>;
   const sub = data.subscription;
   const v = form ?? { billingCycle: sub.billingCycle, graceDays: sub.graceDays, dueDays: sub.dueDays };
@@ -51,12 +54,13 @@ export function SubscriptionPanel({ societyId }) {
         <Badge>Outstanding {money(data.outstanding)}</Badge>
         <Badge>Next: {data.nextInvoice.total ? `${money(data.nextInvoice.total)} on ${date(data.nextInvoice.startsOn)}` : 'free'}</Badge>
       </div>
-      <div className="grid gap-3 sm:grid-cols-4">
+      {canManage && <div className="grid gap-3 sm:grid-cols-4">
         <Select label="Cycle" value={v.billingCycle} onChange={(e) => setForm({ ...v, billingCycle: e.target.value })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'yearly', label: 'Yearly' }]} />
         <Input label="Due after (days)" type="number" min={0} max={60} value={v.dueDays} onChange={(e) => setForm({ ...v, dueDays: e.target.value })} />
         <Input label="Grace period (days)" type="number" min={0} max={90} value={v.graceDays} onChange={(e) => setForm({ ...v, graceDays: e.target.value })} hint="Then auto-suspend" />
         <div className="flex items-end"><Button size="sm" disabled={!form} loading={update.isPending} onClick={() => update.mutate({ billingCycle: v.billingCycle, graceDays: Number(v.graceDays), dueDays: Number(v.dueDays) }, { onSuccess: () => setForm(null) })}>Save</Button></div>
-      </div>
+      </div>}
+      {!canManage && <p className="text-xs text-slate-500">{label(sub.billingCycle)} billing · due after {sub.dueDays} days · {sub.graceDays} days’ grace</p>}
     </div>
   );
 }

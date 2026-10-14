@@ -100,6 +100,19 @@ export const router = createBrowserRouter([
           ]),
           guarded([A], [{ path: 'devices', element: page(() => import('../features/devices/pages/DevicesPage')) }]),
           // ---- feature module routes (add below this line; use guarded([roles], [...]) and page(() => import(...))) ----
+          {
+            element: <RequirePlatform />,
+            children: [
+              { path: 'platform/team', element: page(() => import('../features/platform/pages/PlatformTeamPage')) },
+              { path: 'platform/roles', element: page(() => import('../features/platform/pages/PlatformRolesPage')) },
+              { path: 'platform/activity', element: page(() => import('../features/platform/pages/PlatformActivityPage')) },
+            ],
+          },
+          guarded([ACC, FM, R], [
+            { path: 'lucky-draws', element: page(() => import('../features/luckyDraw/pages/LuckyDrawsPage')) },
+            { path: 'lucky-draws/:id', element: page(() => import('../features/luckyDraw/pages/LuckyDrawDetailPage')) },
+          ]),
+          { element: <RequirePlatform />, children: [{ path: 'platform/lucky-draws', element: page(() => import('../features/luckyDraw/pages/PlatformLuckyDrawsPage')) }] },
           guarded([A], [{ path: 'privacy/requests', element: page(() => import('../features/privacy/pages/DeletionRequestsPage')) }]),
           { element: <RequirePlatform />, children: [{ path: 'platform/privacy', element: page(() => import('../features/privacy/pages/DeletionRequestsPage')) }] },
           guarded([FM, S], [

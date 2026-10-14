@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { PageLoader } from '../ui';
 import { hasRole } from '../../lib/roles';
+import { isPlatformMember } from '../../lib/platformPermissions';
 
 export function RequireAuth() {
   const { user, booting } = useAuth();
@@ -19,10 +20,10 @@ export function RequireRole({ roles }) {
   return <Outlet />;
 }
 
-// Platform console (no society open).
+// Platform console (no society open), for every platform team member. Pages check their own permission.
 export function RequirePlatform() {
   const { user } = useAuth();
-  if (user.society || user.platformRole !== 'super_admin') return <Navigate to="/" replace />;
+  if (user.society || !isPlatformMember(user)) return <Navigate to="/" replace />;
   return <Outlet />;
 }
 

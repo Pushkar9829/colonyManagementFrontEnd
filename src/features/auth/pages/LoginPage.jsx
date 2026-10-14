@@ -13,7 +13,13 @@ const DEMO = [
   ['Accountant', 'accountant@demo.test'],
   ['Manager', 'manager@demo.test'],
   ['Staff', 'plumber@demo.test'],
-  ['Platform owner', 'superadmin@demo.test'],
+];
+// The platform console's team, one per built-in role the seed creates.
+const PLATFORM_DEMO = [
+  ['Owner', 'superadmin@demo.test'],
+  ['Billing', 'billing@demo.test'],
+  ['Support', 'support@demo.test'],
+  ['Viewer', 'viewer@demo.test'],
 ];
 const DEMO_PASSWORD = 'Password@123';
 
@@ -97,23 +103,26 @@ export default function LoginPage() {
         <div className="mt-8 rounded-xl border border-dashed border-slate-300 p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Try the demo — tap a role to log in</p>
           <p className="mt-0.5 text-xs text-slate-400">All demo accounts use the password {DEMO_PASSWORD}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {DEMO.map(([name, email]) => (
-              <button
-                key={email}
-                type="button"
-                disabled={loading}
-                onClick={() => {
-                  setIdentifier(email);
-                  setPassword(DEMO_PASSWORD);
-                  signIn(email, DEMO_PASSWORD);
-                }}
-                className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+          {[['Society', DEMO], ['Platform team', PLATFORM_DEMO]].map(([group, accounts]) => (
+            <div key={group} className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-medium text-slate-400 sm:w-24">{group}</span>
+              {accounts.map(([name, email]) => (
+                <button
+                  key={email}
+                  type="button"
+                  disabled={loading}
+                  onClick={() => {
+                    setIdentifier(email);
+                    setPassword(DEMO_PASSWORD);
+                    signIn(email, DEMO_PASSWORD);
+                  }}
+                  className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       )}
     </div>
