@@ -6,6 +6,7 @@ import { api } from '../../../api/client';
 import { Badge, Button, Card, CardHeader, Input, Modal, Spinner } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { useApiMutation } from '../../../hooks/useApiMutation';
 import { date } from '../../../lib/format';
 
@@ -36,15 +37,16 @@ function downloadCodes(codes) {
 // Shown once, right after the codes are created — the server only keeps hashes.
 export function BackupCodes({ codes }) {
   const toast = useToast();
+  const { t } = useT();
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">Save these backup codes now. Each one logs you in once if you lose your phone. You won't see them again.</p>
+      <p className="text-sm text-slate-600">{t("Save these backup codes now. Each one logs you in once if you lose your phone. You won't see them again.")}</p>
       <ul className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 font-mono text-sm text-slate-800">
         {codes.map((c) => <li key={c}>{c}</li>)}
       </ul>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" icon={Download} onClick={() => downloadCodes(codes)}>Download .txt</Button>
-        <Button size="sm" variant="ghost" icon={Copy} onClick={() => { navigator.clipboard?.writeText(codes.join('\n')); toast.success('Codes copied'); }}>Copy</Button>
+        <Button size="sm" variant="ghost" icon={Copy} onClick={() => { navigator.clipboard?.writeText(codes.join('\n')); toast.success(t('Codes copied')); }}>Copy</Button>
       </div>
     </div>
   );
@@ -52,6 +54,7 @@ export function BackupCodes({ codes }) {
 
 // Scan QR -> confirm a code -> show backup codes. Used on the profile page and the forced setup screen.
 export function TwoStepSetup({ onEnabled }) {
+  const { t } = useT();
   const [setup, setSetup] = useState(null);
   const [qr, setQr] = useState('');
   const [code, setCode] = useState('');
@@ -77,8 +80,7 @@ export function TwoStepSetup({ onEnabled }) {
     return (
       <div className="space-y-3">
         <p className="text-sm text-slate-600">
-          Add a second step to your login: after your password or SMS code, enter a 6-digit code from an authenticator app
-          (Google Authenticator, Microsoft Authenticator, Authy…).
+          {t('Add a second step to your login: after your password or SMS code, enter a 6-digit code from an authenticator app (Google Authenticator, Microsoft Authenticator, Authy…).')}
         </p>
         <Button icon={ShieldCheck} loading={start.isPending} onClick={() => start.mutate()}>Set up two-step verification</Button>
       </div>
@@ -89,19 +91,19 @@ export function TwoStepSetup({ onEnabled }) {
   return (
     <div className="space-y-4">
       <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-600">
-        <li>Open your authenticator app and add an account.</li>
-        <li>Scan this QR code, or type the key by hand.</li>
-        <li>Enter the 6-digit code the app shows.</li>
+        <li>{t('Open your authenticator app and add an account.')}</li>
+        <li>{t('Scan this QR code, or type the key by hand.')}</li>
+        <li>{t('Enter the 6-digit code the app shows.')}</li>
       </ol>
       <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <div className="flex size-[200px] shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
-          {qr ? <img src={qr} alt="QR code for your authenticator app" className="size-[200px]" /> : <Spinner />}
+          {qr ? <img src={qr} alt={t('QR code for your authenticator app')} className="size-[200px]" /> : <Spinner />}
         </div>
         <div className="w-full min-w-0 space-y-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Key</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('Key')}</p>
             <p className="break-all font-mono text-sm text-slate-800">{key}</p>
-            <p className="mt-1 text-xs text-slate-500">Account: {setup.account} · time-based</p>
+            <p className="mt-1 text-xs text-slate-500">{t('Account: {account} · time-based', { account: setup.account })}</p>
           </div>
           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); enable.mutate(code); }}>
             {codeInput(code, setCode, { autoFocus: true })}
@@ -145,6 +147,7 @@ function RegenerateModal({ open, onClose, onDone }) {
 
 export function TwoStepCard() {
   const qc = useQueryClient();
+  const { t } = useT();
   const { reloadUser } = useAuth();
   const { data, isLoading } = useQuery({ queryKey: ['mfa'], queryFn: () => api.get('/auth/mfa') });
   const [modal, setModal] = useState(null);
@@ -156,13 +159,13 @@ export function TwoStepCard() {
   return (
     <Card>
       <CardHeader title="Two-step verification" subtitle="A code from your phone in addition to your password."
-        action={data && (data.enabled ? <Badge tone="green">On</Badge> : <Badge>Off</Badge>)} />
+        action={data && (data.enabled ? <Badge tone="green">{t('On')}</Badge> : <Badge>{t('Off')}</Badge>)} />
       <div className="p-5">
         {isLoading || !data ? <div className="flex justify-center py-4"><Spinner /></div> : data.enabled ? (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              On since {date(data.enabledAt)}. {data.backupCodesLeft} backup code{data.backupCodesLeft === 1 ? '' : 's'} left.
-              {data.backupCodesLeft <= 2 && ' Create new ones so you are not locked out.'}
+              {data.backupCodesLeft === 1 ? t('On since {date}. 1 backup code left.', { date: date(data.enabledAt) }) : t('On since {date}. {n} backup codes left.', { date: date(data.enabledAt), n: data.backupCodesLeft })}
+              {data.backupCodesLeft <= 2 && ` ${t('Create new ones so you are not locked out.')}`}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" icon={KeyRound} onClick={() => setModal('regen')}>New backup codes</Button>

@@ -1,5 +1,6 @@
 import { cn } from '../../lib/cn';
 import { label } from '../../lib/format';
+import { useT } from '../../context/LanguageContext';
 
 const tones = {
   slate: 'bg-slate-100 text-slate-700',
@@ -46,9 +47,10 @@ const STATUS_TONES = {
 };
 
 export function StatusBadge({ status, className }) {
+  const { t } = useT();
   return (
     <Badge tone={STATUS_TONES[status] || 'slate'} className={className}>
-      {label(status)}
+      {t(label(status))}
     </Badge>
   );
 }

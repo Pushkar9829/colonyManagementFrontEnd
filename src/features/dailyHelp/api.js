@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, request } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 const put = (path, body) => request('PUT', path, { body }).then((j) => j.data);
 
@@ -17,13 +18,15 @@ export const useHelpLeaves = (id) =>
 export const useCreateHelp = (o) => useApiMutation((b) => api.post('/daily-help', b), { invalidate: ['dailyHelp'], success: 'Helper added', ...o });
 export const useUpdateHelp = () => useApiMutation(({ id, ...b }) => api.patch(`/daily-help/${id}`, b), { invalidate: ['dailyHelp'], success: 'Helper updated' });
 export const useRemoveHelpFromUnit = () => useApiMutation((id) => api.del(`/daily-help/${id}/my-unit`), { invalidate: ['dailyHelp'], success: 'Removed from your home' });
-export const useGateScan = (o) =>
+export const useGateScan = (o) => {
+  const { t } = useT();
   // passcode, or { passcode, gateId } from the gate console
-  useApiMutation((b) => api.post('/daily-help/gate-scan', typeof b === 'string' ? { passcode: b } : b), {
+  return useApiMutation((b) => api.post('/daily-help/gate-scan', typeof b === 'string' ? { passcode: b } : b), {
     invalidate: ['dailyHelp', 'dashboard'],
-    success: (r) => `${r.help.name} ${r.direction === 'in' ? 'entered' : 'left'}`,
+    success: (r) => (r.direction === 'in' ? t('{name} entered', { name: r.help.name }) : t('{name} left', { name: r.help.name })),
     ...o,
   });
+};
 
 export const useRateHelp = (o) => useApiMutation(({ id, ...b }) => put(`/daily-help/${id}/reviews/mine`, b), { invalidate: ['dailyHelp'], success: 'Thanks for the review', ...o });
 export const useSetEmployment = (o) => useApiMutation(({ id, ...b }) => put(`/daily-help/${id}/employment`, b), { invalidate: ['dailyHelp'], success: 'Salary details saved', ...o });

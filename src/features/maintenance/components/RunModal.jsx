@@ -6,10 +6,12 @@ import { dateTime, label } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
 import { useCompleteRun, useVerifyRun } from '../api';
 import { RUN_TONES } from '../constants';
+import { useT } from '../../../context/LanguageContext';
 
 // Fill a housekeeping checklist with photo proof, or verify one as a supervisor.
 export function RunModal({ run, onClose }) {
   const { user } = useAuth();
+  const { t } = useT();
   const manager = isManager(user);
   const [done, setDone] = useState({});
   const [photos, setPhotos] = useState([]);
@@ -29,7 +31,7 @@ export function RunModal({ run, onClose }) {
   const toggle = (id) => editable && setDone((d) => ({ ...d, [id]: !d[id] }));
 
   return (
-    <Modal open onClose={onClose} title={`${run.name} · ${run.slot}`} description={`${run.date} · due ${dateTime(run.dueAt)}`}
+    <Modal open onClose={onClose} title={`${run.name} · ${run.slot}`} description={t('{date} · due {time}', { date: run.date, time: dateTime(run.dueAt) })}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Close</Button>
@@ -44,10 +46,10 @@ export function RunModal({ run, onClose }) {
       }>
       <div className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge tone={RUN_TONES[run.status]}>{label(run.status)}</Badge>
-          {run.completedBy && <span className="text-xs text-slate-500">by {run.completedBy.name} · {dateTime(run.completedAt)}</span>}
+          <Badge tone={RUN_TONES[run.status]}>{t(label(run.status))}</Badge>
+          {run.completedBy && <span className="text-xs text-slate-500">{t('by {name} · {time}', { name: run.completedBy.name, time: dateTime(run.completedAt) })}</span>}
         </div>
-        {run.status === 'rejected' && run.verifyNote && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Supervisor: {run.verifyNote}</p>}
+        {run.status === 'rejected' && run.verifyNote && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{t('Supervisor: {note}', { note: run.verifyNote })}</p>}
         <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
           {run.items.map((i) => (
             <li key={i.itemId}>
@@ -68,7 +70,7 @@ export function RunModal({ run, onClose }) {
             <Attachments items={run.photos} />
             {run.remarks && <p className="text-sm text-slate-600">“{run.remarks}”</p>}
             {manager && run.status === 'completed' && <Textarea label="Note to staff (optional)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />}
-            {run.verifiedBy && <p className="text-xs text-slate-500">{run.status === 'verified' ? 'Verified' : 'Reviewed'} by {run.verifiedBy.name}{run.verifyNote ? ` — ${run.verifyNote}` : ''}</p>}
+            {run.verifiedBy && <p className="text-xs text-slate-500">{t(run.status === 'verified' ? 'Verified by {name}' : 'Reviewed by {name}', { name: run.verifiedBy.name })}{run.verifyNote ? ` — ${run.verifyNote}` : ''}</p>}
           </>
         )}
       </div>

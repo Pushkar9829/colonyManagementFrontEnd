@@ -8,6 +8,7 @@ import { useAssets } from '../../assets/api';
 import { clean, usePeople } from '../../assets/shared';
 import { useAssignBreakdown, useBreakdown, useBreakdownStatus, useCreateBreakdown } from '../api';
 import { PRIORITIES } from '../constants';
+import { useT } from '../../../context/LanguageContext';
 
 const BD_TONES = { open: 'amber', in_progress: 'blue', resolved: 'green', closed: 'slate' };
 export const breakdownTone = (s) => BD_TONES[s] || 'slate';
@@ -47,6 +48,7 @@ export function ReportBreakdownModal({ open, onClose, asset }) {
 export function BreakdownDetailModal({ id, open, onClose, onCreateWorkOrder }) {
   const { user } = useAuth();
   const manager = isManager(user);
+  const { t } = useT();
   const { data: b, isLoading } = useBreakdown(open ? id : null);
   const { data: people } = usePeople(['staff', 'facility_manager'], open && manager);
   const [resolution, setResolution] = useState('');
@@ -60,15 +62,15 @@ export function BreakdownDetailModal({ id, open, onClose, onCreateWorkOrder }) {
       {isLoading || !b ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <div className="space-y-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={breakdownTone(b.status)}>{label(b.status)}</Badge>
-            <Badge tone={b.priority === 'urgent' ? 'red' : b.priority === 'high' ? 'amber' : 'slate'}>{label(b.priority)}</Badge>
-            <span className="text-slate-500">{b.asset?.name} ({b.asset?.code}) · reported {dateTime(b.createdAt)} by {b.reportedBy?.name}</span>
+            <Badge tone={breakdownTone(b.status)}>{t(label(b.status))}</Badge>
+            <Badge tone={b.priority === 'urgent' ? 'red' : b.priority === 'high' ? 'amber' : 'slate'}>{t(label(b.priority))}</Badge>
+            <span className="text-slate-500">{t('{asset} ({code}) · reported {time} by {name}', { asset: b.asset?.name || '', code: b.asset?.code || '', time: dateTime(b.createdAt), name: b.reportedBy?.name || '' })}</span>
           </div>
           {b.description && <p className="text-slate-700">{b.description}</p>}
-          {b.complaint && <p className="text-slate-500">Helpdesk: {b.complaint.ticketNumber} · {b.complaint.title}</p>}
-          {b.workOrder && <p className="text-slate-500">Work order {b.workOrder.number} ({label(b.workOrder.status)})</p>}
+          {b.complaint && <p className="text-slate-500">{t('Helpdesk')}: {b.complaint.ticketNumber} · {b.complaint.title}</p>}
+          {b.workOrder && <p className="text-slate-500">{t('Work order {number} ({status})', { number: b.workOrder.number, status: t(label(b.workOrder.status)) })}</p>}
           <Attachments items={b.attachments} />
-          {b.resolution && <div className="rounded-lg bg-emerald-50 p-3 text-emerald-800"><p className="font-medium">Resolution</p><p>{b.resolution}{b.cost ? ` · ${money(b.cost)}` : ''}</p></div>}
+          {b.resolution && <div className="rounded-lg bg-emerald-50 p-3 text-emerald-800"><p className="font-medium">{t('Resolution')}</p><p>{b.resolution}{b.cost ? ` · ${money(b.cost)}` : ''}</p></div>}
 
           {manager && ['open', 'in_progress'].includes(b.status) && (
             <div className="flex flex-wrap items-end gap-2">
@@ -79,7 +81,7 @@ export function BreakdownDetailModal({ id, open, onClose, onCreateWorkOrder }) {
           {b.status === 'open' && <Button variant="secondary" loading={status.isPending} onClick={() => status.mutate({ id: b._id, status: 'in_progress' })}>Start work</Button>}
           {['open', 'in_progress'].includes(b.status) && (
             <div className="space-y-3 rounded-lg border border-slate-200 p-3">
-              <p className="font-medium text-slate-800">Resolve</p>
+              <p className="font-medium text-slate-800">{t('Resolve')}</p>
               <Textarea label="What was done" rows={2} value={resolution} onChange={(e) => setResolution(e.target.value)} />
               <Input label="Cost (₹)" type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} />
               <FileUpload folder="facility" files={files} onChange={setFiles} camera label="Add photo" />

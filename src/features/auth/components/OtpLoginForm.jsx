@@ -73,7 +73,7 @@ export function OtpLoginForm({ onDone, onMfa }) {
       <div className="flex justify-between text-sm">
         <button type="button" className="text-slate-500 hover:text-slate-700" onClick={() => { setSent(false); setCode(''); setInfo(''); }}>{t('Change number')}</button>
         <button type="button" className="font-medium text-brand-600 hover:underline disabled:text-slate-400 disabled:no-underline" disabled={cooldown > 0 || loading} onClick={send}>
-          {cooldown ? `${t('Resend code')} (${cooldown}s)` : t('Resend code')}
+          {cooldown ? t('Resend code ({s}s)', { s: cooldown }) : t('Resend code')}
         </button>
       </div>
     </form>

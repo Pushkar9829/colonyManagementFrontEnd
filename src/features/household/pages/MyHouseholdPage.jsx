@@ -10,6 +10,7 @@ import { useAddHouseholdItem, useMyHousehold, useRemoveHouseholdItem, useSetMyMe
 import { BLOOD_GROUPS, PET_TYPES, RELATIONS } from '../constants';
 import { PersonalDetailsFields, personalBody, personalForm } from '../../people/components/PersonalDetailsFields';
 import { occupationSummary } from '../../people/constants';
+import { useT } from '../../../context/LanguageContext';
 
 const nullable = (v) => (v === '' ? null : v);
 
@@ -29,6 +30,7 @@ function MedicalFields({ v, set }) {
 
 function MemberModal({ member, onClose }) {
   const editing = Boolean(member?._id);
+  const { t } = useT();
   const [v, setV] = useState({ name: '', relation: 'spouse', dob: '', age: '', phone: '', ...member, age: member?.dob ? '' : String(member?.age ?? '') });
   const [photo, setPhoto] = useState([]);
   // Anniversary, gender, occupation (people feature); the DOB field above stays the source for dob.
@@ -56,7 +58,7 @@ function MemberModal({ member, onClose }) {
     ...(photo.length ? { photo: photo[0]._id } : {}),
   });
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${member.name}` : 'Add family member'} description="For people without their own app login. Residents with a login manage their own medical details." size="lg"
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: member.name }) : 'Add family member'} description="For people without their own app login. Residents with a login manage their own medical details." size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={add.isPending || update.isPending} onClick={() => (editing ? update.mutate({ id: member._id, ...body() }, { onError }) : add.mutate(body(), { onError }))}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" required value={v.name} onChange={(e) => set('name', e.target.value)} error={errors['body.name']} />
@@ -65,11 +67,11 @@ function MemberModal({ member, onClose }) {
         <Input label="Age (if DOB unknown)" type="number" min={0} max={120} disabled={Boolean(v.dob)} value={v.age} onChange={(e) => set('age', e.target.value)} />
         <Input label="Phone" type="tel" value={v.phone || ''} onChange={(e) => set('phone', e.target.value)} />
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Photo</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Photo')}</p>
           <FileUpload folder="household" files={photo} onChange={setPhoto} max={1} label={member?.photo ? 'Replace photo' : 'Add photo'} />
         </div>
         <MedicalFields v={v} set={set} />
-        <p className="pt-2 text-sm font-semibold text-slate-700 sm:col-span-2">Personal details</p>
+        <p className="pt-2 text-sm font-semibold text-slate-700 sm:col-span-2">{t('Personal details')}</p>
         <PersonalDetailsFields hideDob value={personal} onChange={setPersonal} errors={errors} />
         <Checkbox className="sm:col-span-2" label="Show on the society's “Today's birthdays” card" checked={showBirthday} onChange={(e) => setShowBirthday(e.target.checked)} />
       </div>
@@ -79,6 +81,7 @@ function MemberModal({ member, onClose }) {
 
 function PetModal({ pet, onClose }) {
   const editing = Boolean(pet?._id);
+  const { t } = useT();
   const [v, setV] = useState({ name: '', type: 'dog', breed: '', vaccinationDate: '', registrationNumber: '', ...pet });
   const [cert, setCert] = useState([]);
   const [photo, setPhoto] = useState([]);
@@ -95,7 +98,7 @@ function PetModal({ pet, onClose }) {
     ...(photo.length ? { photo: photo[0]._id } : {}),
   });
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${pet.name}` : 'Add pet'} size="lg"
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: pet.name }) : 'Add pet'} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={add.isPending || update.isPending} onClick={() => (editing ? update.mutate({ id: pet._id, ...body() }) : add.mutate(body()))}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" required value={v.name} onChange={set('name')} />
@@ -104,11 +107,11 @@ function PetModal({ pet, onClose }) {
         <Input label="Municipal registration no." value={v.registrationNumber || ''} onChange={set('registrationNumber')} />
         <Input label="Last vaccination" type="date" value={v.vaccinationDate || ''} onChange={set('vaccinationDate')} />
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Vaccination certificate</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Vaccination certificate')}</p>
           <FileUpload folder="documents" files={cert} onChange={setCert} max={1} label={pet?.vaccinationCertificate ? 'Replace' : 'Attach'} />
         </div>
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Photo</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Photo')}</p>
           <FileUpload folder="household" files={photo} onChange={setPhoto} max={1} label="Add photo" />
         </div>
       </div>
@@ -119,12 +122,13 @@ function PetModal({ pet, onClose }) {
 function Family({ h }) {
   const [editing, setEditing] = useState(null);
   const remove = useRemoveHouseholdItem('members');
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title="Family members" subtitle="People living here without their own login" action={<Button size="sm" icon={Plus} onClick={() => setEditing({})}>Add</Button>} />
       {h.residents?.length > 0 && (
         <div className="border-b border-slate-100 px-5 py-3 text-sm text-slate-600">
-          With app login: {h.residents.map((r) => `${r.name} (${label(r.residentType)})`).join(', ')}
+          {t('With app login:')} {h.residents.map((r) => `${r.name} (${t(label(r.residentType))})`).join(', ')}
         </div>
       )}
       {!h.members.length ? <EmptyState icon={Users} title="No family members added" /> : (
@@ -135,16 +139,16 @@ function Family({ h }) {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-slate-900">{m.name}</p>
-                  <span className="text-xs text-slate-500">{label(m.relation)}{m.age != null ? ` · ${m.age} yrs` : ''}</span>
+                  <span className="text-xs text-slate-500">{t(label(m.relation))}{m.age != null ? ` · ${t('{age} yrs', { age: m.age })}` : ''}</span>
                   {m.bloodGroup && <Badge tone="red">{m.bloodGroup}</Badge>}
-                  {m.elderly && <Badge tone="amber">Senior</Badge>}
-                  {m.specialNeeds && <Badge tone="amber">Special needs</Badge>}
+                  {m.elderly && <Badge tone="amber">{t('Senior')}</Badge>}
+                  {m.specialNeeds && <Badge tone="amber">{t('Special needs')}</Badge>}
                 </div>
-                {(m.allergies || m.conditions) && <p className="text-xs text-slate-500">{[m.conditions, m.allergies && `Allergic to ${m.allergies}`].filter(Boolean).join(' · ')}</p>}
+                {(m.allergies || m.conditions) && <p className="text-xs text-slate-500">{[m.conditions, m.allergies && t('Allergic to {what}', { what: m.allergies })].filter(Boolean).join(' · ')}</p>}
                 {m.occupation && <p className="text-xs text-slate-600">{occupationSummary(m.occupation)}</p>}
               </div>
-              <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={`Edit ${m.name}`} onClick={() => setEditing(m)}><Pencil className="size-4" /></button>
-              <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600" aria-label={`Remove ${m.name}`} onClick={() => window.confirm(`Remove ${m.name}?`) && remove.mutate(m._id)}><Trash2 className="size-4" /></button>
+              <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={t('Edit {name}', { name: m.name })} onClick={() => setEditing(m)}><Pencil className="size-4" /></button>
+              <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600" aria-label={t('Remove {name}', { name: m.name })} onClick={() => window.confirm(t('Remove {name}?', { name: m.name })) && remove.mutate(m._id)}><Trash2 className="size-4" /></button>
             </li>
           ))}
         </ul>
@@ -157,6 +161,7 @@ function Family({ h }) {
 function Pets({ h }) {
   const [editing, setEditing] = useState(null);
   const remove = useRemoveHouseholdItem('pets');
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title="Pets" action={<Button size="sm" icon={Plus} onClick={() => setEditing({})}>Add</Button>} />
@@ -165,13 +170,13 @@ function Pets({ h }) {
           {h.pets.map((p) => (
             <li key={p._id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-900">{p.name} <span className="text-xs font-normal text-slate-500">{label(p.type)}{p.breed ? ` · ${p.breed}` : ''}</span></p>
-                <p className="text-xs text-slate-500">{p.vaccinationDate ? `Vaccinated ${fmtDate(p.vaccinationDate)}` : 'Vaccination date not added'}{p.registrationNumber ? ` · Reg. ${p.registrationNumber}` : ''}</p>
+                <p className="font-medium text-slate-900">{p.name} <span className="text-xs font-normal text-slate-500">{t(label(p.type))}{p.breed ? ` · ${p.breed}` : ''}</span></p>
+                <p className="text-xs text-slate-500">{p.vaccinationDate ? t('Vaccinated {date}', { date: fmtDate(p.vaccinationDate) }) : t('Vaccination date not added')}{p.registrationNumber ? ` · ${t('Reg. {no}', { no: p.registrationNumber })}` : ''}</p>
                 {p.vaccinationCertificate && <div className="mt-1"><Attachments items={[p.vaccinationCertificate]} /></div>}
               </div>
               <div className="flex gap-1">
                 <Button size="sm" variant="ghost" onClick={() => setEditing(p)}>Edit</Button>
-                <Button size="sm" variant="ghost" onClick={() => window.confirm(`Remove ${p.name}?`) && remove.mutate(p._id)}>Remove</Button>
+                <Button size="sm" variant="ghost" onClick={() => window.confirm(t('Remove {name}?', { name: p.name })) && remove.mutate(p._id)}>Remove</Button>
               </div>
             </li>
           ))}
@@ -185,6 +190,7 @@ function Pets({ h }) {
 function Contacts({ h }) {
   const [rows, setRows] = useState(h.emergencyContacts.length ? h.emergencyContacts.map(({ name, relation, phone, altPhone }) => ({ name, relation: relation || '', phone, altPhone: altPhone || '' })) : [{ name: '', relation: '', phone: '', altPhone: '' }]);
   const save = useUpdateHousehold();
+  const { t } = useT();
   const set = (i, k, v) => setRows((r) => r.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
   return (
     <Card>
@@ -196,7 +202,7 @@ function Contacts({ h }) {
             <Input label="Relation" value={c.relation} onChange={(e) => set(i, 'relation', e.target.value)} />
             <Input label="Phone" type="tel" value={c.phone} onChange={(e) => set(i, 'phone', e.target.value)} />
             <Input label="Alternate phone" type="tel" value={c.altPhone} onChange={(e) => set(i, 'altPhone', e.target.value)} />
-            <button type="button" className="mb-2 justify-self-start rounded p-1 text-slate-400 hover:text-red-600" aria-label="Remove contact" onClick={() => setRows((r) => r.filter((_, j) => j !== i))}><Trash2 className="size-4" /></button>
+            <button type="button" className="mb-2 justify-self-start rounded p-1 text-slate-400 hover:text-red-600" aria-label={t('Remove contact')} onClick={() => setRows((r) => r.filter((_, j) => j !== i))}><Trash2 className="size-4" /></button>
           </div>
         ))}
         <div className="flex flex-wrap gap-2">
@@ -248,10 +254,11 @@ export default function MyHouseholdPage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'family';
   const { data: h, isLoading } = useMyHousehold();
+  const { t } = useT();
   return (
     <div className="mx-auto max-w-5xl">
-      <PageHeader title="My household" description={h?.unit ? `${h.unit.label} — family, pets, emergency details, ID proof and rent agreement` : 'Family, pets, emergency details, ID proof and rent agreement'} />
-      <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={(t) => setParams({ tab: t }, { replace: true })} tabs={TABS} />
+      <PageHeader title="My household" description={h?.unit ? t('{unit} — family, pets, emergency details, ID proof and rent agreement', { unit: h.unit.label }) : 'Family, pets, emergency details, ID proof and rent agreement'} />
+      <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={(v) => setParams({ tab: v }, { replace: true })} tabs={TABS} />
       {isLoading || !h ? <div className="flex justify-center py-12"><Spinner /></div> : (
         <>
           {tab === 'family' && <Family h={h} />}
@@ -262,7 +269,7 @@ export default function MyHouseholdPage() {
           {tab === 'lease' && <LeasePanel />}
         </>
       )}
-      {tab === 'medical' && <p className="mt-4 flex items-center gap-1 text-xs text-slate-500"><HeartPulse className="size-3.5" /> Managers can see household details; guards only during an open emergency.</p>}
+      {tab === 'medical' && <p className="mt-4 flex items-center gap-1 text-xs text-slate-500"><HeartPulse className="size-3.5" /> {t('Managers can see household details; guards only during an open emergency.')}</p>}
     </div>
   );
 }

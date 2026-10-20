@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { tr, useT } from '../../context/LanguageContext';
 
 const variants = {
   primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm',
@@ -16,6 +17,7 @@ const sizes = {
 };
 
 export function Button({ variant = 'primary', size = 'md', loading = false, icon: Icon, className, children, disabled, type = 'button', ...props }) {
+  const { t } = useT();
   return (
     <button
       type={type}
@@ -29,7 +31,7 @@ export function Button({ variant = 'primary', size = 'md', loading = false, icon
       {...props}
     >
       {loading ? <Loader2 className="size-4 animate-spin" /> : Icon ? <Icon className="size-4" /> : null}
-      {children}
+      {tr(t, children)}
     </button>
   );
 }

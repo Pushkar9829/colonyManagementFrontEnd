@@ -3,11 +3,13 @@ import QrScanner from 'qr-scanner';
 import { CheckCircle2, Keyboard, XCircle } from 'lucide-react';
 import { Button, Input, Modal } from '../../../components/ui';
 import { money } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useCheckIn } from '../api';
 
 // Organiser check-in: scan the ticket QR with the camera, or type the 8-character code.
 // When the attendee still owes money, offers to record it as collected (cash / UPI) and check in.
 export function CheckInModal({ eventId, open, onClose }) {
+  const { t } = useT();
   const video = useRef(null);
   const last = useRef({ code: '', at: 0 });
   const [camError, setCamError] = useState('');
@@ -20,11 +22,11 @@ export function CheckInModal({ eventId, open, onClose }) {
     mutate(
       { id: eventId, code, collect },
       {
-        onSuccess: (r) => setResult({ ok: true, title: r.user?.name || 'Checked in', sub: `${r.attendedCount} ${r.attendedCount === 1 ? 'person' : 'people'}${r.user?.units?.length ? ` · ${r.user.units.join(', ')}` : ''}` }),
+        onSuccess: (r) => setResult({ ok: true, title: r.user?.name || t('Checked in'), sub: `${r.attendedCount === 1 ? t('{n} person', { n: r.attendedCount }) : t('{n} people', { n: r.attendedCount })}${r.user?.units?.length ? ` · ${r.user.units.join(', ')}` : ''}` }),
         onError: (err) =>
           setResult(err.code === 'PAYMENT_PENDING'
-            ? { ok: false, title: 'Payment pending', sub: `${money(err.details?.amountDue)} to collect`, pending: code }
-            : { ok: false, title: 'Not checked in', sub: err.message }),
+            ? { ok: false, title: t('Payment pending'), sub: t('{amount} to collect', { amount: money(err.details?.amountDue) }), pending: code }
+            : { ok: false, title: t('Not checked in'), sub: err.message }),
       },
     );
   };
@@ -54,7 +56,7 @@ export function CheckInModal({ eventId, open, onClose }) {
       <div className="space-y-4">
         <div className="relative overflow-hidden rounded-xl bg-slate-900">
           <video ref={video} className="aspect-square w-full object-cover" muted playsInline />
-          {camError && <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/80">{camError}</p>}
+          {camError && <p className="absolute inset-0 flex items-center justify-center p-6 text-center text-sm text-white/80">{t(camError)}</p>}
         </div>
         {result && (
           <div className={`flex items-start gap-3 rounded-lg p-3 ${result.ok ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-800'}`}>

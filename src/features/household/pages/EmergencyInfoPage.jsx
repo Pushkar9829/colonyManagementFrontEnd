@@ -5,14 +5,16 @@ import { Button, Card, EmptyState, ErrorState, Spinner, StatusBadge } from '../.
 import { label, timeAgo } from '../../../lib/format';
 import { useOpenSos, useSosContext } from '../api';
 import { HouseholdDetail } from '../components/HouseholdDetail';
+import { useT } from '../../../context/LanguageContext';
 
 function Context({ sosId }) {
   const { data, isLoading, error, refetch } = useSosContext(sosId);
+  const { t } = useT();
   if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">{data.unit ? `Home ${data.unit.label}` : 'Raised outside a home'}{data.alert.location ? ` · at ${data.alert.location}` : ''}{data.alert.message ? ` — ${data.alert.message}` : ''}</p>
+      <p className="text-sm text-slate-600">{data.unit ? t('Home {unit}', { unit: data.unit.label }) : t('Raised outside a home')}{data.alert.location ? ` · ${t('at {place}', { place: data.alert.location })}` : ''}{data.alert.message ? ` — ${data.alert.message}` : ''}</p>
       {data.unit && <HouseholdDetail {...data} />}
     </div>
   );
@@ -22,6 +24,7 @@ function Context({ sosId }) {
 // The server refuses guards once the alert is resolved, so this is never a browsable directory.
 export default function EmergencyInfoPage() {
   const { data, isLoading } = useOpenSos();
+  const { t } = useT();
   const [selected, setSelected] = useState(null);
   const open = (data?.data || []).filter((a) => a.status !== 'resolved');
   return (
@@ -35,12 +38,12 @@ export default function EmergencyInfoPage() {
                 <div className="flex items-center gap-3">
                   <Siren className="size-6 text-red-600" />
                   <div>
-                    <p className="font-semibold text-slate-900">{label(a.type)} · {a.unit?.label || 'No unit'}</p>
+                    <p className="font-semibold text-slate-900">{t(label(a.type))} · {a.unit?.label || t('No unit')}</p>
                     <p className="text-xs text-slate-500">{a.raisedBy?.name} · {timeAgo(a.createdAt)}</p>
                   </div>
                   <StatusBadge status={a.status} />
                 </div>
-                <Button size="sm" variant={selected === a._id ? 'secondary' : 'primary'} onClick={() => setSelected(selected === a._id ? null : a._id)}>{selected === a._id ? 'Hide details' : 'Show details'}</Button>
+                <Button size="sm" variant={selected === a._id ? 'secondary' : 'primary'} onClick={() => setSelected(selected === a._id ? null : a._id)}>{selected === a._id ? t('Hide details') : t('Show details')}</Button>
               </div>
               {selected === a._id && <div className="mt-4"><Context sosId={a._id} /></div>}
             </Card>

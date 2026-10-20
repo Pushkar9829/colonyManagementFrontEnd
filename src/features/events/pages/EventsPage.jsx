@@ -4,6 +4,7 @@ import { CalendarDays, List, MapPin, Plus, Ticket, Users } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, EmptyState, Pagination, Spinner, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { label, money } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
@@ -16,6 +17,7 @@ const RSVP_BADGE = { confirmed: ['green', 'Going'], waitlisted: ['amber', 'Waitl
 
 export function EventCard({ e }) {
   const navigate = useNavigate();
+  const { t } = useT();
   const start = new Date(e.startAt);
   const rsvp = e.myRsvp && RSVP_BADGE[e.myRsvp.state];
   return (
@@ -31,16 +33,16 @@ export function EventCard({ e }) {
       <div className="min-w-0 flex-1 p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <h3 className={cn('font-semibold text-slate-900', e.status === 'cancelled' && 'line-through')}>{e.title}</h3>
-          {e.status === 'cancelled' && <Badge tone="red">Cancelled</Badge>}
-          {rsvp && e.status !== 'cancelled' && <Badge tone={rsvp[0]}>{rsvp[1]}</Badge>}
-          {e.isFull && e.status !== 'cancelled' && <Badge tone="amber">Full</Badge>}
+          {e.status === 'cancelled' && <Badge tone="red">{t('Cancelled')}</Badge>}
+          {rsvp && e.status !== 'cancelled' && <Badge tone={rsvp[0]}>{t(rsvp[1])}</Badge>}
+          {e.isFull && e.status !== 'cancelled' && <Badge tone="amber">{t('Full')}</Badge>}
         </div>
         <p className="mt-1 text-sm text-slate-600">{whenText(e)}</p>
         <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
           {e.venue && <span className="inline-flex items-center gap-1"><MapPin className="size-3.5" />{e.venue}</span>}
-          <span className="inline-flex items-center gap-1"><Users className="size-3.5" />{e.goingCount}{e.capacity ? ` / ${e.capacity}` : ''} going</span>
-          <span className="inline-flex items-center gap-1"><Ticket className="size-3.5" />{e.ticketPrice ? `${money(e.ticketPrice)} / person` : 'Free'}</span>
-          <Badge>{label(e.category)}</Badge>
+          <span className="inline-flex items-center gap-1"><Users className="size-3.5" />{e.capacity ? t('{going} / {capacity} going', { going: e.goingCount, capacity: e.capacity }) : t('{going} going', { going: e.goingCount })}</span>
+          <span className="inline-flex items-center gap-1"><Ticket className="size-3.5" />{e.ticketPrice ? t('{price} / person', { price: money(e.ticketPrice) }) : t('Free')}</span>
+          <Badge>{t(label(e.category))}</Badge>
         </div>
       </div>
     </Card>
@@ -50,6 +52,7 @@ export function EventCard({ e }) {
 function CalendarView() {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selected, setSelected] = useState(dayKey(new Date()));
+  const { t } = useT();
   const range = useMemo(() => {
     const days = monthGrid(month);
     const to = new Date(days[41]);
@@ -66,7 +69,7 @@ function CalendarView() {
       </Card>
       <div>
         <h2 className="mb-2 text-sm font-semibold text-slate-700">{new Date(`${selected}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
-        {!dayEvents.length ? <p className="text-sm text-slate-400">No events on this day.</p> : <div className="space-y-3">{dayEvents.map((e) => <EventCard key={e._id} e={e} />)}</div>}
+        {!dayEvents.length ? <p className="text-sm text-slate-400">{t('No events on this day.')}</p> : <div className="space-y-3">{dayEvents.map((e) => <EventCard key={e._id} e={e} />)}</div>}
       </div>
     </div>
   );
@@ -92,12 +95,13 @@ export default function EventsPage() {
   const navigate = useNavigate();
   const organiser = isManager(user);
   const [view, setView] = useState('upcoming');
+  const { t } = useT();
   const [creating, setCreating] = useState(false);
   return (
     <div>
       <PageHeader title="Events" description="What's happening in the society." actions={organiser && <Button icon={Plus} onClick={() => setCreating(true)}>New event</Button>} />
       <Tabs className="mb-4 w-fit" value={view} onChange={setView}
-        tabs={[{ value: 'upcoming', label: <span className="inline-flex items-center gap-1.5"><List className="size-4" />Upcoming</span> }, { value: 'calendar', label: <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />Calendar</span> }, { value: 'past', label: 'Past' }]} />
+        tabs={[{ value: 'upcoming', label: <span className="inline-flex items-center gap-1.5"><List className="size-4" />{t('Upcoming')}</span> }, { value: 'calendar', label: <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-4" />{t('Calendar')}</span> }, { value: 'past', label: 'Past' }]} />
       {view === 'calendar' ? <CalendarView /> : <ListView key={view} when={view} />}
       {creating && <EventFormModal open onClose={() => setCreating(false)} onSaved={(e) => navigate(`/events/${e._id}`)} />}
     </div>

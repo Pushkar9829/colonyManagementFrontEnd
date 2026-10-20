@@ -10,6 +10,7 @@ import { cn } from '../../../lib/cn';
 import { label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
 import { CONTACT_CATEGORIES, telHref, useContacts, useCreateContact, useRemoveContact, useReorderContacts, useUpdateContact } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const ICONS = {
   ambulance: Ambulance, hospital: Hospital, police: Siren, fire: Flame, pharmacy: Pill, doctor: Stethoscope, electrician: Zap,
@@ -76,22 +77,23 @@ function CallButton({ phone, primary }) {
 // Manager tools sit behind a "⋯" menu at the top of the card, well away from the big call buttons.
 function ManageMenu({ c, isFirst, isLast, busy, onEdit, onMove, onDelete }) {
   const [open, setOpen] = useState(false);
+  const { t } = useT();
   const item = 'flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40';
   const pick = (fn) => () => { setOpen(false); fn(); };
   return (
     <div className="relative shrink-0">
-      <button type="button" aria-label={`Manage ${c.name}`} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}
+      <button type="button" aria-label={t('Manage {name}', { name: c.name })} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}
         className="flex size-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700">
         <MoreHorizontal className="size-5" />
       </button>
       {open && (
         <>
-          <button type="button" aria-label="Close menu" className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
+          <button type="button" aria-label={t('Close menu')} className="fixed inset-0 z-10 cursor-default" onClick={() => setOpen(false)} />
           <div role="menu" className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-            <button type="button" role="menuitem" className={item} onClick={pick(onEdit)}><Pencil className="size-4 text-slate-400" />Edit</button>
-            <button type="button" role="menuitem" className={item} aria-label={`Move ${c.name} up`} disabled={isFirst || busy} onClick={pick(() => onMove(-1))}><ChevronUp className="size-4 text-slate-400" />Move up</button>
-            <button type="button" role="menuitem" className={item} aria-label={`Move ${c.name} down`} disabled={isLast || busy} onClick={pick(() => onMove(1))}><ChevronDown className="size-4 text-slate-400" />Move down</button>
-            <button type="button" role="menuitem" className={cn(item, 'border-t border-slate-100 text-red-600 hover:bg-red-50')} onClick={pick(onDelete)}><Trash2 className="size-4" />Delete</button>
+            <button type="button" role="menuitem" className={item} onClick={pick(onEdit)}><Pencil className="size-4 text-slate-400" />{t('Edit')}</button>
+            <button type="button" role="menuitem" className={item} aria-label={t('Move {name} up', { name: c.name })} disabled={isFirst || busy} onClick={pick(() => onMove(-1))}><ChevronUp className="size-4 text-slate-400" />{t('Move up')}</button>
+            <button type="button" role="menuitem" className={item} aria-label={t('Move {name} down', { name: c.name })} disabled={isLast || busy} onClick={pick(() => onMove(1))}><ChevronDown className="size-4 text-slate-400" />{t('Move down')}</button>
+            <button type="button" role="menuitem" className={cn(item, 'border-t border-slate-100 text-red-600 hover:bg-red-50')} onClick={pick(onDelete)}><Trash2 className="size-4" />{t('Delete')}</button>
           </div>
         </>
       )}
@@ -101,6 +103,7 @@ function ManageMenu({ c, isFirst, isLast, busy, onEdit, onMove, onDelete }) {
 
 function ContactCard({ c, manager, isFirst, isLast, onEdit, onMove, onDelete, busy }) {
   const Icon = ICONS[c.category] || Phone;
+  const { t } = useT();
   // The icon already shows the kind; spell it out only when the name does not say it.
   const kind = label(c.category);
   const showKind = c.category !== 'other' && !c.name.toLowerCase().includes(kind.toLowerCase());
@@ -114,9 +117,9 @@ function ContactCard({ c, manager, isFirst, isLast, onEdit, onMove, onDelete, bu
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-base font-semibold text-slate-900">{c.name}</h3>
             {c.available24x7 && <Badge tone="green">24x7</Badge>}
-            {c.active === false && <Badge>Hidden</Badge>}
+            {c.active === false && <Badge>{t('Hidden')}</Badge>}
           </div>
-          {showKind && <p className="text-sm text-slate-500">{kind}</p>}
+          {showKind && <p className="text-sm text-slate-500">{t(kind)}</p>}
           {c.notes && <p className="mt-1 text-sm text-slate-600">{c.notes}</p>}
           {c.address && (
             <p className="mt-1 flex items-start gap-1 text-sm text-slate-500">
@@ -143,6 +146,7 @@ export default function EmergencyDirectoryPage() {
   const [deleting, setDeleting] = useState(null);
   const remove = useRemoveContact();
   const reorder = useReorderContacts();
+  const { t } = useT();
 
   const move = (index, dir) => {
     const ids = data.map((c) => c._id);
@@ -185,7 +189,7 @@ export default function EmergencyDirectoryPage() {
         open={Boolean(deleting)}
         onClose={() => setDeleting(null)}
         size="sm"
-        title={`Delete ${deleting?.name}?`}
+        title={t('Delete {name}?', { name: deleting?.name })}
         footer={
           <>
             <Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button>
@@ -193,7 +197,7 @@ export default function EmergencyDirectoryPage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600">The number is removed from the emergency directory for everyone.</p>
+        <p className="text-sm text-slate-600">{t('The number is removed from the emergency directory for everyone.')}</p>
       </Modal>
       {manager && editing && <ContactModal key={editing._id || 'new'} contact={editing._id ? editing : null} open onClose={() => setEditing(null)} />}
     </div>

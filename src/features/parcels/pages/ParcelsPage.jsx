@@ -11,6 +11,7 @@ import { CollectParcelModal } from '../components/CollectParcelModal';
 import { DeliveryPreferences } from '../components/DeliveryPreferences';
 import { LogParcelForm } from '../components/LogParcelForm';
 import { AgeBadge, ParcelRow, ParcelStatus, STATUS_LABEL } from '../components/ParcelRow';
+import { useT } from '../../../context/LanguageContext';
 
 const STATUS_FILTERS = [
   { value: 'waiting', label: 'All not collected yet' },
@@ -21,10 +22,11 @@ const STATUS_FILTERS = [
 function Stats() {
   const live = useLiveInterval(15000);
   const { data } = useParcelStats({ refetchInterval: live });
+  const { t } = useT();
   if (!data) return null;
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <StatCard icon={Package} label="Waiting" value={data.waiting} sub={`${data.ageing?.under24h ?? 0} under 24h`} />
+      <StatCard icon={Package} label="Waiting" value={data.waiting} sub={t('{n} under 24h', { n: data.ageing?.under24h ?? 0 })} />
       <StatCard icon={Hourglass} tone="amber" label="1–3 days" value={data.ageing?.days1to3 ?? 0} />
       <StatCard icon={AlertTriangle} tone="red" label="Over 3 days" value={data.ageing?.over3days ?? 0} />
       <StatCard icon={PackageCheck} tone="green" label="Collected today" value={data.collectedToday} />
@@ -35,6 +37,7 @@ function Stats() {
 function ReturnModal({ parcel, onClose }) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState();
+  const { t } = useT();
   const ret = useReturnParcel({ onSuccess: () => { setReason(''); onClose(); } });
   return (
     <Modal
@@ -47,7 +50,7 @@ function ReturnModal({ parcel, onClose }) {
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="danger" loading={ret.isPending} disabled={reason.trim().length < 3}
             onClick={() => ret.mutate({ id: parcel._id, reason: reason.trim() }, { onError: (e) => setError(e.fieldErrors?.reason) })}>
-            Mark returned
+            {t('Mark returned')}
           </Button>
         </>
       }
@@ -137,6 +140,7 @@ function StaffView({ user }) {
 function WaitingParcels() {
   const live = useLiveInterval(15000);
   const { data, isLoading } = useParcels({ open: true, limit: 50 }, { refetchInterval: live });
+  const { t } = useT();
   if (isLoading) return <div className="flex justify-center py-8"><Spinner /></div>;
   if (!data?.data.length) {
     return (
@@ -155,19 +159,19 @@ function WaitingParcels() {
                 <p className="text-lg font-semibold text-slate-900">{p.courier}</p>
                 <ParcelStatus status={p.status} />
                 <AgeBadge hours={p.ageHours} />
-                {p.leftAtGate && <span className="text-xs font-medium text-emerald-700">Left at gate</span>}
+                {p.leftAtGate && <span className="text-xs font-medium text-emerald-700">{t('Left at gate')}</span>}
               </div>
               <p className="text-sm text-slate-500">
                 {p.number}
                 {p.recipientName ? ` · ${p.recipientName}` : ''}
-                {p.packages > 1 ? ` · ${p.packages} packages` : ''}
+                {p.packages > 1 ? ` · ${t('{n} packages', { n: p.packages })}` : ''}
                 {p.trackingNo ? ` · ${p.trackingNo}` : ''}
               </p>
-              {p.storageLocation && <p className="text-xs text-slate-400">Kept at {p.storageLocation}</p>}
+              {p.storageLocation && <p className="text-xs text-slate-400">{t('Kept at {place}', { place: p.storageLocation })}</p>}
             </div>
             <div className="rounded-xl bg-brand-50 px-5 py-3 text-center">
               <p className="font-mono text-4xl font-bold tracking-[0.3em] text-brand-700 sm:text-5xl">{p.otp || '----'}</p>
-              <p className="mt-1 text-xs font-medium text-brand-700">Show this OTP to the guard</p>
+              <p className="mt-1 text-xs font-medium text-brand-700">{t('Show this OTP to the guard')}</p>
             </div>
           </div>
         </Card>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 import { put } from '../assets/shared';
 
 const emp = { invalidate: ['staffhr'] };
@@ -25,7 +26,10 @@ export const useSaveRoster = (o) => useApiMutation((b) => put('/staffhr/roster',
 // attendance
 export const useMyToday = () => useQuery({ queryKey: ['attendance', 'today'], queryFn: () => api.get('/staffhr/attendance/today') });
 export const useMyAttendance = (period) => useQuery({ queryKey: ['attendance', 'me', period], queryFn: () => api.get('/staffhr/attendance/me', { period }) });
-export const useCheckIn = (o) => useApiMutation((b) => api.post('/staffhr/attendance/check-in', b), { ...att, success: (r) => (r.status === 'late' ? `Checked in · ${r.lateMinutes} min late` : 'Checked in'), ...o });
+export const useCheckIn = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/staffhr/attendance/check-in', b), { ...att, success: (r) => (r.status === 'late' ? t('Checked in · {n} min late', { n: r.lateMinutes }) : 'Checked in'), ...o });
+};
 export const useCheckOut = (o) => useApiMutation((b) => api.post('/staffhr/attendance/check-out', b), { ...att, success: 'Checked out', ...o });
 export const useDaySheet = (dateStr) => useQuery({ queryKey: ['attendance', 'day', dateStr], queryFn: () => api.get('/staffhr/attendance/day', { date: dateStr }) });
 export const useRegister = (period, enabled = true) => useQuery({ queryKey: ['attendance', 'register', period], queryFn: () => api.get('/staffhr/attendance/register', { period }), enabled });

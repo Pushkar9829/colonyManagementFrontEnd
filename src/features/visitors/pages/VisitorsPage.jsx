@@ -5,6 +5,7 @@ import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { dateTime, dayBounds, label, timeAgo } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
@@ -31,10 +32,11 @@ function ResidentPending() {
   const { data } = useVisitors({ status: 'pending', limit: 20 }, { refetchInterval: live5 });
   const approve = useApproveVisitor();
   const deny = useDenyVisitor();
+  const { t } = useT();
   if (!data?.data.length) return null;
   return (
     <Card className="mb-6 border-amber-200">
-      <div className="border-b border-amber-100 bg-amber-50 px-5 py-3 font-semibold text-amber-800">Waiting at the gate</div>
+      <div className="border-b border-amber-100 bg-amber-50 px-5 py-3 font-semibold text-amber-800">{t('Waiting at the gate')}</div>
       <ul className="divide-y divide-slate-100">
         {data.data.map((v) => (
           <VisitorRow
@@ -60,6 +62,7 @@ function PassesTab() {
   const [show, setShow] = useState(null);
   const { data, isLoading } = usePasses({ page, kind: kind || undefined });
   const cancel = useCancelPass();
+  const { t } = useT();
   return (
     <Card>
       <div className="border-b border-slate-100 p-3">
@@ -72,8 +75,8 @@ function PassesTab() {
         columns={[
           { key: 'guestName', header: 'Guest', render: (p) => <span className="font-medium text-slate-900">{p.guestName}</span> },
           { key: 'code', header: 'Code', render: (p) => <span className="font-mono font-semibold tracking-widest">{p.code}</span> },
-          { key: 'when', header: 'When', render: (p) => passWindow(p) || `until ${dateTime(p.validTo)}` },
-          { key: 'gates', header: 'Gates', render: (p) => (p.gates?.length ? p.gates.map((g) => g.name).join(', ') : 'Any gate') },
+          { key: 'when', header: 'When', render: (p) => passWindow(p, t) || t('until {date}', { date: dateTime(p.validTo) }) },
+          { key: 'gates', header: 'Gates', render: (p) => (p.gates?.length ? p.gates.map((g) => g.name).join(', ') : t('Any gate')) },
           { key: 'uses', header: 'Used', render: (p) => (p.kind === 'recurring' ? p.usedCount : `${p.usedCount}/${p.maxUses}`) },
           { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
           {
@@ -83,7 +86,7 @@ function PassesTab() {
               p.status === 'active' && (
                 <div className="flex gap-1">
                   <Button size="sm" variant="secondary" icon={QrCode} onClick={() => setShow(p)}>QR</Button>
-                  <Button size="sm" variant="ghost" onClick={() => window.confirm('Cancel this pass?') && cancel.mutate(p._id)}>Cancel</Button>
+                  <Button size="sm" variant="ghost" onClick={() => window.confirm(t('Cancel this pass?')) && cancel.mutate(p._id)}>Cancel</Button>
                 </div>
               ),
           },
@@ -123,10 +126,11 @@ function FrequentTab() {
   const remove = useRemoveFrequent();
   const quick = useFrequentPass({ onSuccess: setPass, success: 'Pass ready' });
   const rows = data?.data || [];
+  const { t } = useT();
   return (
     <Card>
       <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-4">
-        <p className="text-sm text-slate-500">Regular visitors for your home.</p>
+        <p className="text-sm text-slate-500">{t('Regular visitors for your home.')}</p>
         <Button size="sm" icon={Plus} onClick={() => setOpen(true)}>Add</Button>
       </div>
       {isLoading ? (
@@ -140,17 +144,17 @@ function FrequentTab() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium text-slate-900">{f.name}</p>
-                  {f.autoApprove && <Badge tone="green">Auto-approve</Badge>}
+                  {f.autoApprove && <Badge tone="green">{t('Auto-approve')}</Badge>}
                 </div>
-                <p className="text-sm text-slate-500">{label(f.purpose)}{f.company ? ` · ${f.company}` : ''}{f.phone ? ` · ${f.phone}` : ''}</p>
-                <p className="text-xs text-slate-400">{f.visits} visit{f.visits === 1 ? '' : 's'}{f.lastVisitAt ? ` · last ${timeAgo(f.lastVisitAt)}` : ''}</p>
+                <p className="text-sm text-slate-500">{t(label(f.purpose))}{f.company ? ` · ${f.company}` : ''}{f.phone ? ` · ${f.phone}` : ''}</p>
+                <p className="text-xs text-slate-400">{f.visits === 1 ? t('1 visit') : t('{n} visits', { n: f.visits })}{f.lastVisitAt ? ` · ${t('last {when}', { when: timeAgo(f.lastVisitAt) })}` : ''}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" icon={Zap} loading={quick.isPending && quick.variables?.id === f._id} onClick={() => quick.mutate({ id: f._id, hours: 12 })}>Pass for today</Button>
-                <Button size="sm" variant="secondary" disabled={!f.phone} title={f.phone ? '' : 'Add a phone number to enable'} onClick={() => update.mutate({ id: f._id, autoApprove: !f.autoApprove })}>
+                <Button size="sm" variant="secondary" disabled={!f.phone} title={f.phone ? '' : t('Add a phone number to enable')} onClick={() => update.mutate({ id: f._id, autoApprove: !f.autoApprove })}>
                   {f.autoApprove ? 'Turn off auto' : 'Auto-approve'}
                 </Button>
-                <Button size="sm" variant="ghost" icon={Trash2} aria-label="Remove" onClick={() => window.confirm(`Remove ${f.name}?`) && remove.mutate(f._id)} />
+                <Button size="sm" variant="ghost" icon={Trash2} aria-label={t('Remove')} onClick={() => window.confirm(t('Remove {name}?', { name: f.name })) && remove.mutate(f._id)} />
               </div>
             </li>
           ))}
@@ -181,6 +185,7 @@ function HistoryTab({ initialFlagged }) {
     ...bounds,
   });
   const saveFrequent = useCreateFrequent();
+  const { t } = useT();
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e?.target ? (e.target.type === 'checkbox' ? e.target.checked : e.target.value) : e, page: 1 }));
   return (
     <Card>
@@ -193,7 +198,7 @@ function HistoryTab({ initialFlagged }) {
         <Select label="Status" placeholder="All statuses" value={filters.status} onChange={set('status')} options={['pending', 'checked_in', 'checked_out', 'denied'].map((v) => ({ value: v, label: label(v) }))} />
         <Select label="Purpose" placeholder="All purposes" value={filters.purpose} onChange={set('purpose')} options={PURPOSES.map((v) => ({ value: v, label: label(v) }))} />
         {!isResident && gates.length > 1 && (
-          <Select label="Entry gate" placeholder="All gates" value={filters.gate} onChange={set('gate')} options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : `${g.name} (closed)` }))} />
+          <Select label="Entry gate" placeholder="All gates" value={filters.gate} onChange={set('gate')} options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : t('{name} (closed)', { name: g.name }) }))} />
         )}
         {!isResident && <Checkbox label="Only watchlist / blocklist hits" checked={filters.flagged} onChange={set('flagged')} />}
       </FilterBar>

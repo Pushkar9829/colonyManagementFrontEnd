@@ -6,8 +6,10 @@ import { cn } from '../../../lib/cn';
 import { dateTime, time } from '../../../lib/format';
 import { getPosition, useCurrentPatrol, useScanCheckpoint } from '../api';
 import { RoundStatus, windowLabel } from './shared';
+import { useT } from '../../../context/LanguageContext';
 
 function RouteCard({ item }) {
+  const { t } = useT();
   const done = item.checkpoints.filter((c) => c.scannedAt).length;
   const total = item.checkpoints.length;
   const pct = total ? Math.round((done / total) * 100) : 0;
@@ -15,14 +17,14 @@ function RouteCard({ item }) {
     <Card>
       <CardHeader
         title={item.route.name}
-        subtitle={item.slot ? `Round ${windowLabel(item.slot)}` : 'No round running right now'}
+        subtitle={item.slot ? t('Round {window}', { window: windowLabel(item.slot) }) : t('No round running right now')}
         action={<RoundStatus status={item.status} className="shrink-0" />}
       />
       <div className="space-y-3 px-5 py-4">
         {item.slot && (
           <div>
             <div className="mb-1 flex justify-between text-xs text-slate-500">
-              <span>{done} of {total} checkpoints</span>
+              <span>{t('{done} of {total} checkpoints', { done, total })}</span>
               <span>{pct}%</span>
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -42,7 +44,7 @@ function RouteCard({ item }) {
                 {c.location && <p className="truncate text-xs text-slate-500">{c.location}</p>}
                 {c.gpsOk === false && (
                   <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-700">
-                    <AlertTriangle className="size-3.5" /> GPS did not match the checkpoint
+                    <AlertTriangle className="size-3.5" /> {t('GPS did not match the checkpoint')}
                   </p>
                 )}
               </div>
@@ -51,9 +53,9 @@ function RouteCard({ item }) {
           ))}
         </ol>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-3 text-xs text-slate-500">
-          <span className="flex items-center gap-1"><Clock className="size-3.5" /> Every {item.route.frequencyMinutes} min</span>
-          {item.nextDueAt && <span>Next round {dateTime(item.nextDueAt)}</span>}
-          {item.route.enforceOrder && <span className="font-medium text-slate-600">Walk in order</span>}
+          <span className="flex items-center gap-1"><Clock className="size-3.5" /> {t('Every {n} min', { n: item.route.frequencyMinutes })}</span>
+          {item.nextDueAt && <span>{t('Next round {when}', { when: dateTime(item.nextDueAt) })}</span>}
+          {item.route.enforceOrder && <span className="font-medium text-slate-600">{t('Walk in order')}</span>}
         </div>
       </div>
     </Card>
@@ -61,13 +63,14 @@ function RouteCard({ item }) {
 }
 
 function ScanResult({ result }) {
+  const { t } = useT();
   if (!result) return null;
   if (result.error) {
     return (
       <div className="flex items-start gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 text-red-800" role="alert">
         <XCircle className="size-7 shrink-0" />
         <div>
-          <p className="text-base font-semibold">Scan not recorded</p>
+          <p className="text-base font-semibold">{t('Scan not recorded')}</p>
           <p className="text-sm">{result.error}</p>
         </div>
       </div>
@@ -83,24 +86,24 @@ function ScanResult({ result }) {
         <div className="min-w-0 flex-1">
           <p className="text-lg font-semibold">{checkpoint.name}</p>
           {checkpoint.location && <p className="text-sm opacity-80">{checkpoint.location}</p>}
-          <p className="mt-1 text-xs opacity-70">Scanned at {time(scan.scannedAt)}</p>
+          <p className="mt-1 text-xs opacity-70">{t('Scanned at {time}', { time: time(scan.scannedAt) })}</p>
         </div>
       </div>
       <p className="mt-3 flex items-center gap-1.5 text-sm font-medium">
         <MapPin className="size-4" />
-        {scan.gpsOk === true && `GPS OK${scan.distanceM != null ? ` (${scan.distanceM} m away)` : ''}`}
-        {scan.gpsOk === false && `GPS mismatch — ${scan.distanceM} m from the checkpoint`}
-        {scan.gpsOk == null && 'GPS not checked'}
+        {scan.gpsOk === true && (scan.distanceM != null ? t('GPS OK ({m} m away)', { m: scan.distanceM }) : t('GPS OK'))}
+        {scan.gpsOk === false && t('GPS mismatch — {m} m from the checkpoint', { m: scan.distanceM })}
+        {scan.gpsOk == null && t('GPS not checked')}
       </p>
       <ul className="mt-2 space-y-1 text-sm">
-        {!rounds.length && <li>Not part of a running round — the scan was still logged.</li>}
+        {!rounds.length && <li>{t('Not part of a running round — the scan was still logged.')}</li>}
         {rounds.map((r) => (
           <li key={r._id} className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{r.route.name}:</span>
-            <span>{r.scanned}/{r.expected} done</span>
+            <span>{t('{scanned}/{expected} done', { scanned: r.scanned, expected: r.expected })}</span>
             <RoundStatus status={r.status} />
-            {r.alreadyScanned && <span className="font-semibold">Already scanned this round</span>}
-            {r.closed && <span className="font-semibold">Round already closed</span>}
+            {r.alreadyScanned && <span className="font-semibold">{t('Already scanned this round')}</span>}
+            {r.closed && <span className="font-semibold">{t('Round already closed')}</span>}
           </li>
         ))}
       </ul>
@@ -109,6 +112,7 @@ function ScanResult({ result }) {
 }
 
 function ScanPanel() {
+  const { t } = useT();
   const [result, setResult] = useState(null);
   const [code, setCode] = useState('');
   const [locating, setLocating] = useState(false);
@@ -143,7 +147,7 @@ function ScanPanel() {
   };
 
   const onScan = (text) => {
-    if (text === null) setResult({ error: 'No QR code was found in that photo. Try again closer to the code.' });
+    if (text === null) setResult({ error: t('No QR code was found in that photo. Try again closer to the code.') });
     else submit(text);
   };
 
@@ -152,10 +156,10 @@ function ScanPanel() {
     <Card className="lg:sticky lg:top-4">
       <CardHeader title="Scan checkpoint" subtitle="Point the camera at the checkpoint QR code" />
       <div className="space-y-4 p-4 sm:p-5">
-        <QrScanner onScan={onScan} paused={busy} fallbackHint="Or type the code printed under the QR in the box below." />
+        <QrScanner onScan={onScan} paused={busy} fallbackHint={t('Or type the code printed under the QR in the box below.')} />
         {busy && (
           <div className="flex items-center justify-center gap-2 rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-600">
-            <Spinner className="size-5" /> {locating ? 'Getting location…' : 'Recording scan…'}
+            <Spinner className="size-5" /> {locating ? t('Getting location…') : t('Recording scan…')}
           </div>
         )}
         <ScanResult result={result} />
@@ -171,8 +175,8 @@ function ScanPanel() {
             <input
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Checkpoint code"
-              aria-label="Checkpoint code"
+              placeholder={t('Checkpoint code')}
+              aria-label={t('Checkpoint code')}
               autoCapitalize="characters"
               className="block h-12 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-base text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />

@@ -8,16 +8,19 @@ export const KINDS = [
   { flag: 'allowDeliveries', label: 'Deliveries', word: 'deliveries' },
 ];
 
-const list = (words) => (words.length <= 1 ? words[0] || '' : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`);
+// Fills {name} placeholders; used when no translator is passed (tests, non-React callers).
+const fill = (text, vars) => (vars ? text.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`)) : text);
+const list = (words, t) => (words.length <= 1 ? words[0] || '' : t('{items} and {last}', { items: words.slice(0, -1).join(', '), last: words[words.length - 1] }));
 
 // Plain-English summary, e.g. "Only staff and deliveries" or "Takes everyone: visitors, vehicles, staff and deliveries".
-export function describeGate(gate) {
+//   t: optional translator from useT(), so screens can show it in the chosen language.
+export function describeGate(gate, t = fill) {
   if (!gate) return '';
-  const allowed = KINDS.filter((k) => gate[k.flag] && !(k.flag === 'allowVehicles' && gate.isPedestrianOnly)).map((k) => k.word);
-  const foot = gate.isPedestrianOnly ? ', on foot only' : '';
-  if (!allowed.length) return `Takes nothing${foot}`;
-  if (allowed.length === KINDS.length) return `Takes everyone: ${list(allowed)}${foot}`;
-  return `Only ${list(allowed)}${foot}`;
+  const allowed = KINDS.filter((k) => gate[k.flag] && !(k.flag === 'allowVehicles' && gate.isPedestrianOnly)).map((k) => t(k.word));
+  const foot = gate.isPedestrianOnly;
+  if (!allowed.length) return foot ? t('Takes nothing, on foot only') : t('Takes nothing');
+  if (allowed.length === KINDS.length) return t(foot ? 'Takes everyone: {list}, on foot only' : 'Takes everyone: {list}', { list: list(allowed, t) });
+  return t(foot ? 'Only {list}, on foot only' : 'Only {list}', { list: list(allowed, t) });
 }
 
 // What the guard is about to log, and whether this gate takes it.

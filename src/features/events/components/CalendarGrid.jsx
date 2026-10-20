@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '../../../lib/cn';
+import { useT } from '../../../context/LanguageContext';
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const dayKey = (d) => new Date(d).toLocaleDateString('en-CA');
@@ -14,6 +15,7 @@ export function monthGrid(month) {
 
 // Month calendar. Multi-day events show on each day they cover.
 export function CalendarGrid({ month, onMonth, events = [], selected, onSelect }) {
+  const { t } = useT();
   const days = monthGrid(month);
   const byDay = new Map();
   for (const e of events) {
@@ -32,12 +34,12 @@ export function CalendarGrid({ month, onMonth, events = [], selected, onSelect }
   return (
     <div>
       <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-        <button type="button" onClick={() => shift(-1)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Previous month"><ChevronLeft className="size-5" /></button>
+        <button type="button" onClick={() => shift(-1)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" aria-label={t('Previous month')}><ChevronLeft className="size-5" /></button>
         <p className="font-semibold text-slate-900">{month.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>
-        <button type="button" onClick={() => shift(1)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Next month"><ChevronRight className="size-5" /></button>
+        <button type="button" onClick={() => shift(1)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100" aria-label={t('Next month')}><ChevronRight className="size-5" /></button>
       </div>
       <div className="grid grid-cols-7 border-b border-slate-100 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-        {WEEKDAYS.map((d) => <div key={d} className="py-2"><span className="sm:hidden">{d[0]}</span><span className="hidden sm:inline">{d}</span></div>)}
+        {WEEKDAYS.map((d) => <div key={d} className="py-2"><span className="sm:hidden">{t(d)[0]}</span><span className="hidden sm:inline">{t(d)}</span></div>)}
       </div>
       <div className="grid grid-cols-7">
         {days.map((d) => {
@@ -54,7 +56,7 @@ export function CalendarGrid({ month, onMonth, events = [], selected, onSelect }
                 {list.slice(0, 2).map((e) => (
                   <span key={e._id} className={cn('block truncate rounded px-1 py-0.5 text-[11px]', e.status === 'cancelled' ? 'bg-slate-100 text-slate-400 line-through' : 'bg-brand-100 text-brand-800')}>{e.title}</span>
                 ))}
-                {list.length > 2 && <span className="block px-1 text-[10px] text-slate-400">+{list.length - 2} more</span>}
+                {list.length > 2 && <span className="block px-1 text-[10px] text-slate-400">{t('+{n} more', { n: list.length - 2 })}</span>}
               </span>
             </button>
           );

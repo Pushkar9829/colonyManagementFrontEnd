@@ -2,8 +2,10 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/cn';
+import { tr, useT } from '../../context/LanguageContext';
 
 export function Modal({ open, onClose, title, description, children, footer, size = 'md' }) {
+  const { t } = useT();
   useEffect(() => {
     if (!open) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose?.();
@@ -25,10 +27,10 @@ export function Modal({ open, onClose, title, description, children, footer, siz
       <div className={cn('relative flex max-h-[92vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:rounded-2xl', widths[size])}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-slate-500">{description}</p>}
+            <h2 className="text-base font-semibold text-slate-900">{tr(t, title)}</h2>
+            {description && <p className="mt-0.5 text-sm text-slate-500">{tr(t, description)}</p>}
           </div>
-          <button type="button" onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label="Close">
+          <button type="button" onClick={onClose} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label={t('Close')}>
             <X className="size-5" />
           </button>
         </div>

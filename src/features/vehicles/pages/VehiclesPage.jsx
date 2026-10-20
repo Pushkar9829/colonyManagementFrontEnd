@@ -7,11 +7,13 @@ import { Button, Card, Input, Modal, Select, Table } from '../../../components/u
 import { useApiMutation } from '../../../hooks/useApiMutation';
 import { useForm } from '../../../hooks/useForm';
 import { label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 
 const TYPES = ['four_wheeler', 'two_wheeler', 'other'].map((v) => ({ value: v, label: label(v) }));
 
 export default function VehiclesPage() {
   const [open, setOpen] = useState(false);
+  const { t } = useT();
   const { data, isLoading } = useQuery({ queryKey: ['vehicles'], queryFn: () => api.list('/vehicles', { limit: 50 }) });
   const { values, bind, applyServerErrors, reset } = useForm({ number: '', type: 'four_wheeler', make: '', color: '', parkingSlot: '' });
   const create = useApiMutation((b) => api.post('/vehicles', b), { invalidate: ['vehicles'], success: 'Vehicle added', onSuccess: () => { reset(); setOpen(false); } });
@@ -25,10 +27,10 @@ export default function VehiclesPage() {
         <Table loading={isLoading} rows={data?.data} empty="No vehicles registered"
           columns={[
             { key: 'number', header: 'Number', render: (v) => <span className="flex items-center gap-2 font-mono font-semibold text-slate-900"><Car className="size-4 text-slate-400" />{v.number}</span> },
-            { key: 'type', header: 'Type', render: (v) => label(v.type) },
+            { key: 'type', header: 'Type', render: (v) => t(label(v.type)) },
             { key: 'make', header: 'Make', render: (v) => [v.make, v.color].filter(Boolean).join(' · ') || '—' },
             { key: 'parkingSlot', header: 'Parking', render: (v) => v.parkingSlot || '—' },
-            { key: 'a', header: '', className: 'text-right', render: (v) => <button type="button" onClick={() => window.confirm(`Remove ${v.number}?`) && remove.mutate(v._id)} className="text-slate-400 hover:text-red-600" aria-label="Remove"><Trash2 className="size-4" /></button> },
+            { key: 'a', header: '', className: 'text-right', render: (v) => <button type="button" onClick={() => window.confirm(t('Remove {name}?', { name: v.number })) && remove.mutate(v._id)} className="text-slate-400 hover:text-red-600" aria-label={t('Remove')}><Trash2 className="size-4" /></button> },
           ]} />
       </Card>
       <Modal open={open} onClose={() => setOpen(false)} title="Add vehicle" size="sm"

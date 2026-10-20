@@ -7,19 +7,21 @@ import { useAuth } from '../../../context/AuthContext';
 import { dateTime, label, timeAgo } from '../../../lib/format';
 import { hasRole } from '../../../lib/roles';
 import { useAcknowledgeSos, useResolveSos, useSosAlerts } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 // Plain words for the alert states (the API says active / acknowledged / resolved).
 const STATUS = { active: { label: 'Open', tone: 'red' }, acknowledged: { label: 'Guard responding', tone: 'blue' }, resolved: { label: 'Closed', tone: 'slate' } };
 
 function CloseModal({ alert, responder, onClose, onConfirm, busy }) {
   const [note, setNote] = useState('');
+  const { t } = useT();
   return (
     <Modal
       open={Boolean(alert)}
       onClose={onClose}
       size="sm"
       title={responder ? 'Close this alert?' : 'Cancel your alert?'}
-      description={alert ? `${label(alert.type)} emergency${alert.unit ? ` · ${alert.unit.label}` : ''}` : ''}
+      description={alert ? `${t('{type} emergency', { type: t(label(alert.type)) })}${alert.unit ? ` · ${alert.unit.label}` : ''}` : ''}
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Back</Button>
@@ -34,6 +36,7 @@ function CloseModal({ alert, responder, onClose, onConfirm, busy }) {
 
 export default function SosPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useSosAlerts({ status: status || undefined, page });
@@ -85,20 +88,20 @@ export default function SosPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-slate-900">{label(a.type)} emergency</p>
-                    <Badge tone={STATUS[a.status]?.tone}>{STATUS[a.status]?.label || label(a.status)}</Badge>
+                    <p className="font-semibold text-slate-900">{t('{type} emergency', { type: t(label(a.type)) })}</p>
+                    <Badge tone={STATUS[a.status]?.tone}>{t(STATUS[a.status]?.label || label(a.status))}</Badge>
                   </div>
                   <p className="text-sm text-slate-600">
                     {a.raisedBy?.name}
                     {a.unit ? ` · ${a.unit.label}` : ''}
                     {a.raisedBy?.phone ? ` · ${a.raisedBy.phone}` : ''}
-                    {a.location ? ` · at ${a.location}` : ''}
+                    {a.location ? ` · ${t('at {place}', { place: a.location })}` : ''}
                   </p>
                   {a.message && <p className="mt-1 text-sm text-slate-700">“{a.message}”</p>}
                   <p className="mt-1 text-xs text-slate-400">
                     {dateTime(a.createdAt)} ({timeAgo(a.createdAt)})
-                    {a.acknowledgedBy ? ` · ${a.acknowledgedBy.name} responding` : ''}
-                    {a.resolvedBy ? ` · closed by ${a.resolvedBy.name}` : ''}
+                    {a.acknowledgedBy ? ` · ${t('{name} responding', { name: a.acknowledgedBy.name })}` : ''}
+                    {a.resolvedBy ? ` · ${t('closed by {name}', { name: a.resolvedBy.name })}` : ''}
                     {a.resolutionNote ? ` — ${a.resolutionNote}` : ''}
                   </p>
                 </div>
@@ -106,7 +109,7 @@ export default function SosPage() {
                   <div className="flex flex-wrap gap-2">
                     {responder && (
                       <Link to="/emergency-info" className="inline-flex h-8 items-center rounded-lg border border-red-200 px-3 text-xs font-medium text-red-700 hover:bg-red-50">
-                        Medical info
+                        {t('Medical info')}
                       </Link>
                     )}
                     {responder && a.status === 'active' && (

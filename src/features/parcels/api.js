@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 // Every parcels key starts with 'parcels' so the server's realtime invalidation refreshes them all.
 const inv = { invalidate: ['parcels', 'dashboard', 'notifications'] };
@@ -18,13 +19,18 @@ export const useParcels = (params, options) =>
   useQuery({ queryKey: ['parcels', 'list', params], queryFn: () => api.list('/parcels', params), placeholderData: (p) => p, ...options });
 export const useParcelStats = (options) => useQuery({ queryKey: ['parcels', 'stats'], queryFn: () => api.get('/parcels/stats'), ...options });
 
-export const useLogParcel = (o) =>
-  useApiMutation((b) => api.post('/parcels', b), {
+export const useLogParcel = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/parcels', b), {
     ...inv,
-    success: (p) => (p.leftAtGate ? `${p.number} logged · left at gate as the household asked` : p.status === 'notified' ? `${p.number} logged · household notified` : `${p.number} logged`),
+    success: (p) => (p.leftAtGate ? t('{number} logged · left at gate as the household asked', { number: p.number }) : p.status === 'notified' ? t('{number} logged · household notified', { number: p.number }) : t('{number} logged', { number: p.number })),
     ...o,
   });
-export const useCollectParcel = (o) => useApiMutation(({ id, ...b }) => api.post(`/parcels/${id}/collect`, b), { ...inv, success: (p) => `${p.number} handed over`, ...o });
+};
+export const useCollectParcel = (o) => {
+  const { t } = useT();
+  return useApiMutation(({ id, ...b }) => api.post(`/parcels/${id}/collect`, b), { ...inv, success: (p) => t('{number} handed over', { number: p.number }), ...o });
+};
 export const useReturnParcel = (o) => useApiMutation(({ id, reason }) => api.post(`/parcels/${id}/return`, { reason }), { ...inv, success: 'Marked as returned', ...o });
 export const useRemindParcel = () => useApiMutation((id) => api.post(`/parcels/${id}/remind`), { invalidate: ['parcels'], success: 'Reminder sent to the household' });
 

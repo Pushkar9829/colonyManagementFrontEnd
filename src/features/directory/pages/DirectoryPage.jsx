@@ -4,6 +4,7 @@ import { BookUser, Briefcase, EyeOff, Mail, MessageCircle, Phone, Search, Shield
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { useBlocks } from '../../units/api';
 import { Avatar } from '../../forum/components/RichText';
@@ -14,14 +15,15 @@ import { OCCUPATION_TYPES, WORK_CATEGORIES, dayMonth, occupationSummary } from '
 import { useMyPersonalDetails } from '../../people/api';
 
 function PersonCard({ p, onMessage, messaging, onPrivacy }) {
+  const { t } = useT();
   return (
     <Card className="flex flex-col p-4">
       <div className="flex items-start gap-3">
         <Avatar name={p.name} className="size-11 text-sm" />
         <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-slate-900">{p.name}{p.isMe && <Badge tone="brand" className="ml-2">You</Badge>}</p>
-          <p className="truncate text-sm text-slate-500">{p.units?.length ? p.units.join(', ') : p.designation || ROLE_LABELS[p.role]}</p>
-          {p.designation && p.units?.length === 0 && p.role && <p className="text-xs text-slate-400">{ROLE_LABELS[p.role]}</p>}
+          <p className="truncate font-semibold text-slate-900">{p.name}{p.isMe && <Badge tone="brand" className="ml-2">{t('You')}</Badge>}</p>
+          <p className="truncate text-sm text-slate-500">{p.units?.length ? p.units.join(', ') : p.designation || t(ROLE_LABELS[p.role] || '')}</p>
+          {p.designation && p.units?.length === 0 && p.role && <p className="text-xs text-slate-400">{t(ROLE_LABELS[p.role] || '')}</p>}
         </div>
       </div>
       {(p.profession || p.skills?.length) && (
@@ -34,11 +36,11 @@ function PersonCard({ p, onMessage, messaging, onPrivacy }) {
       {(p.birthday || p.occupation) && (
         <div className="mt-2 space-y-1">
           {p.occupation && <p className="flex items-center gap-1.5 text-sm text-slate-700">{p.occupation.type === 'student' ? <GraduationCap className="size-4 text-slate-400" /> : <Briefcase className="size-4 text-slate-400" />}{occupationSummary(p.occupation)}</p>}
-          {p.birthday && <p className="flex items-center gap-1.5 text-sm text-slate-700"><Cake className="size-4 text-slate-400" />Birthday {dayMonth(p.birthday)}</p>}
+          {p.birthday && <p className="flex items-center gap-1.5 text-sm text-slate-700"><Cake className="size-4 text-slate-400" />{t('Birthday {date}', { date: dayMonth(p.birthday) })}</p>}
         </div>
       )}
       {p.isMe && onPrivacy && (
-        <p className="mt-2 text-xs text-slate-500">Shown to neighbours · <button type="button" onClick={onPrivacy} className="font-medium text-brand-700 hover:underline">Change</button></p>
+        <p className="mt-2 text-xs text-slate-500">{t('Shown to neighbours')} · <button type="button" onClick={onPrivacy} className="font-medium text-brand-700 hover:underline">{t('Change')}</button></p>
       )}
       <div className="mt-auto flex flex-wrap gap-2 pt-3">
         {p.phone && <a href={`tel:${p.phone}`} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"><Phone className="size-3.5" />{p.phone}</a>}
@@ -63,11 +65,12 @@ function Neighbours({ listed, onEdit }) {
   const setO = (k) => (e) => { setOcc((o) => ({ ...o, [k]: e.target.value })); setPage(1); };
   const filtersOn = [block, occ.occupationType, occ.occupationCategory, institution].filter(Boolean).length;
   const open = useOpenDirect({ onSuccess: (c) => navigate(`/messages/${c._id}`) });
+  const { t } = useT();
   return (
     <div className="space-y-4">
       {!listed && (
         <Card className="flex flex-col gap-3 border-brand-200 bg-brand-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-start gap-2 text-sm text-brand-900"><EyeOff className="mt-0.5 size-4 shrink-0" />You are hidden from the directory. Neighbours can&apos;t find you until you list yourself.</p>
+          <p className="flex items-start gap-2 text-sm text-brand-900"><EyeOff className="mt-0.5 size-4 shrink-0" />{t("You are hidden from the directory. Neighbours can't find you until you list yourself.")}</p>
           <Button size="sm" onClick={onEdit}>List me</Button>
         </Card>
       )}
@@ -75,10 +78,10 @@ function Neighbours({ listed, onEdit }) {
         <FilterBar cols={4} active={filtersOn} className="border-b-0" search={(
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, flat, block or profession" aria-label="Search name, flat, block or profession" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t('Search name, flat, block or profession')} aria-label={t('Search name, flat, block or profession')} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
         </div>
         )}>
-          <Select value={block} onChange={(e) => { setBlock(e.target.value); setPage(1); }} placeholder="All blocks" aria-label="Block" options={blocks.map((b) => ({ value: b._id, label: `Block ${b.name}` }))} />
+          <Select value={block} onChange={(e) => { setBlock(e.target.value); setPage(1); }} placeholder="All blocks" aria-label="Block" options={blocks.map((b) => ({ value: b._id, label: t('Block {name}', { name: b.name }) }))} />
           <Select value={occ.occupationType} onChange={setO('occupationType')} placeholder="Any occupation" aria-label="Occupation" options={OCCUPATION_TYPES} />
           <Select value={occ.occupationCategory} onChange={setO('occupationCategory')} placeholder="Any work category" aria-label="Work category" options={WORK_CATEGORIES} />
           <Input value={occ.institution} onChange={setO('institution')} placeholder="School / college" aria-label="School or college" />
@@ -102,18 +105,19 @@ function Contacts() {
   const navigate = useNavigate();
   const { data, isLoading } = useDirectoryContacts();
   const open = useOpenDirect({ onSuccess: (c) => navigate(`/messages/${c._id}`) });
+  const { t } = useT();
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   const section = (title, list) => (
     <div>
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">{title}</h2>
-      {!list.length ? <p className="text-sm text-slate-400">No one yet.</p> : (
+      <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">{t(title)}</h2>
+      {!list.length ? <p className="text-sm text-slate-400">{t('No one yet.')}</p> : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{list.map((p) => <PersonCard key={`${p._id}-${p.role}`} p={{ ...p, units: [] }} onMessage={open.mutate} messaging={open.isPending && open.variables === p._id} />)}</div>
       )}
     </div>
   );
   return (
     <div className="space-y-6">
-      <Card className="flex items-start gap-3 p-4 text-sm text-slate-600"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand-600" />To reach the guards, use <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => navigate('/messages')}>Messages → Call gate</button>. Any guard on duty will answer.</Card>
+      <Card className="flex items-start gap-3 p-4 text-sm text-slate-600"><ShieldCheck className="mt-0.5 size-5 shrink-0 text-brand-600" /><>{t('To reach the guards, use')} <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => navigate('/messages')}>{t('Messages → Call gate')}</button>. {t('Any guard on duty will answer.')}</></Card>
       {section('Committee', data.committee)}
       {section('Staff', data.staff)}
     </div>
@@ -125,6 +129,7 @@ function MyListing() {
   const { data, isLoading } = useMyDirectoryProfile();
   const { data: personal } = useMyPersonalDetails();
   const save = useUpdateDirectoryProfile();
+  const { t } = useT();
   const [form, setForm] = useState(null);
   useEffect(() => {
     if (data) setForm({ ...data, skills: (data.skills || []).join(', ') });
@@ -147,13 +152,13 @@ function MyListing() {
         <div className="space-y-4 p-4 sm:p-5">
           <Checkbox label="List me in the resident directory (name and flat)" checked={form.listed} onChange={set('listed')} />
           <div className={form.listed ? 'space-y-3 pl-6' : 'pointer-events-none space-y-3 pl-6 opacity-50'}>
-            <Checkbox label={`Show my phone${user.phone ? ` (${user.phone})` : ''}`} checked={form.showPhone} onChange={set('showPhone')} />
-            <Checkbox label={`Show my email${user.email ? ` (${user.email})` : ''}`} checked={form.showEmail} onChange={set('showEmail')} />
+            <Checkbox label={user.phone ? t('Show my phone ({phone})', { phone: user.phone }) : t('Show my phone')} checked={form.showPhone} onChange={set('showPhone')} />
+            <Checkbox label={user.email ? t('Show my email ({email})', { email: user.email }) : t('Show my email')} checked={form.showEmail} onChange={set('showEmail')} />
             <Checkbox label="Show my profession and skills" checked={form.showProfession} onChange={set('showProfession')} />
-            <Checkbox label={`Show my occupation${personal?.occupation ? ` (${occupationSummary(personal.occupation)})` : ''}`} checked={form.showOccupation} onChange={set('showOccupation')} />
+            <Checkbox label={personal?.occupation ? t('Show my occupation ({occupation})', { occupation: occupationSummary(personal.occupation) }) : t('Show my occupation')} checked={form.showOccupation} onChange={set('showOccupation')} />
           </div>
-          <Checkbox label={`Show my birthday — day and month only, never the year${personal?.dateOfBirth ? ` (${dayMonth(personal.dateOfBirth.slice(5))})` : ''}. Also puts you on the “Today's birthdays” card.`} checked={form.showBirthday} onChange={set('showBirthday')} />
-          {!personal?.dateOfBirth && !personal?.occupation && <p className="text-xs text-slate-500">Add your birthday and occupation in <Link to="/profile" className="font-medium text-brand-700 hover:underline">My profile</Link>.</p>}
+          <Checkbox label={personal?.dateOfBirth ? t('Show my birthday — day and month only, never the year ({date}). Also puts you on the “Today\'s birthdays” card.', { date: dayMonth(personal.dateOfBirth.slice(5)) }) : t('Show my birthday — day and month only, never the year. Also puts you on the “Today\'s birthdays” card.')} checked={form.showBirthday} onChange={set('showBirthday')} />
+          {!personal?.dateOfBirth && !personal?.occupation && <p className="text-xs text-slate-500">{t('Add your birthday and occupation in')} <Link to="/profile" className="font-medium text-brand-700 hover:underline">{t('My profile')}</Link>.</p>}
           <Input label="Profession" placeholder="e.g. Pediatrician, CA, Yoga teacher" value={form.profession} onChange={set('profession')} />
           <Input label="Skills / can help with" hint="Comma separated, up to 10" placeholder="e.g. Math tuition, Plumbing advice" value={form.skills} onChange={set('skills')} />
           <Textarea label="About" rows={2} maxLength={300} value={form.about} onChange={set('about')} />
@@ -161,7 +166,7 @@ function MyListing() {
         </div>
       </Card>
       <div>
-        <p className="mb-2 text-sm font-semibold text-slate-700">What neighbours see</p>
+        <p className="mb-2 text-sm font-semibold text-slate-700">{t('What neighbours see')}</p>
         {form.listed ? <PersonCard p={preview} /> : <Card><EmptyState icon={UserRound} title="You're hidden" description="Nobody can find you in the directory." /></Card>}
       </div>
     </div>

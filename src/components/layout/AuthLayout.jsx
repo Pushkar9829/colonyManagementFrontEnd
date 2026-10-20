@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import { Home, ShieldCheck, Receipt, Wrench } from 'lucide-react';
 import { PreferencesMenu } from './PreferencesMenu';
+import { useT } from '../../context/LanguageContext';
 
 const points = [
   { icon: ShieldCheck, text: 'Visitor approvals, guest passes and daily-help tracking at the gate' },
@@ -9,6 +10,7 @@ const points = [
 ];
 
 export function AuthLayout() {
+  const { t } = useT();
   return (
     <div className="flex min-h-screen">
       <aside className="dark-keep hidden w-[42%] flex-col justify-between bg-gradient-to-br from-brand-700 to-brand-500 p-12 text-white lg:flex">
@@ -16,17 +18,17 @@ export function AuthLayout() {
           <Home className="size-6" /> ColonyHub
         </div>
         <div>
-          <h2 className="text-3xl font-semibold leading-tight">Run your society from one place.</h2>
+          <h2 className="text-3xl font-semibold leading-tight">{t('Run your society from one place.')}</h2>
           <ul className="mt-8 space-y-4">
             {points.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-3 text-brand-50">
                 <Icon className="mt-0.5 size-5 shrink-0" />
-                <span>{text}</span>
+                <span>{t(text)}</span>
               </li>
             ))}
           </ul>
         </div>
-        <p className="text-sm text-brand-100">For residents, committees, guards and facility teams.</p>
+        <p className="text-sm text-brand-100">{t('For residents, committees, guards and facility teams.')}</p>
       </aside>
       <main className="relative flex flex-1 items-center justify-center px-4 py-10">
         <PreferencesMenu className="absolute right-4 top-4" />

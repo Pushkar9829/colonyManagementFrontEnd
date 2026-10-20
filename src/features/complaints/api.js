@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 const inv = { invalidate: ['complaints', 'dashboard'] };
 
@@ -18,7 +19,10 @@ export const useAssignees = (enabled) =>
     staleTime: 60000,
   });
 
-export const useCreateComplaint = (o) => useApiMutation((b) => api.post('/complaints', b), { ...inv, success: (c) => `Complaint ${c.ticketNumber} raised`, ...o });
+export const useCreateComplaint = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/complaints', b), { ...inv, success: (c) => t('Complaint {ticket} raised', { ticket: c.ticketNumber }), ...o });
+};
 export const useAssignComplaint = () => useApiMutation(({ id, assignedTo }) => api.post(`/complaints/${id}/assign`, { assignedTo }), { ...inv, success: 'Assigned' });
 export const useComplaintStatus = () => useApiMutation(({ id, ...b }) => api.post(`/complaints/${id}/status`, b), { ...inv, success: 'Status updated' });
 export const useComplaintComment = (o) => useApiMutation(({ id, ...b }) => api.post(`/complaints/${id}/comments`, b), { ...inv, ...o });

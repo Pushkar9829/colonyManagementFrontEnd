@@ -6,6 +6,7 @@ import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { dateTime, label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { KEY_STATUSES, SHIFTS, useAcknowledgeHandover, useCreateHandover, useDutyGuards, useHandovers } from '../api';
 
 const KEY_TONES = { with_guard: 'green', issued: 'blue', missing: 'red' };
@@ -21,6 +22,7 @@ function currentShift() {
 
 function HandoverForm({ onClose }) {
   const { user } = useAuth();
+  const { t } = useT();
   const { data: guards = [] } = useDutyGuards();
   const { values, bind, applyServerErrors } = useForm({ shift: currentShift(), gate: 'Main gate', toGuard: '', notes: '', incidents: '' });
   const [keys, setKeys] = useState([]);
@@ -53,7 +55,7 @@ function HandoverForm({ onClose }) {
 
         <div className="space-y-2 sm:col-span-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">Keys</p>
+            <p className="text-sm font-medium text-slate-700">{t('Keys')}</p>
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => setKeys((k) => [...k, { name: '', status: 'with_guard', holder: '' }])}>Add key</Button>
           </div>
           {keys.map((k, i) => (
@@ -69,7 +71,7 @@ function HandoverForm({ onClose }) {
 
         <div className="space-y-2 sm:col-span-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-700">Pending items</p>
+            <p className="text-sm font-medium text-slate-700">{t('Pending items')}</p>
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => setPending((p) => [...p, { text: '' }])}>Add item</Button>
           </div>
           {pending.map((p, i) => (
@@ -86,16 +88,17 @@ function HandoverForm({ onClose }) {
 }
 
 function AcknowledgeModal({ handover, onClose }) {
+  const { t } = useT();
   const [note, setNote] = useState('');
   const [items, setItems] = useState(() => handover.pendingItems.map((p) => ({ ...p })));
   const ack = useAcknowledgeHandover({ onSuccess: onClose });
   return (
-    <Modal open onClose={onClose} title="Acknowledge handover" description={`${label(handover.shift)} shift from ${handover.fromGuard?.name || 'guard'}`}
+    <Modal open onClose={onClose} title="Acknowledge handover" description={t('{shift} shift from {name}', { shift: t(label(handover.shift)), name: handover.fromGuard?.name || t('guard') })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button variant="success" icon={ClipboardCheck} loading={ack.isPending} onClick={() => ack.mutate({ id: handover._id, note: note || undefined, ...(items.length ? { pendingItems: items } : {}) })}>Acknowledge</Button></>}>
       <div className="space-y-4">
         {items.length > 0 && (
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700">Pending items — tick what is already done</p>
+            <p className="text-sm font-medium text-slate-700">{t('Pending items — tick what is already done')}</p>
             {items.map((p, i) => (
               // eslint-disable-next-line react/no-array-index-key
               <Checkbox key={i} className="min-h-10 w-full rounded-lg border border-slate-200 px-3" label={p.text} checked={p.done} onChange={(e) => setItems((list) => list.map((x, j) => (j === i ? { ...x, done: e.target.checked } : x)))} />
@@ -109,13 +112,14 @@ function AcknowledgeModal({ handover, onClose }) {
 }
 
 function HandoverCard({ h, canAck, onAck }) {
+  const { t } = useT();
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-5">
         <div className="min-w-0">
-          <p className="font-semibold text-slate-900">{label(h.shift)} shift · {h.gate}</p>
+          <p className="font-semibold text-slate-900">{t('{shift} shift', { shift: t(label(h.shift)) })} · {h.gate}</p>
           <p className="flex flex-wrap items-center gap-1 text-sm text-slate-500">
-            From {h.fromGuard?.name || 'Guard'} <ArrowRight className="size-3.5" /> Handed to: {h.toGuard?.name || 'next guard on shift'}
+            {t('From {name}', { name: h.fromGuard?.name || t('Guard') })} <ArrowRight className="size-3.5" /> {t('Handed to: {name}', { name: h.toGuard?.name || t('next guard on shift') })}
             <span className="text-xs">· {dateTime(h.createdAt)}</span>
           </p>
         </div>
@@ -125,19 +129,19 @@ function HandoverCard({ h, canAck, onAck }) {
         {h.notes && <p className="whitespace-pre-line text-slate-700">{h.notes}</p>}
         {h.incidents && (
           <div className="rounded-lg bg-amber-50 p-3 text-amber-900">
-            <p className="text-xs font-semibold uppercase tracking-wide">Incidents</p>
+            <p className="text-xs font-semibold uppercase tracking-wide">{t('Incidents')}</p>
             <p className="whitespace-pre-line">{h.incidents}</p>
           </div>
         )}
         {h.keys?.length > 0 && (
           <div>
-            <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500"><KeyRound className="size-3.5" />Keys</p>
+            <p className="mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500"><KeyRound className="size-3.5" />{t('Keys')}</p>
             <ul className="flex flex-wrap gap-2">
               {h.keys.map((k, i) => (
                 // eslint-disable-next-line react/no-array-index-key
                 <li key={i} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1">
                   <span className="font-medium text-slate-800">{k.name}</span>
-                  <Badge tone={KEY_TONES[k.status]}>{label(k.status)}</Badge>
+                  <Badge tone={KEY_TONES[k.status]}>{t(label(k.status))}</Badge>
                   {k.holder && <span className="text-xs text-slate-500">{k.holder}</span>}
                 </li>
               ))}
@@ -146,7 +150,7 @@ function HandoverCard({ h, canAck, onAck }) {
         )}
         {h.pendingItems?.length > 0 && (
           <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">Pending items</p>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Pending items')}</p>
             <ul className="space-y-1">
               {h.pendingItems.map((p, i) => (
                 // eslint-disable-next-line react/no-array-index-key
@@ -160,7 +164,7 @@ function HandoverCard({ h, canAck, onAck }) {
         )}
         {h.status === 'acknowledged' ? (
           <p className="rounded-lg bg-sky-50 p-3 text-sky-900">
-            Acknowledged by <strong>{h.acknowledgedBy?.name || '—'}</strong> on {dateTime(h.acknowledgedAt)}
+            {t('Acknowledged by {name} on {date}', { name: h.acknowledgedBy?.name || '—', date: dateTime(h.acknowledgedAt) })}
             {h.ackNote && <span className="mt-1 block text-sm">“{h.ackNote}”</span>}
           </p>
         ) : canAck && (

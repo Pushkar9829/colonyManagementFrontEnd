@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, Repeat } from 'lucide-react';
 import { Button, Card, Input, Pagination, Select, StatusBadge, Table } from '../../../components/ui';
 import { date, label, money, toPaise } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useAutopayCancel, useAutopayOptIn, useCancelMandate, useMandates, useMyAutopay, useSetupAutopay } from '../api';
 
 const methodLabel = (m) => (m === 'enach' ? 'Bank auto-debit (e-NACH)' : 'UPI AutoPay');
@@ -9,6 +10,7 @@ const methodLabel = (m) => (m === 'enach' ? 'Bank auto-debit (e-NACH)' : 'UPI Au
 // Resident: set up a mandate (authorised once with the bank), change its limit, or switch it off.
 // Shown as one tappable row under the bills; the form opens when the row is tapped.
 export function AutopayCard() {
+  const { t } = useT();
   const { data } = useMyAutopay();
   const [expanded, setExpanded] = useState(false);
   const [max, setMax] = useState('');
@@ -22,24 +24,25 @@ export function AutopayCard() {
   const m = data.mandate;
   const pending = data.pending;
   const signingUp = !m || renew;
-  const status = m ? `On, up to ${money(m.maxAmount)} per bill` : pending ? 'Waiting for bank' : 'Off';
+  const status = m ? t('On, up to {amount} per bill', { amount: money(m.maxAmount) }) : pending ? t('Waiting for bank') : t('Off');
+  const [maxPre, maxPost] = m ? t('Maximum {amount} per bill · {method}', { method: t(methodLabel(m.method)) }).split('{amount}') : [];
   return (
     <Card className="mt-4">
       <button type="button" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}
         className="flex min-h-12 w-full items-center gap-2 px-5 py-3 text-left text-sm">
         <Repeat className="size-4 shrink-0 text-brand-600" />
-        <span className="min-w-0 flex-1 truncate"><b className="text-slate-900">Autopay</b> <span className="text-slate-600">· {status}</span></span>
-        <span className="flex shrink-0 items-center font-medium text-brand-700">{m ? 'Manage' : pending ? 'Details' : 'Set up'}<ChevronRight className={`size-4 transition-transform ${expanded ? 'rotate-90' : ''}`} /></span>
+        <span className="min-w-0 flex-1 truncate"><b className="text-slate-900">{t('Autopay')}</b> <span className="text-slate-600">· {status}</span></span>
+        <span className="flex shrink-0 items-center font-medium text-brand-700">{m ? t('Manage') : pending ? t('Details') : t('Set up')}<ChevronRight className={`size-4 transition-transform ${expanded ? 'rotate-90' : ''}`} /></span>
       </button>
       {expanded && (
         <div className="border-t border-slate-100">
-          <p className="px-5 pt-4 text-sm text-slate-500">{m ? 'New bills up to your limit are paid automatically.' : 'Let new bills be paid automatically by UPI AutoPay or bank auto-debit (e-NACH). You approve it once in your UPI app or net banking.'}</p>
+          <p className="px-5 pt-4 text-sm text-slate-500">{m ? t('New bills up to your limit are paid automatically.') : t('Let new bills be paid automatically by UPI AutoPay or bank auto-debit (e-NACH). You approve it once in your UPI app or net banking.')}</p>
           <div className="flex flex-wrap items-end gap-3 p-5">
             {(m || pending) && (
               <div className="mr-auto w-full text-sm text-slate-600 sm:w-auto">
-                {m && <p>Maximum <b className="text-slate-900">{money(m.maxAmount)}</b> per bill · {methodLabel(m.method)}</p>}
-                {m?.lastResult && <p className="text-xs text-slate-500">Last: {label(m.lastResult)}{m.lastChargedAt ? ` on ${date(m.lastChargedAt)}` : ''}{m.lastError ? ` · ${m.lastError}` : ''}</p>}
-                {pending && <p className="text-xs text-amber-700">Your bank is approving a {methodLabel(pending.method)} mandate up to {money(pending.maxAmount)} (since {date(pending.createdAt)}). This usually takes 2–3 working days.</p>}
+                {m && <p>{maxPre}<b className="text-slate-900">{money(m.maxAmount)}</b>{maxPost}</p>}
+                {m?.lastResult && <p className="text-xs text-slate-500">{m.lastChargedAt ? t('Last: {result} on {date}', { result: t(label(m.lastResult)), date: date(m.lastChargedAt) }) : t('Last: {result}', { result: t(label(m.lastResult)) })}{m.lastError ? ` · ${m.lastError}` : ''}</p>}
+                {pending && <p className="text-xs text-amber-700">{t('Your bank is approving a {method} mandate up to {amount} (since {date}). This usually takes 2–3 working days.', { method: t(methodLabel(pending.method)), amount: money(pending.maxAmount), date: date(pending.createdAt) })}</p>}
               </div>
             )}
             <Input className="w-full sm:w-52" label={signingUp ? 'Maximum amount per bill (₹)' : 'New maximum per bill (₹)'} type="number" min={1} value={max} onChange={(e) => setMax(e.target.value)} />
@@ -50,9 +53,9 @@ export function AutopayCard() {
               <Button disabled={!Number(max)} loading={optIn.isPending} onClick={() => optIn.mutate({ maxAmount: toPaise(max) })}>Update</Button>
             )}
             {m && <Button variant="ghost" onClick={() => setRenew((v) => !v)}>{renew ? 'Keep current mandate' : 'Raise limit / change bank'}</Button>}
-            {m && <Button variant="ghost" loading={cancel.isPending} onClick={() => window.confirm('Turn off autopay?') && cancel.mutate()}>Turn off</Button>}
+            {m && <Button variant="ghost" loading={cancel.isPending} onClick={() => window.confirm(t('Turn off autopay?')) && cancel.mutate()}>Turn off</Button>}
           </div>
-          {signingUp && <p className="px-5 pb-4 text-xs text-slate-500">UPI AutoPay debits ₹1 to authorise; it is added to your advance balance. Bank auto-debit (e-NACH) needs no debit.</p>}
+          {signingUp && <p className="px-5 pb-4 text-xs text-slate-500">{t('UPI AutoPay debits ₹1 to authorise; it is added to your advance balance. Bank auto-debit (e-NACH) needs no debit.')}</p>}
         </div>
       )}
     </Card>

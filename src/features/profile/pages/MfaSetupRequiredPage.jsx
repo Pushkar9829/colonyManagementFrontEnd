@@ -13,7 +13,9 @@ export default function MfaSetupRequiredPage() {
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">{t('Set up two-step verification')}</h1>
       <p className="mt-1 text-sm text-slate-500">
-        {user.society?.name ? `${user.society.name} requires` : 'Your society requires'} admins and accountants to protect their account with a code from an authenticator app.
+        {user.society?.name
+          ? t('{society} requires admins and accountants to protect their account with a code from an authenticator app.', { society: user.society.name })
+          : t('Your society requires admins and accountants to protect their account with a code from an authenticator app.')}
       </p>
       <div className="mt-6">
         <TwoStepSetup onEnabled={async () => { await reloadUser(); navigate('/', { replace: true }); }} />

@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Input } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { label } from '../../../lib/format';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { PushToggle } from '../../notifications/components/PushToggle';
@@ -17,6 +18,7 @@ import { PersonalDetailsCard } from '../../people/components/PersonalDetailsCard
 export default function ProfilePage() {
   const { user, reloadUser } = useAuth();
   const toast = useToast();
+  const { t } = useT();
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone || '');
   const [pw, setPw] = useState({ currentPassword: '', newPassword: '' });
@@ -42,7 +44,7 @@ export default function ProfilePage() {
       {user.society && <PushToggle />}
       {user.society && <ChannelPrefs />}
       <Card>
-        <CardHeader title="Account" subtitle={user.email} action={<div className="flex gap-1"><Badge tone="brand">{ROLE_LABELS[user.role]}</Badge>{user.residentType && <Badge>{label(user.residentType)}</Badge>}</div>} />
+        <CardHeader title="Account" subtitle={user.email} action={<div className="flex gap-1"><Badge tone="brand">{t(ROLE_LABELS[user.role])}</Badge>{user.residentType && <Badge>{t(label(user.residentType))}</Badge>}</div>} />
         <div className="space-y-4 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} error={errors.name} />
@@ -50,10 +52,10 @@ export default function ProfilePage() {
           </div>
           <p className="text-sm text-slate-500">
             {user.society?.name}
-            {user.unit?.label ? ` · Unit ${user.unit.label}` : ''}
+            {user.unit?.label ? ` · ${t('Unit {unit}', { unit: user.unit.label })}` : ''}
             {user.designation ? ` · ${user.designation}` : ''}
           </p>
-          <Button loading={saving === 'profile'} onClick={() => run('profile', async () => { await api.patch('/auth/me', { name, phone: phone || undefined }); await reloadUser(); toast.success('Profile saved'); })}>
+          <Button loading={saving === 'profile'} onClick={() => run('profile', async () => { await api.patch('/auth/me', { name, phone: phone || undefined }); await reloadUser(); toast.success(t('Profile saved')); })}>
             Save
           </Button>
         </div>
@@ -67,7 +69,7 @@ export default function ProfilePage() {
           <Button
             disabled={!pw.currentPassword || !pw.newPassword}
             loading={saving === 'pw'}
-            onClick={() => run('pw', async () => { await api.post('/auth/change-password', { ...pw, refreshToken: tokens.refreshToken() || undefined }); setPw({ currentPassword: '', newPassword: '' }); toast.success('Password changed'); })}
+            onClick={() => run('pw', async () => { await api.post('/auth/change-password', { ...pw, refreshToken: tokens.refreshToken() || undefined }); setPw({ currentPassword: '', newPassword: '' }); toast.success(t('Password changed')); })}
           >
             Update password
           </Button>

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/cn';
+import { tr, useT } from '../../context/LanguageContext';
 
 // tabs: [{ value, label, count? }]
 // On narrow screens the strip scrolls sideways: the selected tab is kept in view and a fade at the edge
 // shows that more tabs follow.
 export function Tabs({ tabs, value, onChange, className }) {
+  const { t: tx } = useT();
   const ref = useRef(null);
   const [more, setMore] = useState({ left: false, right: false });
   const measure = () => {
@@ -36,7 +38,7 @@ export function Tabs({ tabs, value, onChange, className }) {
             value === t.value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900',
           )}
         >
-          {t.label}
+          {tr(tx, t.label)}
           {t.count > 0 && <span className="rounded-full bg-brand-600 px-1.5 text-[10px] font-semibold text-white">{t.count}</span>}
         </button>
       ))}

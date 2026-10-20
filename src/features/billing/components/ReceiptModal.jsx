@@ -3,6 +3,7 @@ import { Ban, Download, Mail } from 'lucide-react';
 import { Badge, Button, Checkbox, Input, Modal, Spinner } from '../../../components/ui';
 import { date, label, money, periodLabel } from '../../../lib/format';
 import { useBouncePayment, useDownload, useEmailReceipt, useReceipt } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 function BounceForm({ payment, onDone }) {
   const [reason, setReason] = useState('');
@@ -19,6 +20,7 @@ function BounceForm({ payment, onDone }) {
 }
 
 export function ReceiptModal({ paymentId, onClose, canBounce = false }) {
+  const { t } = useT();
   const { data, isLoading } = useReceipt(paymentId);
   const { download, busy } = useDownload();
   const email = useEmailReceipt();
@@ -53,32 +55,32 @@ export function ReceiptModal({ paymentId, onClose, canBounce = false }) {
               <h2 className="text-lg font-semibold">{data.society.name}</h2>
               <p className="text-slate-500">{[data.society.address, data.society.city, data.society.state, data.society.pincode].filter(Boolean).join(', ')}</p>
             </div>
-            {p.status === 'bounced' && <Badge tone="red">Bounced</Badge>}
+            {p.status === 'bounced' && <Badge tone="red">{t('Bounced')}</Badge>}
           </div>
           <div className="flex justify-between rounded-lg bg-slate-50 p-3">
             <div>
-              <p className="text-xs text-slate-500">Receipt no.</p>
+              <p className="text-xs text-slate-500">{t('Receipt no.')}</p>
               <p className="font-semibold">{p.receiptNumber}</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-slate-500">Date</p>
+              <p className="text-xs text-slate-500">{t('Date')}</p>
               <p className="font-semibold">{date(p.paidAt)}</p>
             </div>
           </div>
           <table className="w-full">
             <tbody>
-              <tr><td className="py-1.5 text-slate-500">Unit</td><td className="text-right font-medium">{p.unit.label}</td></tr>
-              <tr><td className="py-1.5 text-slate-500">Against</td><td className="text-right">{data.bill ? `${data.bill.billNumber} (${data.bill.period === 'OPENING' ? 'Opening balance' : periodLabel(data.bill.period)})` : 'Advance payment'}</td></tr>
-              <tr><td className="py-1.5 text-slate-500">Mode</td><td className="text-right">{label(p.method)}{p.reference ? ` · ${p.reference}` : ''}</td></tr>
-              <tr><td className="py-1.5 text-slate-500">Amount received</td><td className="text-right text-base font-semibold">{money(p.amount)}</td></tr>
-              {data.bill && p.advanceAmount > 0 && <tr><td className="py-1.5 text-slate-500">Held as advance</td><td className="text-right">{money(p.advanceAmount)}</td></tr>}
-              {data.bill && <tr><td className="py-1.5 text-slate-500">Balance on bill</td><td className="text-right">{money(data.bill.balance)}</td></tr>}
-              <tr><td className="py-1.5 text-slate-500">Advance balance</td><td className="text-right">{money(data.creditBalance)}</td></tr>
-              {p.status === 'bounced' && <tr><td className="py-1.5 text-red-600">Bounced on</td><td className="text-right text-red-600">{date(p.bouncedAt)} · {p.bounceReason}</td></tr>}
+              <tr><td className="py-1.5 text-slate-500">{t('Unit')}</td><td className="text-right font-medium">{p.unit.label}</td></tr>
+              <tr><td className="py-1.5 text-slate-500">{t('Against')}</td><td className="text-right">{data.bill ? `${data.bill.billNumber} (${data.bill.period === 'OPENING' ? t('Opening balance') : periodLabel(data.bill.period)})` : t('Advance payment')}</td></tr>
+              <tr><td className="py-1.5 text-slate-500">{t('Mode')}</td><td className="text-right">{t(label(p.method))}{p.reference ? ` · ${p.reference}` : ''}</td></tr>
+              <tr><td className="py-1.5 text-slate-500">{t('Amount received')}</td><td className="text-right text-base font-semibold">{money(p.amount)}</td></tr>
+              {data.bill && p.advanceAmount > 0 && <tr><td className="py-1.5 text-slate-500">{t('Held as advance')}</td><td className="text-right">{money(p.advanceAmount)}</td></tr>}
+              {data.bill && <tr><td className="py-1.5 text-slate-500">{t('Balance on bill')}</td><td className="text-right">{money(data.bill.balance)}</td></tr>}
+              <tr><td className="py-1.5 text-slate-500">{t('Advance balance')}</td><td className="text-right">{money(data.creditBalance)}</td></tr>
+              {p.status === 'bounced' && <tr><td className="py-1.5 text-red-600">{t('Bounced on')}</td><td className="text-right text-red-600">{date(p.bouncedAt)} · {p.bounceReason}</td></tr>}
             </tbody>
           </table>
           {bouncing && <BounceForm payment={p} onDone={close} />}
-          <p className="text-xs text-slate-400">This is a computer-generated receipt. Cheques are subject to realisation.</p>
+          <p className="text-xs text-slate-400">{t('This is a computer-generated receipt. Cheques are subject to realisation.')}</p>
         </div>
       )}
     </Modal>

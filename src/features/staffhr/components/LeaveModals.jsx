@@ -2,6 +2,7 @@ import { Button, Checkbox, Input, Modal, Select, Spinner, Textarea } from '../..
 import { useForm } from '../../../hooks/useForm';
 import { label, todayISO } from '../../../lib/format';
 import { useApplyLeave, useEmployees, useLeaveBalances } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 export const LEAVE_TYPES = [
   { value: 'casual', label: 'Casual' },
@@ -12,14 +13,15 @@ export const LEAVE_TYPES = [
 export const LEAVE_TONES = { pending: 'amber', approved: 'green', rejected: 'red', cancelled: 'slate' };
 
 export function BalanceCards({ balances }) {
+  const { t } = useT();
   if (!balances) return <div className="flex justify-center py-4"><Spinner /></div>;
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {balances.map((b) => (
         <div key={b.type} className="rounded-lg border border-slate-200 p-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label(b.type)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t(label(b.type))}</p>
           <p className="mt-1 text-xl font-semibold text-slate-900">{b.available === null ? b.used : b.available}</p>
-          <p className="text-xs text-slate-500">{b.available === null ? 'days taken' : `left of ${b.allocated}`}{b.pending ? ` · ${b.pending} pending` : ''}</p>
+          <p className="text-xs text-slate-500">{b.available === null ? t('days taken') : t('left of {n}', { n: b.allocated })}{b.pending ? ` · ${t('{n} pending', { n: b.pending })}` : ''}</p>
         </div>
       ))}
     </div>

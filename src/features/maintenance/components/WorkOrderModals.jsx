@@ -8,6 +8,7 @@ import { useAssets } from '../../assets/api';
 import { clean, usePeople } from '../../assets/shared';
 import { useCreateWorkOrder, useWorkOrder, useWorkOrderStatus } from '../api';
 import { PRIORITIES, WO_TONES } from '../constants';
+import { useT } from '../../../context/LanguageContext';
 
 // preset: { asset, breakdown, ppmTask, title } when raised from another screen.
 export function CreateWorkOrderModal({ open, onClose, preset }) {
@@ -58,6 +59,7 @@ export function CreateWorkOrderModal({ open, onClose, preset }) {
 export function WorkOrderDetailModal({ id, open, onClose }) {
   const { user } = useAuth();
   const manager = isManager(user);
+  const { t } = useT();
   const { data: w, isLoading } = useWorkOrder(open ? id : null);
   const [note, setNote] = useState('');
   const [cost, setCost] = useState('');
@@ -70,23 +72,23 @@ export function WorkOrderDetailModal({ id, open, onClose }) {
       {isLoading || !w ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <div className="space-y-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={WO_TONES[w.status]}>{label(w.status)}</Badge>
-            <Badge>{label(w.priority)}</Badge>
-            <span className="text-slate-500">{label(w.source)}{w.asset ? ` · ${w.asset.name} (${w.asset.code})` : ''}</span>
+            <Badge tone={WO_TONES[w.status]}>{t(label(w.status))}</Badge>
+            <Badge>{t(label(w.priority))}</Badge>
+            <span className="text-slate-500">{t(label(w.source))}{w.asset ? ` · ${w.asset.name} (${w.asset.code})` : ''}</span>
           </div>
           <dl className="grid gap-3 sm:grid-cols-3">
-            <div><dt className="text-xs text-slate-500">Vendor</dt><dd className="font-medium">{w.vendorName || '—'}</dd></div>
-            <div><dt className="text-xs text-slate-500">Technician</dt><dd className="font-medium">{w.technician?.name || '—'}</dd></div>
-            <div><dt className="text-xs text-slate-500">Due</dt><dd className="font-medium">{w.dueDate ? date(w.dueDate) : '—'}</dd></div>
-            <div><dt className="text-xs text-slate-500">Estimate</dt><dd className="font-medium">{money(w.estimate)}</dd></div>
-            <div><dt className="text-xs text-slate-500">Actual</dt><dd className="font-medium">{w.actualCost !== undefined && w.actualCost !== null ? money(w.actualCost) : '—'}</dd></div>
-            <div><dt className="text-xs text-slate-500">Location</dt><dd className="font-medium">{w.location || '—'}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Vendor')}</dt><dd className="font-medium">{w.vendorName || '—'}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Technician')}</dt><dd className="font-medium">{w.technician?.name || '—'}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Due')}</dt><dd className="font-medium">{w.dueDate ? date(w.dueDate) : '—'}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Estimate')}</dt><dd className="font-medium">{money(w.estimate)}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Actual')}</dt><dd className="font-medium">{w.actualCost !== undefined && w.actualCost !== null ? money(w.actualCost) : '—'}</dd></div>
+            <div><dt className="text-xs text-slate-500">{t('Location')}</dt><dd className="font-medium">{w.location || '—'}</dd></div>
           </dl>
           {w.scope && <p className="whitespace-pre-line text-slate-700">{w.scope}</p>}
           <Attachments items={w.attachments} />
           {w.completion?.completedAt && (
             <div className="rounded-lg bg-slate-50 p-3">
-              <p className="font-medium text-slate-800">Completion · {dateTime(w.completion.completedAt)}</p>
+              <p className="font-medium text-slate-800">{t('Completion · {time}', { time: dateTime(w.completion.completedAt) })}</p>
               {w.completion.notes && <p className="text-slate-600">{w.completion.notes}</p>}
               <div className="mt-2"><Attachments items={w.completion.attachments} /></div>
             </div>
@@ -107,7 +109,7 @@ export function WorkOrderDetailModal({ id, open, onClose }) {
           )}
           {w.history?.length > 0 && (
             <ul className="space-y-1 text-xs text-slate-500">
-              {w.history.map((h, i) => <li key={i}>{dateTime(h.createdAt)} · {h.by?.name || 'System'}: {h.from ? `${label(h.from)} → ` : ''}{label(h.to)}{h.note ? ` — ${h.note}` : ''}</li>)}
+              {w.history.map((h, i) => <li key={i}>{dateTime(h.createdAt)} · {h.by?.name || t('System')}: {h.from ? `${t(label(h.from))} → ` : ''}{t(label(h.to))}{h.note ? ` — ${h.note}` : ''}</li>)}
             </ul>
           )}
         </div>

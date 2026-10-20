@@ -4,22 +4,24 @@ import { Badge, Card, CardHeader, EmptyState, Spinner } from '../../../component
 import { date, label, time, todayISO } from '../../../lib/format';
 import { useRuns, useTasks, useWorkOrders } from '../../maintenance/api';
 import { RUN_TONES, TASK_TONES, WO_TONES } from '../../maintenance/constants';
+import { useT } from '../../../context/LanguageContext';
 
 // Staff home: everything due today in one list. Each row opens My work, where the job is done.
 export function TodayJobs() {
+  const { t } = useT();
   const today = todayISO();
   const runs = useRuns({ date: today, mine: true, limit: 20 });
   const tasks = useTasks({ mine: true, open: true, to: today, limit: 20 });
   const wos = useWorkOrders({ open: true, mine: true, limit: 20 });
   const loading = runs.isLoading || tasks.isLoading || wos.isLoading;
   const items = [
-    ...(runs.data?.data || []).filter((r) => r.status === 'pending' || r.status === 'rejected').map((r) => ({ id: r._id, icon: ClipboardCheck, title: r.name, sub: `Checklist · ${r.slot} · by ${time(r.dueAt)}`, tone: RUN_TONES[r.status], status: r.status === 'rejected' ? 'redo' : r.status })),
-    ...(tasks.data?.data || []).map((x) => ({ id: x._id, icon: Wrench, title: x.title, sub: `Maintenance · ${x.asset?.name || ''} · due ${date(x.dueDate)}`, tone: TASK_TONES[x.status], status: x.status })),
-    ...(wos.data?.data || []).map((w) => ({ id: w._id, icon: Hammer, title: w.title, sub: `Work order ${w.number}${w.asset ? ` · ${w.asset.name}` : ''}`, tone: WO_TONES[w.status], status: w.status })),
+    ...(runs.data?.data || []).filter((r) => r.status === 'pending' || r.status === 'rejected').map((r) => ({ id: r._id, icon: ClipboardCheck, title: r.name, sub: t('Checklist · {slot} · by {time}', { slot: r.slot, time: time(r.dueAt) }), tone: RUN_TONES[r.status], status: r.status === 'rejected' ? 'redo' : r.status })),
+    ...(tasks.data?.data || []).map((x) => ({ id: x._id, icon: Wrench, title: x.title, sub: t('Maintenance · {asset} · due {date}', { asset: x.asset?.name || '', date: date(x.dueDate) }), tone: TASK_TONES[x.status], status: x.status })),
+    ...(wos.data?.data || []).map((w) => ({ id: w._id, icon: Hammer, title: w.title, sub: w.asset ? t('Work order {number} · {asset}', { number: w.number, asset: w.asset.name }) : t('Work order {number}', { number: w.number }), tone: WO_TONES[w.status], status: w.status })),
   ];
   return (
     <Card>
-      <CardHeader title="Due today" subtitle="Checklists, maintenance and work orders" action={<Link to="/my-work" className="text-sm font-medium text-brand-600 hover:underline">My work</Link>} />
+      <CardHeader title="Due today" subtitle="Checklists, maintenance and work orders" action={<Link to="/my-work" className="text-sm font-medium text-brand-600 hover:underline">{t('My work')}</Link>} />
       {loading ? (
         <div className="flex justify-center p-6"><Spinner /></div>
       ) : !items.length ? (
@@ -36,7 +38,7 @@ export function TodayJobs() {
                     <p className="truncate text-xs text-slate-500">{sub}</p>
                   </div>
                 </div>
-                <Badge tone={tone}>{label(status)}</Badge>
+                <Badge tone={tone}>{t(label(status))}</Badge>
               </Link>
             </li>
           ))}

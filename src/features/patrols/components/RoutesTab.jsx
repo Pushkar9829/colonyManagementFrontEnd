@@ -5,6 +5,7 @@ import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { useCheckpoints, useCreateRoute, useDeleteRoute, usePatrolRoutes, useUpdateRoute } from '../api';
 import { DAYS, daysLabel, isOvernight } from './shared';
+import { useT } from '../../../context/LanguageContext';
 
 // The PATCH schema fills `days`/`enforceOrder` defaults when they are absent, so edits always send the whole route.
 export const routePayload = (r) => ({
@@ -18,6 +19,7 @@ export const routePayload = (r) => ({
 });
 
 function RouteForm({ route, onClose }) {
+  const { t } = useT();
   const editing = Boolean(route);
   const { data: checkpoints = [] } = useCheckpoints();
   const { values, bind, set, errors, applyServerErrors } = useForm({
@@ -64,15 +66,15 @@ function RouteForm({ route, onClose }) {
           <Input label="End" type="time" required {...bind('endTime')} />
         </div>
         {values.startTime && values.endTime && isOvernight(values) && values.startTime !== values.endTime && (
-          <p className="flex items-center gap-1.5 text-xs text-slate-500 sm:col-span-2"><Moon className="size-3.5" /> Overnight: runs from {values.startTime} until {values.endTime} the next morning.</p>
+          <p className="flex items-center gap-1.5 text-xs text-slate-500 sm:col-span-2"><Moon className="size-3.5" /> {t('Overnight: runs from {start} until {end} the next morning.', { start: values.startTime, end: values.endTime })}</p>
         )}
         <div className="sm:col-span-2">
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Days <span className="font-normal text-slate-500">(none selected = every day)</span></p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Days')} <span className="font-normal text-slate-500">{t('(none selected = every day)')}</span></p>
           <div className="flex flex-wrap gap-1.5">
             {DAYS.map((d, i) => (
               <button key={d} type="button" onClick={() => toggleDay(i)} aria-pressed={values.days.includes(i)}
                 className={cn('h-10 min-w-12 rounded-lg border px-3 text-sm font-medium', values.days.includes(i) ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50')}>
-                {d}
+                {t(d)}
               </button>
             ))}
           </div>
@@ -83,7 +85,7 @@ function RouteForm({ route, onClose }) {
         </div>
 
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium text-slate-700">Checkpoints <span className="text-red-500">*</span></p>
+          <p className="text-sm font-medium text-slate-700">{t('Checkpoints')} <span className="text-red-500">*</span></p>
           {stops.length ? (
             <ol className="divide-y divide-slate-100 rounded-lg border border-slate-200">
               {stops.map((s, i) => (
@@ -93,14 +95,14 @@ function RouteForm({ route, onClose }) {
                     <p className="truncate font-medium text-slate-800">{s.name}</p>
                     {s.location && <p className="truncate text-xs text-slate-500">{s.location}</p>}
                   </div>
-                  <Button size="sm" variant="ghost" icon={ArrowUp} disabled={i === 0} onClick={() => move(i, -1)} aria-label="Move up" />
-                  <Button size="sm" variant="ghost" icon={ArrowDown} disabled={i === stops.length - 1} onClick={() => move(i, 1)} aria-label="Move down" />
-                  <Button size="sm" variant="ghost" icon={X} className="text-red-600" onClick={() => setStops((x) => x.filter((_, j) => j !== i))} aria-label="Remove" />
+                  <Button size="sm" variant="ghost" icon={ArrowUp} disabled={i === 0} onClick={() => move(i, -1)} aria-label={t('Move up')} />
+                  <Button size="sm" variant="ghost" icon={ArrowDown} disabled={i === stops.length - 1} onClick={() => move(i, 1)} aria-label={t('Move down')} />
+                  <Button size="sm" variant="ghost" icon={X} className="text-red-600" onClick={() => setStops((x) => x.filter((_, j) => j !== i))} aria-label={t('Remove')} />
                 </li>
               ))}
             </ol>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-sm text-slate-500">Add at least one checkpoint</p>
+            <p className="rounded-lg border border-dashed border-slate-300 p-3 text-center text-sm text-slate-500">{t('Add at least one checkpoint')}</p>
           )}
           {errors.checkpoints && <p className="text-xs text-red-600">{errors.checkpoints}</p>}
           <div className="flex gap-2">
@@ -114,6 +116,7 @@ function RouteForm({ route, onClose }) {
 }
 
 export function RoutesTab({ manager }) {
+  const { t } = useT();
   const { data, isLoading } = usePatrolRoutes();
   const [editing, setEditing] = useState(null); // null | 'new' | route
   const [deleting, setDeleting] = useState(null);
@@ -138,14 +141,14 @@ export function RoutesTab({ manager }) {
                 <div className="min-w-0">
                   <h3 className="font-semibold text-slate-900">{r.name}</h3>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-                    <span className="flex items-center gap-1"><Clock className="size-3.5" />{r.startTime}–{r.endTime}{isOvernight(r) && ' (overnight)'}</span>
-                    <span>· every {r.frequencyMinutes} min</span>
+                    <span className="flex items-center gap-1"><Clock className="size-3.5" />{r.startTime}–{r.endTime}{isOvernight(r) && ` ${t('(overnight)')}`}</span>
+                    <span>· {t('every {n} min', { n: r.frequencyMinutes })}</span>
                   </p>
-                  <p className="text-xs text-slate-500">{daysLabel(r.days)}</p>
+                  <p className="text-xs text-slate-500">{daysLabel(r.days, t)}</p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <StatusBadge status={r.active ? 'active' : 'inactive'} />
-                  {r.enforceOrder && <Badge tone="brand">In order</Badge>}
+                  {r.enforceOrder && <Badge tone="brand">{t('In order')}</Badge>}
                 </div>
               </div>
               <ol className="space-y-1 px-5 py-3 text-sm">
@@ -161,7 +164,7 @@ export function RoutesTab({ manager }) {
                 <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-5 py-3">
                   <Button size="sm" variant="secondary" loading={update.isPending && update.variables?.id === r._id}
                     onClick={() => update.mutate({ id: r._id, ...routePayload(r), active: !r.active })}>
-                    {r.active ? 'Deactivate' : 'Activate'}
+                    {r.active ? t('Deactivate') : t('Activate')}
                   </Button>
                   <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(r)}>Edit</Button>
                   <Button size="sm" variant="ghost" icon={Trash2} className="text-red-600" onClick={() => setDeleting(r)}>Delete</Button>
@@ -172,9 +175,9 @@ export function RoutesTab({ manager }) {
         </div>
       )}
       {editing && <RouteForm route={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
-      <Modal open={Boolean(deleting)} onClose={() => setDeleting(null)} size="sm" title={`Delete ${deleting?.name}?`}
+      <Modal open={Boolean(deleting)} onClose={() => setDeleting(null)} size="sm" title={t('Delete {name}?', { name: deleting?.name })}
         footer={<><Button variant="secondary" onClick={() => setDeleting(null)}>Cancel</Button><Button variant="danger" loading={del.isPending} onClick={() => del.mutate(deleting._id)}>Delete</Button></>}>
-        <p className="text-sm text-slate-600">Past rounds stay in the history. To pause patrols temporarily, deactivate the route instead.</p>
+        <p className="text-sm text-slate-600">{t('Past rounds stay in the history. To pause patrols temporarily, deactivate the route instead.')}</p>
       </Modal>
     </div>
   );

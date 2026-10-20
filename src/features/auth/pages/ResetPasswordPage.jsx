@@ -3,9 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { CheckCircle2 } from 'lucide-react';
 import { api } from '../../../api/client';
 import { Button, Input, PageLoader } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 
 // Handles both "forgot password" links and "set your password" invites for imported/added members.
 export default function ResetPasswordPage() {
+  const { t } = useT();
   const [params] = useSearchParams();
   const token = params.get('token') || '';
   const invite = params.get('invite') === '1';
@@ -46,9 +48,9 @@ export default function ResetPasswordPage() {
   if (invalid) {
     return (
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Link not valid</h1>
-        <p className="mt-2 text-sm text-slate-500">{invalid}</p>
-        <Link to="/forgot-password" className="mt-6 inline-block font-medium text-brand-600 hover:underline">Request a new link</Link>
+        <h1 className="text-2xl font-semibold text-slate-900">{t('Link not valid')}</h1>
+        <p className="mt-2 text-sm text-slate-500">{t(invalid)}</p>
+        <Link to="/forgot-password" className="mt-6 inline-block font-medium text-brand-600 hover:underline">{t('Request a new link')}</Link>
       </div>
     );
   }
@@ -57,21 +59,21 @@ export default function ResetPasswordPage() {
     return (
       <div className="text-center">
         <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-semibold text-slate-900">Password {invite ? 'set' : 'changed'}</h1>
-        <p className="mt-2 text-sm text-slate-500">You can now log in with your new password. Other devices were signed out.</p>
-        <Link to="/login" className="mt-6 inline-block font-medium text-brand-600 hover:underline">Go to login</Link>
+        <h1 className="mt-4 text-2xl font-semibold text-slate-900">{invite ? t('Password set') : t('Password changed')}</h1>
+        <p className="mt-2 text-sm text-slate-500">{t('You can now log in with your new password. Other devices were signed out.')}</p>
+        <Link to="/login" className="mt-6 inline-block font-medium text-brand-600 hover:underline">{t('Go to login')}</Link>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">{invite ? 'Welcome to ColonyHub' : 'Choose a new password'}</h1>
+      <h1 className="text-2xl font-semibold text-slate-900">{invite ? t('Welcome to ColonyHub') : t('Choose a new password')}</h1>
       <p className="mt-1 text-sm text-slate-500">{info.name ? `${info.name} · ` : ''}{info.email}</p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <Input label="New password" type="password" autoComplete="new-password" hint="At least 8 characters" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <Input label="Confirm password" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{t(error)}</p>}
         <Button type="submit" loading={loading} className="w-full">{invite ? 'Set password' : 'Change password'}</Button>
       </form>
     </div>

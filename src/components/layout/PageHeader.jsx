@@ -1,6 +1,4 @@
-import { useT } from '../../context/LanguageContext';
-
-const tr = (t, v) => (typeof v === 'string' ? t(v) : v);
+import { tr, useT } from '../../context/LanguageContext';
 
 export function PageHeader({ title, description, actions }) {
   const { t } = useT();

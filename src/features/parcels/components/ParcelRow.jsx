@@ -3,19 +3,22 @@ import { Badge } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { dateTime, label } from '../../../lib/format';
 import { formatAge, OPEN_STATUSES } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const STATUS_TONE = { received: 'amber', notified: 'blue', collected: 'green', returned: 'slate' };
 // "Notified" told nobody what to do; the parcel is sitting at the gate until someone collects it.
 export const STATUS_LABEL = { notified: 'Waiting at gate' };
 
 export function ParcelStatus({ status }) {
-  return <Badge tone={STATUS_TONE[status] || 'slate'}>{STATUS_LABEL[status] || label(status)}</Badge>;
+  const { t } = useT();
+  return <Badge tone={STATUS_TONE[status] || 'slate'}>{t(STATUS_LABEL[status] || label(status))}</Badge>;
 }
 
 export function AgeBadge({ hours }) {
+  const { t } = useT();
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold', hours >= 24 ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600')}>
-      Waiting {formatAge(hours)}
+      {t('Waiting {age}', { age: formatAge(hours) })}
     </span>
   );
 }
@@ -23,12 +26,13 @@ export function AgeBadge({ hours }) {
 // One parcel in a list; `actions` renders on the right (stacked below on phones).
 export function ParcelRow({ p, actions, showUnit = true }) {
   const waiting = OPEN_STATUSES.includes(p.status);
+  const { t } = useT();
   return (
     <li className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 gap-3">
         {p.photoUrl ? (
           <a href={p.photoUrl} target="_blank" rel="noreferrer" className="shrink-0">
-            <img src={p.photoUrl} alt={`Parcel ${p.number}`} className="size-12 rounded-lg object-cover" />
+            <img src={p.photoUrl} alt={t('Parcel {number}', { number: p.number })} className="size-12 rounded-lg object-cover" />
           </a>
         ) : (
           <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
@@ -40,20 +44,20 @@ export function ParcelRow({ p, actions, showUnit = true }) {
             <p className="font-medium text-slate-900">{p.courier}</p>
             <ParcelStatus status={p.status} />
             {waiting && <AgeBadge hours={p.ageHours} />}
-            {p.leftAtGate && <Badge tone="green">Left at gate</Badge>}
+            {p.leftAtGate && <Badge tone="green">{t('Left at gate')}</Badge>}
           </div>
           <p className="truncate text-sm text-slate-500">
             {p.number}
             {showUnit && p.unit ? ` · ${p.unit.label}` : ''}
             {p.recipientName ? ` · ${p.recipientName}` : ''}
-            {p.packages > 1 ? ` · ${p.packages} packages` : ''}
+            {p.packages > 1 ? ` · ${t('{n} packages', { n: p.packages })}` : ''}
             {p.trackingNo ? ` · ${p.trackingNo}` : ''}
           </p>
           <p className="text-xs text-slate-400">
-            Received {dateTime(p.receivedAt)}
+            {t('Received {time}', { time: dateTime(p.receivedAt) })}
             {p.storageLocation ? ` · ${p.storageLocation}` : ''}
-            {p.collectedAt ? ` · collected ${dateTime(p.collectedAt)}${p.collectedBy?.name ? ` by ${p.collectedBy.name}` : p.collectedBy?.type ? ` by ${label(p.collectedBy.type)}` : ''}` : ''}
-            {p.returnedAt ? ` · returned ${dateTime(p.returnedAt)}${p.returnReason ? ` (${p.returnReason})` : ''}` : ''}
+            {p.collectedAt ? ` · ${p.collectedBy?.name ? t('collected {time} by {who}', { time: dateTime(p.collectedAt), who: p.collectedBy.name }) : p.collectedBy?.type ? t('collected {time} by {who}', { time: dateTime(p.collectedAt), who: t(label(p.collectedBy.type)) }) : t('collected {time}', { time: dateTime(p.collectedAt) })}` : ''}
+            {p.returnedAt ? ` · ${t('returned {time}', { time: dateTime(p.returnedAt) })}${p.returnReason ? ` (${p.returnReason})` : ''}` : ''}
           </p>
           {p.note && <p className="mt-0.5 text-xs text-slate-500">“{p.note}”</p>}
         </div>

@@ -4,6 +4,7 @@ import { Clock, Gift, Plus, Users } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, EmptyState, Pagination, Spinner, Tabs } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
+import { useT } from '../../../context/LanguageContext';
 import { useGovernance } from '../../committee/api';
 import { useEnterDraw, useLuckyDraws, useWithdrawEntry } from '../api';
 import { DrawFormModal } from '../components/DrawFormModal';
@@ -20,12 +21,14 @@ export function useTick(ms = 30000) {
 }
 
 export function PhaseBadge({ phase }) {
+  const { t } = useT();
   const [tone, text] = PHASE[phase] || PHASE.draft;
-  return <Badge tone={tone}>{text}</Badge>;
+  return <Badge tone={tone}>{t(text)}</Badge>;
 }
 
 function DrawCard({ d }) {
   const navigate = useNavigate();
+  const { t } = useT();
   const enter = useEnterDraw();
   const withdraw = useWithdrawEntry();
   const won = d.myWins?.length > 0;
@@ -43,9 +46,9 @@ function DrawCard({ d }) {
         </div>
         <p className="line-clamp-2 text-sm text-slate-600">{prizeSummary(d.prizes)}</p>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-          <span className="inline-flex items-center gap-1"><Clock className="size-3.5" />{timingText(d)}</span>
-          <span className="inline-flex items-center gap-1"><Users className="size-3.5" />{d.entrantCount} {d.entrantCount === 1 ? 'entrant' : 'entrants'}</span>
-          <span className="inline-flex items-center gap-1"><Gift className="size-3.5" />{d.totalPrizes} {d.totalPrizes === 1 ? 'prize' : 'prizes'}</span>
+          <span className="inline-flex items-center gap-1"><Clock className="size-3.5" />{timingText(d, undefined, t)}</span>
+          <span className="inline-flex items-center gap-1"><Users className="size-3.5" />{d.entrantCount === 1 ? t('{n} entrant', { n: d.entrantCount }) : t('{n} entrants', { n: d.entrantCount })}</span>
+          <span className="inline-flex items-center gap-1"><Gift className="size-3.5" />{d.totalPrizes === 1 ? t('{n} prize', { n: d.totalPrizes }) : t('{n} prizes', { n: d.totalPrizes })}</span>
         </div>
         {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
         <div className="mt-auto pt-2" onClick={(e) => e.stopPropagation()}>

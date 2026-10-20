@@ -11,11 +11,13 @@ import { hasRole, ROLES } from '../../../lib/roles';
 import { useAcknowledgeAlert, useChildAlerts, useChildren, useCreateChild, useRemoveChild, useUpdateChild } from '../api';
 import { AlertOutcome, ChildAlertsList, ChildAvatar } from '../components/ChildAlertsList';
 import { ChildExitPanel } from '../components/ChildExitPanel';
+import { useT } from '../../../context/LanguageContext';
 
 // ---------- resident ----------
 
 function ChildModal({ child, onClose }) {
   const editing = Boolean(child?._id);
+  const { t } = useT();
   const { values, bind, set, applyServerErrors } = useForm({
     name: child?.name || '',
     age: child?.age ?? '',
@@ -41,7 +43,7 @@ function ChildModal({ child, onClose }) {
   };
 
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${child.name}` : 'Add a child'}
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: child.name }) : 'Add a child'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={save}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" required {...bind('name')} />
@@ -69,7 +71,8 @@ function ChildModal({ child, onClose }) {
 function MyChildren() {
   const { data, isLoading } = useChildren({ limit: 50 });
   const [editing, setEditing] = useState(null);
-  const update = useUpdateChild({ success: (c) => (c.alertOnExit ? `Guards will alert you when ${c.name} leaves alone` : `Exit alerts off for ${c.name}`) });
+  const { t } = useT();
+  const update = useUpdateChild({ success: (c) => (c.alertOnExit ? t('Guards will alert you when {name} leaves alone', { name: c.name }) : t('Exit alerts off for {name}', { name: c.name })) });
   const remove = useRemoveChild();
   const children = data?.data || [];
   return (
@@ -87,12 +90,12 @@ function MyChildren() {
                 <ChildAvatar child={c} className="size-14" />
                 <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-900">{c.name}</p>
-                  {c.age != null && <p className="text-sm text-slate-500">{c.age} yrs</p>}
+                  {c.age != null && <p className="text-sm text-slate-500">{t('{age} yrs', { age: c.age })}</p>}
                   {c.notes && <p className="mt-1 text-xs text-slate-500">{c.notes}</p>}
                 </div>
               </div>
               <label className="mt-3 flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
-                <span className="text-sm text-slate-700">Alert me if my child leaves the gate alone</span>
+                <span className="text-sm text-slate-700">{t('Alert me if my child leaves the gate alone')}</span>
                 <input
                   type="checkbox"
                   role="switch"
@@ -107,7 +110,7 @@ function MyChildren() {
               </label>
               <div className="mt-3 flex items-center justify-between gap-2">
                 <Button size="sm" variant="ghost" icon={Trash2} className="text-slate-500 hover:bg-red-50 hover:text-red-600" loading={remove.isPending && remove.variables === c._id}
-                  onClick={() => window.confirm(`Remove ${c.name}? Guards will no longer see this child.`) && remove.mutate(c._id)}>
+                  onClick={() => window.confirm(t('Remove {name}? Guards will no longer see this child.', { name: c.name })) && remove.mutate(c._id)}>
                   Delete
                 </Button>
                 <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(c)}>Edit</Button>
@@ -124,22 +127,23 @@ function MyChildren() {
 function OpenAlert({ a }) {
   const [note, setNote] = useState('');
   const ack = useAcknowledgeAlert();
+  const { t } = useT();
   const answer = (response) => ack.mutate({ id: a._id, response, note: note.trim() || undefined });
   return (
     <Card className="overflow-hidden border-2 border-red-500">
       <div className="flex items-center gap-2 bg-red-600 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-white">
         <BellRing className="size-4 animate-pulse" />
-        Your child is at the gate
+        {t('Your child is at the gate')}
       </div>
       <div className="space-y-4 p-4">
         <div className="flex items-center gap-3">
           <ChildAvatar child={a.child} className="size-16" />
           <div className="min-w-0">
-            <p className="text-lg font-semibold text-slate-900">{a.child?.name} is leaving through {a.gate}</p>
+            <p className="text-lg font-semibold text-slate-900">{t('{name} is leaving through {gate}', { name: a.child?.name, gate: a.gate })}</p>
             <p className="text-sm text-slate-500">
-              {time(a.createdAt)} ({timeAgo(a.createdAt)}){a.raisedBy?.name ? ` · reported by ${a.raisedBy.name}` : ''}
+              {time(a.createdAt)} ({timeAgo(a.createdAt)}){a.raisedBy?.name ? ` · ${t('reported by {name}', { name: a.raisedBy.name })}` : ''}
             </p>
-            {a.note && <p className="mt-1 text-sm text-slate-700">Guard: “{a.note}”</p>}
+            {a.note && <p className="mt-1 text-sm text-slate-700">{t('Guard: “{note}”', { note: a.note })}</p>}
           </div>
         </div>
         <Input placeholder="Optional message for the guard" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -147,12 +151,12 @@ function OpenAlert({ a }) {
           <button type="button" disabled={ack.isPending} onClick={() => answer('ok')}
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 text-base font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60">
             <ShieldCheck className="size-5" />
-            OK, let them go
+            {t('OK, let them go')}
           </button>
           <button type="button" disabled={ack.isPending} onClick={() => answer('stop')}
             className="flex min-h-14 items-center justify-center gap-2 rounded-xl bg-red-600 px-4 text-base font-bold text-white shadow-sm hover:bg-red-700 disabled:opacity-60">
             <Hand className="size-5" />
-            STOP — hold my child
+            {t('STOP — hold my child')}
           </button>
         </div>
       </div>
@@ -167,6 +171,7 @@ function ResidentView() {
   const alerts = data?.data || [];
   const open = alerts.filter((a) => a.status === 'open');
   const past = alerts.filter((a) => a.status !== 'open');
+  const { t } = useT();
   return (
     <div>
       <PageHeader title="Child safety" description="Get an alert when your child walks out of the gate alone, and tell the guard what to do." />
@@ -188,7 +193,7 @@ function ResidentView() {
                     <p className="font-medium text-slate-900">{a.child?.name} · {a.gate}</p>
                     <p className="text-xs text-slate-500">
                       {time(a.createdAt)} ({timeAgo(a.createdAt)})
-                      {a.acknowledgedBy?.name ? ` · answered by ${a.acknowledgedBy.name}` : ''}
+                      {a.acknowledgedBy?.name ? ` · ${t('answered by {name}', { name: a.acknowledgedBy.name })}` : ''}
                       {a.ackNote ? ` · “${a.ackNote}”` : ''}
                     </p>
                   </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BellRing } from 'lucide-react';
 import { Button, Card, CardHeader } from '../../../components/ui';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { disablePush, enablePush, pushState } from '../push';
 
 const MESSAGES = {
@@ -14,6 +15,7 @@ const MESSAGES = {
 
 export function PushToggle() {
   const toast = useToast();
+  const { t } = useT();
   const [state, setState] = useState('loading');
   const [busy, setBusy] = useState(false);
 
@@ -26,10 +28,10 @@ export function PushToggle() {
     try {
       if (state === 'on') {
         await disablePush();
-        toast.success('Push notifications turned off on this device');
+        toast.success(t('Push notifications turned off on this device'));
       } else {
         await enablePush();
-        toast.success('Push notifications turned on');
+        toast.success(t('Push notifications turned on'));
       }
       setState(await pushState());
     } catch (err) {
@@ -45,7 +47,7 @@ export function PushToggle() {
       <CardHeader title="Notifications on this device" />
       <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
         <BellRing className="size-8 shrink-0 text-brand-500" />
-        <p className="flex-1 text-sm text-slate-600">{state === 'loading' ? 'Checking…' : MESSAGES[state]}</p>
+        <p className="flex-1 text-sm text-slate-600">{state === 'loading' ? t('Checking…') : t(MESSAGES[state])}</p>
         {['on', 'off'].includes(state) && (
           <Button variant={state === 'on' ? 'secondary' : 'primary'} loading={busy} onClick={toggle}>
             {state === 'on' ? 'Turn off' : 'Turn on'}

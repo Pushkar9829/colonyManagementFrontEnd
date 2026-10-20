@@ -61,7 +61,8 @@ describe('roles', () => {
 
 describe('translations', () => {
   it('every sidebar label and section has Hindi, Marathi and Punjabi text', async () => {
-    const { DICTIONARIES } = await import('./i18n');
+    const { loadDictionary } = await import('./i18n');
+    const DICTIONARIES = { hi: await loadDictionary('hi'), mr: await loadDictionary('mr'), pa: await loadDictionary('pa') };
     const { NAV_ITEMS, SECTIONS, ROLE_SECTIONS } = await import('../app/navigation');
     const roleLabels = NAV_ITEMS.flatMap((i) => Object.values(i.labels || {}));
     const keys = [...new Set([...NAV_ITEMS.map((i) => i.label), ...roleLabels, ...SECTIONS, ...ROLE_SECTIONS])];

@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { Button, Input } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { LoginBrandBanner, useLoginBrand } from '../../whitelabel/components/BrandMark';
 
 export default function RegisterSocietyPage() {
+  const { t } = useT();
   const { registerSociety } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -57,11 +59,11 @@ export default function RegisterSocietyPage() {
   return (
     <div>
       <LoginBrandBanner brand={brand} />
-      <h1 className="text-2xl font-semibold text-slate-900">Register your society</h1>
-      <p className="mt-1 text-sm text-slate-500">You'll become the society admin. Add blocks and units next.</p>
+      <h1 className="text-2xl font-semibold text-slate-900">{t('Register your society')}</h1>
+      <p className="mt-1 text-sm text-slate-500">{t("You'll become the society admin. Add blocks and units next.")}</p>
       <form onSubmit={submit} className="mt-6 space-y-4">
         <fieldset className="space-y-4">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">Society</legend>
+          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Society')}</legend>
           <Input label="Society name" required {...bind('name')} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="City" {...bind('city')} />
@@ -70,7 +72,7 @@ export default function RegisterSocietyPage() {
           <Input label="Address" {...bind('address')} />
         </fieldset>
         <fieldset className="space-y-4 pt-2">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">Admin account</legend>
+          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Admin account')}</legend>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Your name" required {...bind('adminName')} />
             <Input label="Designation" {...bind('designation')} />
@@ -80,8 +82,8 @@ export default function RegisterSocietyPage() {
           <Input label="Password" type="password" required hint="At least 8 characters" {...bind('password')} />
         </fieldset>
         <fieldset className="space-y-4 pt-2">
-          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">Licence key (optional)</legend>
-          <Input label="Licence key" placeholder="CH-XXXX-XXXX-XXXX" autoComplete="off" hint={brand ? `From ${brand.appName}` : 'Only if your provider gave you one'} {...bind('licenceKey')} />
+          <legend className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Licence key (optional)')}</legend>
+          <Input label="Licence key" placeholder="CH-XXXX-XXXX-XXXX" autoComplete="off" hint={brand ? t('From {app}', { app: brand.appName }) : 'Only if your provider gave you one'} {...bind('licenceKey')} />
         </fieldset>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <Button type="submit" loading={loading} className="w-full">
@@ -89,9 +91,9 @@ export default function RegisterSocietyPage() {
         </Button>
       </form>
       <p className="mt-6 text-sm text-slate-600">
-        Already registered?{' '}
+        {t('Already registered?')}{' '}
         <Link to="/login" className="font-medium text-brand-600 hover:underline">
-          Log in
+          {t('Log in')}
         </Link>
       </p>
     </div>

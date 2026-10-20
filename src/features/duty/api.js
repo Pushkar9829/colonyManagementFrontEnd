@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 // Every key starts with 'guardDuty' so server-side realtime invalidation refreshes them all.
 const inv = { invalidate: ['guardDuty'] };
@@ -19,7 +20,10 @@ export const useAcknowledgeHandover = (o) => useApiMutation(({ id, ...b }) => ap
 
 export const useIncidents = (params) => useQuery({ queryKey: ['guardDuty', 'incidents', params], queryFn: () => api.list('/guard-duty/incidents', params), placeholderData: (p) => p });
 export const useIncident = (id) => useQuery({ queryKey: ['guardDuty', 'incidents', 'detail', id], queryFn: () => api.get(`/guard-duty/incidents/${id}`), enabled: Boolean(id) });
-export const useCreateIncident = (o) => useApiMutation((b) => api.post('/guard-duty/incidents', b), { ...inv, success: (i) => `Incident ${i.number} reported`, ...o });
+export const useCreateIncident = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/guard-duty/incidents', b), { ...inv, success: (i) => t('Incident {number} reported', { number: i.number }), ...o });
+};
 export const useCloseIncident = (o) => useApiMutation(({ id, actionTaken }) => api.post(`/guard-duty/incidents/${id}/close`, { actionTaken }), { ...inv, success: 'Incident closed', ...o });
 
 export const useOccurrenceBook = (date) => useQuery({ queryKey: ['guardDuty', 'book', date], queryFn: () => api.get('/guard-duty/occurrence-book', { date }) });

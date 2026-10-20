@@ -5,6 +5,7 @@ import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { COURIERS, useLogParcel, usePreferenceCheck } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const INITIAL = { unit: '', courier: '', otherCourier: '', trackingNo: '', recipientName: '', packages: '1', storageLocation: '', note: '' };
 const opt = (v) => (typeof v === 'string' && v.trim() ? v.trim() : undefined);
@@ -25,6 +26,7 @@ function useDebounced(value, ms = 300) {
 export function LogParcelForm({ onDone, visitorId, gateId }) {
   const { values, set, bind, errors, applyServerErrors, setValues } = useForm(INITIAL);
   const [files, setFiles] = useState([]);
+  const { t } = useT();
   const [formKey, setFormKey] = useState(0);
   const courier = values.courier === 'Other' ? values.otherCourier.trim() : values.courier;
   const debouncedCourier = useDebounced(courier);
@@ -74,7 +76,7 @@ export function LogParcelForm({ onDone, visitorId, gateId }) {
                 values.courier === c ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 bg-white text-slate-700 hover:border-brand-300',
               )}
             >
-              {c}
+              {c === 'Other' ? t('Other') : c}
             </button>
           ))}
         </div>
@@ -85,10 +87,10 @@ export function LogParcelForm({ onDone, visitorId, gateId }) {
         <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
           <CircleCheck className="mt-0.5 size-4 shrink-0" />
           <div>
-            <p className="font-semibold">Household says: leave at gate — no approval needed</p>
+            <p className="font-semibold">{t('Household says: leave at gate — no approval needed')}</p>
             <p className="text-xs text-emerald-700">
               {check.data.preference?.company}
-              {check.data.preference?.oneOff ? ' · today only' : ''}
+              {check.data.preference?.oneOff ? ` · ${t('today only')}` : ''}
               {check.data.preference?.note ? ` · ${check.data.preference.note}` : ''}
             </p>
           </div>

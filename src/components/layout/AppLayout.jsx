@@ -162,11 +162,12 @@ function BottomBar({ onMenu }) {
 
 function LiveDot() {
   const { connected } = useRealtime();
+  const { t } = useT();
   return (
     // phones: the offline banner below the header covers losing the connection, so the dot is desktop-only
-    <span className="hidden items-center gap-1.5 text-xs text-slate-400 sm:flex" title={connected ? 'Live updates on' : 'Reconnecting…'}>
+    <span className="hidden items-center gap-1.5 text-xs text-slate-400 sm:flex" title={connected ? t('Live updates on') : t('Reconnecting…')}>
       <span className={cn('size-2 rounded-full', connected ? 'bg-emerald-500' : 'bg-amber-400')} />
-      {connected ? 'Live' : 'Offline'}
+      {connected ? t('Live') : t('Offline')}
     </span>
   );
 }
@@ -230,7 +231,7 @@ function Shell() {
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/40" onClick={closeMobile} />
           <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-xl">
-            <button type="button" onClick={closeMobile} className="absolute right-3 top-4 rounded-md p-2 text-slate-400 hover:bg-slate-100" aria-label="Close menu">
+            <button type="button" onClick={closeMobile} className="absolute right-3 top-4 rounded-md p-2 text-slate-400 hover:bg-slate-100" aria-label={t('Close menu')}>
               <X className="size-5" />
             </button>
             <Sidebar onNavigate={closeMobile} />
@@ -240,7 +241,7 @@ function Shell() {
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-1.5 border-b border-slate-200 bg-white/90 px-3 backdrop-blur sm:gap-2 sm:px-6">
-          <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Open menu">
+          <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label={t('Open menu')}>
             <Menu className="size-5" />
           </button>
           <CurrentHome onOpen={() => setMobileOpen(true)} />

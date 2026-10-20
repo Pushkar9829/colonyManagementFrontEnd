@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, BASE_URL, refreshSession, tokens, ApiError } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 const inv = { invalidate: ['visitors', 'dashboard', 'notifications'] };
 
@@ -9,12 +10,14 @@ export const useVisitors = (params, options) =>
 
 export const usePasses = (params) => useQuery({ queryKey: ['visitors', 'passes', params], queryFn: () => api.list('/visitors/passes', params) });
 
-export const useLogVisitor = (o) =>
-  useApiMutation((b) => api.post('/visitors', b), {
+export const useLogVisitor = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/visitors', b), {
     ...inv,
-    success: (v) => (v.leaveAtGate ? 'Delivery can be left at the gate' : v.status === 'pending' ? 'Waiting for resident approval' : 'Entry logged'),
+    success: (v) => (v.leaveAtGate ? t('Delivery can be left at the gate') : v.status === 'pending' ? t('Waiting for resident approval') : t('Entry logged')),
     ...o,
   });
+};
 export const useApproveVisitor = () => useApiMutation((id) => api.post(`/visitors/${id}/approve`), { ...inv, success: 'Visitor allowed in' });
 export const useDenyVisitor = () => useApiMutation((id) => api.post(`/visitors/${id}/deny`), { ...inv, success: 'Visitor denied' });
 export const useGuardSendBack = () => useApiMutation((id) => api.post(`/visitors/${id}/send-back`), { ...inv, success: 'Visitor sent back' });
@@ -27,8 +30,10 @@ export const useHouseholdContacts = (id) => useQuery({ queryKey: ['visitors', 'c
 export const useCreatePass = (o) => useApiMutation((b) => api.post('/visitors/passes', b), { invalidate: ['visitors'], ...o });
 export const useCancelPass = () => useApiMutation((id) => api.post(`/visitors/passes/${id}/cancel`), { invalidate: ['visitors'], success: 'Pass cancelled' });
 // body: { code } or { qr }
-export const useVerifyPass = (o) =>
-  useApiMutation((body) => api.post('/visitors/passes/verify', typeof body === 'string' ? { code: body } : body), { ...inv, success: (v) => `${v.name} entered (${v.unit.label})`, ...o });
+export const useVerifyPass = (o) => {
+  const { t } = useT();
+  return useApiMutation((body) => api.post('/visitors/passes/verify', typeof body === 'string' ? { code: body } : body), { ...inv, success: (v) => t('{name} entered ({unit})', { name: v.name, unit: v.unit.label }), ...o });
+};
 
 // ---- watchlist ----
 export const useWatchlist = (params, options) => useQuery({ queryKey: ['watchlist', params], queryFn: () => api.list('/visitors/watchlist', params), placeholderData: (p) => p, ...options });

@@ -90,26 +90,26 @@ export default function LoginPage() {
 
       <div className="mt-6 space-y-2 text-sm text-slate-600">
         <p>
-          New resident?{' '}
+          {t('New resident?')}{' '}
           <Link to="/join" className="font-medium text-brand-600 hover:underline">
-            Join your society
+            {t('Join your society')}
           </Link>
         </p>
         <p>
-          Managing a society?{' '}
+          {t('Managing a society?')}{' '}
           <Link to="/register" className="font-medium text-brand-600 hover:underline">
-            Register it here
+            {t('Register it here')}
           </Link>
         </p>
       </div>
 
       {(import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true') && (
         <div className="mt-8 rounded-xl border border-dashed border-slate-300 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Try the demo — tap a role to log in</p>
-          <p className="mt-0.5 text-xs text-slate-400">All demo accounts use the password {DEMO_PASSWORD}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('Try the demo — tap a role to log in')}</p>
+          <p className="mt-0.5 text-xs text-slate-400">{t('All demo accounts use the password {password}', { password: DEMO_PASSWORD })}</p>
           {[['Society', DEMO], ['Platform team', PLATFORM_DEMO]].map(([group, accounts]) => (
             <div key={group} className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="w-full text-[11px] font-medium text-slate-400 sm:w-24">{group}</span>
+              <span className="w-full text-[11px] font-medium text-slate-400 sm:w-24">{t(group)}</span>
               {accounts.map(([name, email]) => (
                 <button
                   key={email}
@@ -122,7 +122,7 @@ export default function LoginPage() {
                   }}
                   className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200"
                 >
-                  {name}
+                  {t(name)}
                 </button>
               ))}
             </div>

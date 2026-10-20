@@ -6,24 +6,25 @@ import { useForm } from '../../../hooks/useForm';
 import { QrImage, qrDataUrl } from '../../visitors/components/QrImage';
 import { getPosition, useCheckpoints, useCreateCheckpoint, useDeleteCheckpoint, useUpdateCheckpoint } from '../api';
 import { escapeHtml } from './shared';
+import { useT } from '../../../context/LanguageContext';
 
 // Opens a separate window with only the QR cards so the app shell is not printed.
 // The window is opened synchronously (inside the click) to avoid popup blockers, then filled.
-async function printCheckpoints(items, toast) {
+async function printCheckpoints(items, toast, t) {
   const win = window.open('', '_blank', 'width=900,height=700');
   if (!win) {
-    toast.error('Allow pop-ups for this site to print QR codes');
+    toast.error(t('Allow pop-ups for this site to print QR codes'));
     return;
   }
-  win.document.write('<p style="font-family:sans-serif;padding:24px">Preparing QR codes…</p>');
+  win.document.write(`<p style="font-family:sans-serif;padding:24px">${escapeHtml(t('Preparing QR codes…'))}</p>`);
   const urls = await Promise.all(items.map((c) => qrDataUrl(c.qr, 480)));
   const cards = items
     .map(
-      (c, i) => `<div class="card"><img src="${urls[i]}" alt="QR" /><div class="name">${escapeHtml(c.name)}</div>${c.location ? `<div class="loc">${escapeHtml(c.location)}</div>` : ''}<div class="hint">Patrol checkpoint · scan with ColonyHub</div></div>`,
+      (c, i) => `<div class="card"><img src="${urls[i]}" alt="QR" /><div class="name">${escapeHtml(c.name)}</div>${c.location ? `<div class="loc">${escapeHtml(c.location)}</div>` : ''}<div class="hint">${escapeHtml(t('Patrol checkpoint · scan with ColonyHub'))}</div></div>`,
     )
     .join('');
   win.document.open();
-  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Patrol checkpoint QR codes</title><style>
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(t('Patrol checkpoint QR codes'))}</title><style>
     *{box-sizing:border-box}body{margin:0;padding:16px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#0f172a}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
     .card{border:2px dashed #94a3b8;border-radius:12px;padding:16px;text-align:center;break-inside:avoid;page-break-inside:avoid}
@@ -40,6 +41,7 @@ async function printCheckpoints(items, toast) {
 
 function CheckpointForm({ open, onClose, checkpoint }) {
   const toast = useToast();
+  const { t } = useT();
   const editing = Boolean(checkpoint);
   const { values, bind, set, applyServerErrors } = useForm({
     name: checkpoint?.name || '',
@@ -58,10 +60,10 @@ function CheckpointForm({ open, onClose, checkpoint }) {
     setLocating(true);
     const pos = await getPosition(10000);
     setLocating(false);
-    if (!pos) return toast.error('Could not get your location. Allow location access and try again.');
+    if (!pos) return toast.error(t('Could not get your location. Allow location access and try again.'));
     set('lat', pos.lat.toFixed(6));
     set('lng', pos.lng.toFixed(6));
-    toast.success(pos.accuracyM > 50 ? `Location set (accuracy ~${pos.accuracyM} m — retry outdoors for a better fix)` : `Location set (accuracy ~${pos.accuracyM} m)`);
+    toast.success(pos.accuracyM > 50 ? t('Location set (accuracy ~{m} m — retry outdoors for a better fix)', { m: pos.accuracyM }) : t('Location set (accuracy ~{m} m)', { m: pos.accuracyM }));
     return undefined;
   };
 
@@ -82,7 +84,7 @@ function CheckpointForm({ open, onClose, checkpoint }) {
         <Input label="Longitude" type="number" step="any" inputMode="decimal" {...bind('lng')} />
         <div className="sm:col-span-2">
           <Button variant="secondary" icon={Crosshair} loading={locating} onClick={useHere}>Use my current location</Button>
-          <p className="mt-1 text-xs text-slate-500">Stand at the checkpoint. Without coordinates, scans are accepted without a GPS check.</p>
+          <p className="mt-1 text-xs text-slate-500">{t('Stand at the checkpoint. Without coordinates, scans are accepted without a GPS check.')}</p>
         </div>
         <Input label="Allowed radius (m)" type="number" min={10} max={1000} {...bind('radiusM')} />
         {editing && <Checkbox className="self-end pb-2" label="Active" checked={values.active} onChange={(e) => set('active', e.target.checked)} />}
@@ -93,6 +95,7 @@ function CheckpointForm({ open, onClose, checkpoint }) {
 
 function QrModal({ checkpoint, onClose }) {
   const toast = useToast();
+  const { t } = useT();
   const download = async () => {
     const url = await qrDataUrl(checkpoint.qr, 800);
     const a = document.createElement('a');
@@ -102,10 +105,10 @@ function QrModal({ checkpoint, onClose }) {
   };
   return (
     <Modal open={Boolean(checkpoint)} onClose={onClose} title={checkpoint?.name} description={checkpoint?.location} size="sm"
-      footer={<><Button variant="secondary" icon={Download} onClick={download}>Download PNG</Button><Button icon={Printer} onClick={() => printCheckpoints([checkpoint], toast)}>Print</Button></>}>
+      footer={<><Button variant="secondary" icon={Download} onClick={download}>Download PNG</Button><Button icon={Printer} onClick={() => printCheckpoints([checkpoint], toast, t)}>Print</Button></>}>
       {checkpoint && (
         <div className="flex flex-col items-center gap-2">
-          <QrImage value={checkpoint.qr} size={240} label={`${checkpoint.name} QR`} />
+          <QrImage value={checkpoint.qr} size={240} label={t('{name} QR', { name: checkpoint.name })} />
           <p className="font-mono text-xs text-slate-500">{checkpoint.code}</p>
         </div>
       )}
@@ -115,6 +118,7 @@ function QrModal({ checkpoint, onClose }) {
 
 export function CheckpointsTab() {
   const toast = useToast();
+  const { t } = useT();
   const { data, isLoading } = useCheckpoints();
   const [editing, setEditing] = useState(null); // null | 'new' | checkpoint
   const [qrFor, setQrFor] = useState(null);
@@ -128,9 +132,9 @@ export function CheckpointsTab() {
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-4">
-        <p className="text-sm text-slate-500">{data?.length ?? 0} checkpoints · print and fix the QR codes at each spot</p>
+        <p className="text-sm text-slate-500">{t('{count} checkpoints · print and fix the QR codes at each spot', { count: data?.length ?? 0 })}</p>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" icon={Printer} disabled={!active.length} onClick={() => printCheckpoints(active, toast)}>Print QR codes</Button>
+          <Button variant="secondary" icon={Printer} disabled={!active.length} onClick={() => printCheckpoints(active, toast, t)}>Print QR codes</Button>
           <Button icon={Plus} onClick={() => setEditing('new')}>New checkpoint</Button>
         </div>
       </div>
@@ -140,15 +144,15 @@ export function CheckpointsTab() {
         empty="No checkpoints yet"
         columns={[
           { key: 'name', header: 'Checkpoint', render: (c) => <div><p className="font-medium text-slate-900">{c.name}</p>{c.location && <p className="text-xs text-slate-500">{c.location}</p>}</div> },
-          { key: 'gps', header: 'GPS', render: (c) => (c.lat != null && c.lng != null ? <span className="text-xs">{c.lat.toFixed(5)}, {c.lng.toFixed(5)} · {c.radiusM} m</span> : <Badge>No GPS</Badge>) },
+          { key: 'gps', header: 'GPS', render: (c) => (c.lat != null && c.lng != null ? <span className="text-xs">{c.lat.toFixed(5)}, {c.lng.toFixed(5)} · {c.radiusM} m</span> : <Badge>{t('No GPS')}</Badge>) },
           { key: 'active', header: 'Status', render: (c) => <StatusBadge status={c.active ? 'active' : 'inactive'} /> },
           {
             key: 'actions', header: '', className: 'text-right', render: (c) => (
               <div className="flex justify-end gap-1">
-                <Button size="sm" variant="ghost" icon={QrCode} onClick={() => setQrFor(c)} aria-label="Show QR">QR</Button>
-                <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(c)} aria-label="Edit" />
-                <Button size="sm" variant="ghost" icon={RefreshCw} onClick={() => setConfirm({ type: 'regen', cp: c })} aria-label="Regenerate code" title="Regenerate code" />
-                <Button size="sm" variant="ghost" icon={Trash2} className="text-red-600" onClick={() => setConfirm({ type: 'delete', cp: c })} aria-label="Delete" />
+                <Button size="sm" variant="ghost" icon={QrCode} onClick={() => setQrFor(c)} aria-label={t('Show QR')}>QR</Button>
+                <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(c)} aria-label={t('Edit')} />
+                <Button size="sm" variant="ghost" icon={RefreshCw} onClick={() => setConfirm({ type: 'regen', cp: c })} aria-label={t('Regenerate code')} title={t('Regenerate code')} />
+                <Button size="sm" variant="ghost" icon={Trash2} className="text-red-600" onClick={() => setConfirm({ type: 'delete', cp: c })} aria-label={t('Delete')} />
               </div>
             ),
           },
@@ -157,7 +161,7 @@ export function CheckpointsTab() {
       {editing && <CheckpointForm open onClose={() => setEditing(null)} checkpoint={editing === 'new' ? null : editing} />}
       <QrModal checkpoint={qrFor} onClose={() => setQrFor(null)} />
       <Modal open={Boolean(confirm)} onClose={close} size="sm"
-        title={confirm?.type === 'delete' ? `Delete ${confirm?.cp.name}?` : `New code for ${confirm?.cp.name}?`}
+        title={confirm?.type === 'delete' ? t('Delete {name}?', { name: confirm?.cp.name }) : t('New code for {name}?', { name: confirm?.cp.name })}
         footer={<>
           <Button variant="secondary" onClick={close}>Cancel</Button>
           {confirm?.type === 'delete'
@@ -165,7 +169,7 @@ export function CheckpointsTab() {
             : <Button loading={regen.isPending} onClick={() => regen.mutate({ id: confirm.cp._id, regenerateCode: true })}>Regenerate</Button>}
         </>}>
         <p className="text-sm text-slate-600">
-          {confirm?.type === 'delete' ? 'Past scans stay in the history. This cannot be undone.' : 'The printed QR stops working immediately. Print and replace it at the checkpoint.'}
+          {confirm?.type === 'delete' ? t('Past scans stay in the history. This cannot be undone.') : t('The printed QR stops working immediately. Print and replace it at the checkpoint.')}
         </p>
         {confirmError && <p className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{confirmError}</p>}
       </Modal>

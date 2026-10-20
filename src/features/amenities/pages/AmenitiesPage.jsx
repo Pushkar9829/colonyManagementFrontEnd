@@ -5,6 +5,7 @@ import { BarChart3, CalendarDays, Clock, Pencil, Plus, Ticket, Trash2, Users } f
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { date as fmtDate, label, money, toPaise, toRupees, todayISO } from '../../../lib/format';
@@ -126,15 +127,16 @@ function AmenityModal({ amenity, onClose }) {
   );
 }
 
-function priceLine(amenity) {
+function priceLine(amenity, t) {
   const parts = [];
-  if (amenity.fee) parts.push(`${money(amenity.fee)} per slot`);
-  if (amenity.deposit) parts.push(`${money(amenity.deposit)} refundable deposit`);
-  if (parts.length && amenity.paymentMode === 'desk') parts.push('pay at the office');
+  if (amenity.fee) parts.push(t('{amount} per slot', { amount: money(amenity.fee) }));
+  if (amenity.deposit) parts.push(t('{amount} refundable deposit', { amount: money(amenity.deposit) }));
+  if (parts.length && amenity.paymentMode === 'desk') parts.push(t('pay at the office'));
   return parts.join(' · ');
 }
 
 function BookingPanel({ amenity }) {
+  const { t } = useT();
   const [day, setDay] = useState(todayISO());
   const [slot, setSlot] = useState(null);
   const [notes, setNotes] = useState('');
@@ -158,10 +160,10 @@ function BookingPanel({ amenity }) {
     <Card className="p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-slate-900">Book {amenity.name}</h3>
-          <p className="text-sm text-slate-500">{amenity.slotMinutes} min slots · {amenity.requiresApproval ? 'needs approval' : 'instant confirmation'}{priceLine(amenity) ? ` · ${priceLine(amenity)}` : ''}</p>
+          <h3 className="font-semibold text-slate-900">{t('Book {name}', { name: amenity.name })}</h3>
+          <p className="text-sm text-slate-500">{t('{n} min slots', { n: amenity.slotMinutes })} · {amenity.requiresApproval ? t('needs approval') : t('instant confirmation')}{priceLine(amenity, t) ? ` · ${priceLine(amenity, t)}` : ''}</p>
         </div>
-        <Input title="Booking date" type="date" min={todayISO()} value={day} onChange={(e) => { setDay(e.target.value); setSlot(null); }} />
+        <Input title={t('Booking date')} type="date" min={todayISO()} value={day} onChange={(e) => { setDay(e.target.value); setSlot(null); }} />
       </div>
       {amenity.photos?.length > 0 && (
         <div className="mt-3 flex gap-2 overflow-x-auto">
@@ -171,7 +173,7 @@ function BookingPanel({ amenity }) {
       {amenity.rules && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">{amenity.rules}</p>}
       {amenity.fee > 0 && (
         <p className="mt-2 text-xs text-slate-500">
-          Cancellation: full fee refund up to {policy.fullRefundHours ?? 24} h before, {policy.partialRefundPercent ?? 50}% up to {policy.partialRefundHours ?? 6} h before, none after.
+          {t('Cancellation: full fee refund up to {full} h before, {percent}% up to {partial} h before, none after.', { full: policy.fullRefundHours ?? 24, percent: policy.partialRefundPercent ?? 50, partial: policy.partialRefundHours ?? 6 })}
         </p>
       )}
       <div className="mt-4">
@@ -184,7 +186,7 @@ function BookingPanel({ amenity }) {
                 <button key={s.startTime} type="button" disabled={disabled} onClick={() => setSlot(s)}
                   className={cn('rounded-lg border px-2 py-2 text-sm', selected ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 hover:border-brand-300', disabled && 'cursor-not-allowed bg-slate-50 text-slate-300 hover:border-slate-200')}>
                   <p className="font-medium">{s.startTime}–{s.endTime}</p>
-                  <p className="text-[11px]">{past(s) ? 'Past' : s.available ? `${s.available} left` : 'Full'}</p>
+                  <p className="text-[11px]">{past(s) ? t('Past') : s.available ? t('{n} left', { n: s.available }) : t('Full')}</p>
                 </button>
               );
             })}
@@ -195,7 +197,7 @@ function BookingPanel({ amenity }) {
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
           <Input className="flex-1" label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} />
           <Button loading={book.isPending || pay.isPending} onClick={() => book.mutate({ amenity: amenity._id, date: day, startTime: slot.startTime, endTime: slot.endTime, notes: notes || undefined })}>
-            {amenity.fee + (amenity.deposit || 0) > 0 && amenity.paymentMode !== 'desk' && !amenity.requiresApproval ? `Book & pay ${slot.startTime}–${slot.endTime}` : `Book ${slot.startTime}–${slot.endTime}`}
+            {amenity.fee + (amenity.deposit || 0) > 0 && amenity.paymentMode !== 'desk' && !amenity.requiresApproval ? t('Book & pay {slot}', { slot: `${slot.startTime}–${slot.endTime}` }) : t('Book {slot}', { slot: `${slot.startTime}–${slot.endTime}` })}
           </Button>
         </div>
       )}
@@ -204,6 +206,7 @@ function BookingPanel({ amenity }) {
 }
 
 function CancelModal({ booking, manager, onClose }) {
+  const { t } = useT();
   const { data: q, isLoading } = useCancellationQuote(booking._id);
   const [reason, setReason] = useState('');
   const cancel = useCancelBooking({ onSuccess: onClose });
@@ -213,10 +216,10 @@ function CancelModal({ booking, manager, onClose }) {
       <p className="text-sm text-slate-600">{booking.amenity?.name} · {fmtDate(booking.date)} {booking.startTime}–{booking.endTime}</p>
       {isLoading ? <Spinner className="mt-4" /> : q && q.feePaid + q.depositPaid > 0 ? (
         <div className="mt-3 space-y-1 rounded-lg bg-slate-50 p-3 text-sm">
-          <p>Fee refund: <span className="font-semibold">{money(q.feeRefund)}</span> of {money(q.feePaid)} ({q.percent}%)</p>
-          {q.depositPaid > 0 && <p>Deposit refund: <span className="font-semibold">{money(q.depositRefund)}</span></p>}
+          <p>{(() => { const [pre, post] = t('Fee refund: {refund} of {paid} ({percent}%)', { paid: money(q.feePaid), percent: q.percent }).split('{refund}'); return <>{pre}<span className="font-semibold">{money(q.feeRefund)}</span>{post}</>; })()}</p>
+          {q.depositPaid > 0 && <p>{t('Deposit refund:')} <span className="font-semibold">{money(q.depositRefund)}</span></p>}
         </div>
-      ) : <p className="mt-3 text-sm text-slate-500">Nothing has been paid for this booking.</p>}
+      ) : <p className="mt-3 text-sm text-slate-500">{t('Nothing has been paid for this booking.')}</p>}
       {manager && <Input className="mt-3" label="Reason (sent to the resident)" value={reason} onChange={(e) => setReason(e.target.value)} />}
     </Modal>
   );
@@ -256,10 +259,12 @@ function DepositModal({ booking, onClose }) {
 }
 
 function BookingsTable({ params, manager, showDecide }) {
+  const { t } = useT();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useBookings({ ...params, page });
   const decide = useDecideBooking();
   const pay = usePayBooking();
+  const online = useOnlinePaymentStatus(!manager).data?.online === true;
   const attendance = useMarkAttendance();
   const [cancelling, setCancelling] = useState(null);
   const [desk, setDesk] = useState(null);
@@ -276,22 +281,22 @@ function BookingsTable({ params, manager, showDecide }) {
           {
             key: 'fee', header: 'Charges', render: (b) => (b.fee || b.deposit ? (
               <div className="text-xs">
-                <p>{money(b.fee)}{b.deposit ? ` + ${money(b.deposit)} dep.` : ''}</p>
-                <p className="text-slate-500">{label(b.paymentStatus)}{b.deposit && b.depositStatus !== 'due' ? ` · deposit ${label(b.depositStatus)}` : ''}</p>
+                <p>{money(b.fee)}{b.deposit ? ` + ${t('{amount} dep.', { amount: money(b.deposit) })}` : ''}</p>
+                <p className="text-slate-500">{t(label(b.paymentStatus))}{b.deposit && b.depositStatus !== 'due' ? ` · ${t('deposit {status}', { status: t(label(b.depositStatus)) })}` : ''}</p>
               </div>
-            ) : 'Free'),
+            ) : t('Free')),
           },
-          { key: 'status', header: 'Status', render: (b) => <div className="flex items-center gap-1"><StatusBadge status={b.status} />{b.attendance === 'no_show' && <Badge tone="red">No-show</Badge>}</div> },
+          { key: 'status', header: 'Status', render: (b) => <div className="flex items-center gap-1"><StatusBadge status={b.status} />{b.attendance === 'no_show' && <Badge tone="red">{t('No-show')}</Badge>}</div> },
           {
             key: 'a', header: '', render: (b) => (
               <div className="flex flex-wrap justify-end gap-1">
                 {showDecide && b.status === 'pending' && (
                   <>
                     <Button size="sm" variant="success" onClick={() => decide.mutate({ id: b._id, approve: true })}>Approve</Button>
-                    <Button size="sm" variant="ghost" onClick={() => { const note = window.prompt('Reason for rejection'); if (note !== null) decide.mutate({ id: b._id, approve: false, note: note || undefined }); }}>Reject</Button>
+                    <Button size="sm" variant="ghost" onClick={() => { const note = window.prompt(t('Reason for rejection')); if (note !== null) decide.mutate({ id: b._id, approve: false, note: note || undefined }); }}>Reject</Button>
                   </>
                 )}
-                {!manager && b.status === 'payment_pending' && (online ? <Button size="sm" loading={pay.isPending && pay.variables?._id === b._id} onClick={() => pay.mutate(b)}>Pay {money(b.fee + b.deposit)}</Button> : <span className="text-xs text-slate-500">Pay {money(b.fee + b.deposit)} at the society office</span>)}
+                {!manager && b.status === 'payment_pending' && (online ? <Button size="sm" loading={pay.isPending && pay.variables?._id === b._id} onClick={() => pay.mutate(b)}>{t('Pay {amount}', { amount: money(b.fee + b.deposit) })}</Button> : <span className="text-xs text-slate-500">{t('Pay {amount} at the society office', { amount: money(b.fee + b.deposit) })}</span>)}
                 {manager && ['pay_at_desk', 'pending'].includes(b.paymentStatus) && ['confirmed', 'payment_pending', 'pending'].includes(b.status) && <Button size="sm" variant="secondary" onClick={() => setDesk(b)}>Record payment</Button>}
                 {manager && b.depositStatus === 'held' && bookingEnd(b) < now && <Button size="sm" variant="secondary" onClick={() => setDeposit(b)}>Refund deposit</Button>}
                 {manager && b.status === 'confirmed' && !b.attendance && bookingStart(b) < now && (
@@ -315,6 +320,7 @@ function BookingsTable({ params, manager, showDecide }) {
 
 export default function AmenitiesPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const manager = isManager(user);
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || (manager ? 'amenities' : 'book');
@@ -357,16 +363,16 @@ export default function AmenitiesPage() {
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="font-semibold text-slate-900">{a.name}</h3>
                       <div className="flex gap-1">
-                        {!a.active && <Badge tone="red">Inactive</Badge>}
-                        {a.requiresApproval && <Badge tone="amber">Approval</Badge>}
-                        {manager && <button type="button" onClick={() => setEditing(a)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label={`Edit ${a.name}`}><Pencil className="size-4" /></button>}
+                        {!a.active && <Badge tone="red">{t('Inactive')}</Badge>}
+                        {a.requiresApproval && <Badge tone="amber">{t('Approval')}</Badge>}
+                        {manager && <button type="button" onClick={() => setEditing(a)} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600" aria-label={t('Edit {name}', { name: a.name })}><Pencil className="size-4" /></button>}
                       </div>
                     </div>
                     {a.description && <p className="mt-1 line-clamp-2 text-sm text-slate-500">{a.description}</p>}
                     <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
                       <span className="flex items-center gap-1"><Clock className="size-3.5" />{a.openTime}–{a.closeTime}</span>
-                      <span className="flex items-center gap-1"><Users className="size-3.5" />{a.capacity} per slot</span>
-                      <span>{a.fee ? money(a.fee) : 'Free'}{a.deposit ? ` + ${money(a.deposit)} deposit` : ''}</span>
+                      <span className="flex items-center gap-1"><Users className="size-3.5" />{t('{n} per slot', { n: a.capacity })}</span>
+                      <span>{a.fee ? money(a.fee) : t('Free')}{a.deposit ? ` + ${t('{amount} deposit', { amount: money(a.deposit) })}` : ''}</span>
                     </div>
                   </div>
                 </Card>

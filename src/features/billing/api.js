@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api, upload } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { useToast } from '../../context/ToastContext';
+import { useT } from '../../context/LanguageContext';
 import { downloadFile } from './download';
 
 const inv = { invalidate: ['bills', 'payments', 'dashboard', 'finance'] };
@@ -41,8 +42,14 @@ export const useDecideWaiver = () =>
 export const useIssueCredit = (o) => useApiMutation((b) => api.post('/bills/credits', b), { ...inv, success: 'Credit note issued', ...o });
 export const useApplyCredit = () => useApiMutation((unit) => api.post('/bills/credits/apply', { unit }), { ...inv, success: (r) => (r.applied ? 'Advance applied to open bills' : 'No open bills to apply it to') });
 export const useRefund = (o) => useApiMutation((b) => api.post('/bills/refunds', b), { ...inv, success: 'Refund recorded', ...o });
-export const useEmailBill = () => useApiMutation((id) => api.post(`/bills/${id}/email`), { success: (r) => `Bill emailed to ${r.to}` });
-export const useEmailReceipt = () => useApiMutation((id) => api.post(`/payments/${id}/email`), { success: (r) => `Receipt emailed to ${r.to}` });
+export const useEmailBill = () => {
+  const { t } = useT();
+  return useApiMutation((id) => api.post(`/bills/${id}/email`), { success: (r) => t('Bill emailed to {to}', { to: r.to }) });
+};
+export const useEmailReceipt = () => {
+  const { t } = useT();
+  return useApiMutation((id) => api.post(`/payments/${id}/email`), { success: (r) => t('Receipt emailed to {to}', { to: r.to }) });
+};
 export const useAutopayOptIn = (o) => useApiMutation((b) => api.post('/payments/autopay', b), { invalidate: ['finance'], success: 'Autopay is on', ...o });
 export const useAutopayCancel = () => useApiMutation(() => api.del('/payments/autopay'), { invalidate: ['finance'], success: 'Autopay turned off' });
 export const useCancelMandate = () => useApiMutation((id) => api.post(`/payments/mandates/${id}/cancel`), { invalidate: ['finance'], success: 'Mandate cancelled' });
@@ -145,4 +152,7 @@ async function setupAutopay({ maxAmount, method }) {
 export const useSetupAutopay = (o) =>
   useApiMutation(setupAutopay, { invalidate: ['finance'], success: (m) => (m.status === 'active' ? 'Autopay is on' : 'Waiting for your bank to approve the mandate'), ...o });
 
-export const usePayOnline = (o) => useApiMutation(payOnline, { ...inv, success: (p) => `Payment successful · ${p.receiptNumber}`, ...o });
+export const usePayOnline = (o) => {
+  const { t } = useT();
+  return useApiMutation(payOnline, { ...inv, success: (p) => t('Payment successful · {receipt}', { receipt: p.receiptNumber }), ...o });
+};

@@ -3,6 +3,7 @@ import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { Badge, Card, CardHeader, EmptyState, Spinner } from '../../../components/ui';
 import { timeAgo, time } from '../../../lib/format';
 import { useChildAlerts } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 export function ChildAvatar({ child, className = 'size-12' }) {
   return child?.photoUrl ? (
@@ -16,24 +17,26 @@ export function ChildAvatar({ child, className = 'size-12' }) {
 
 // Parent's answer as the guard needs to see it: a glanceable OK / HOLD.
 export function AlertOutcome({ a }) {
+  const { t } = useT();
   if (a.status === 'open') {
     return (
       <div className="flex flex-wrap items-center gap-1.5">
-        <Badge tone="amber">Waiting for parent</Badge>
-        {a.escalatedAt && <Badge tone="red">Escalated</Badge>}
+        <Badge tone="amber">{t('Waiting for parent')}</Badge>
+        {a.escalatedAt && <Badge tone="red">{t('Escalated')}</Badge>}
       </div>
     );
   }
   if (a.response === 'stop') {
-    return <span className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white">HOLD CHILD</span>;
+    return <span className="inline-flex items-center rounded-lg bg-red-600 px-3 py-1.5 text-sm font-bold uppercase tracking-wide text-white">{t('HOLD CHILD')}</span>;
   }
-  return <span className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white">Parent says OK</span>;
+  return <span className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white">{t('Parent says OK')}</span>;
 }
 
 // Read-only recent alerts for guards and managers.
 export function ChildAlertsList({ title = 'Recent child exit alerts', limit = 20 }) {
   const live = useLiveInterval(5000);
   const { data, isLoading } = useChildAlerts({ limit }, { refetchInterval: live });
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title={title} />
@@ -49,16 +52,16 @@ export function ChildAlertsList({ title = 'Recent child exit alerts', limit = 20
                 <ChildAvatar child={a.child} />
                 <div className="min-w-0">
                   <p className="font-medium text-slate-900">
-                    {a.child?.name || 'Child'}
+                    {a.child?.name || t('Child')}
                     {a.unit?.label ? <span className="font-normal text-slate-500"> · {a.unit.label}</span> : null}
                   </p>
                   <p className="text-sm text-slate-500">
                     {a.gate} · {time(a.createdAt)} ({timeAgo(a.createdAt)})
-                    {a.raisedBy?.name ? ` · by ${a.raisedBy.name}` : ''}
+                    {a.raisedBy?.name ? ` · ${t('by {name}', { name: a.raisedBy.name })}` : ''}
                   </p>
-                  {a.note && <p className="text-xs text-slate-500">Guard: {a.note}</p>}
-                  {a.ackNote && <p className="text-xs font-medium text-slate-700">Parent: {a.ackNote}</p>}
-                  {a.acknowledgedBy?.name && <p className="text-xs text-slate-400">Answered by {a.acknowledgedBy.name} at {time(a.acknowledgedAt)}</p>}
+                  {a.note && <p className="text-xs text-slate-500">{t('Guard: {note}', { note: a.note })}</p>}
+                  {a.ackNote && <p className="text-xs font-medium text-slate-700">{t('Parent: {note}', { note: a.ackNote })}</p>}
+                  {a.acknowledgedBy?.name && <p className="text-xs text-slate-400">{t('Answered by {name} at {time}', { name: a.acknowledgedBy.name, time: time(a.acknowledgedAt) })}</p>}
                 </div>
               </div>
               <AlertOutcome a={a} />

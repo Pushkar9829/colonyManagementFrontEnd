@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/cn';
+import { tr, useT } from '../../context/LanguageContext';
 
 export function Card({ className, children, ...props }) {
   return (
@@ -10,11 +11,12 @@ export function Card({ className, children, ...props }) {
 }
 
 export function CardHeader({ title, subtitle, action, className }) {
+  const { t } = useT();
   return (
     <div className={cn('flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4', className)}>
       <div className="min-w-0 flex-1 basis-48">
-        <h3 className="font-semibold text-slate-900">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{subtitle}</p>}
+        <h3 className="font-semibold text-slate-900">{tr(t, title)}</h3>
+        {subtitle && <p className="mt-0.5 text-sm text-slate-500">{tr(t, subtitle)}</p>}
       </div>
       {action}
     </div>
@@ -31,6 +33,7 @@ const tones = {
 };
 
 export function StatCard({ label, value, sub, icon: Icon, tone = 'brand', to }) {
+  const { t } = useT();
   const body = (
     <Card className={cn('flex h-full items-center gap-4 p-3 sm:p-4', to && 'transition hover:border-brand-200 hover:shadow')}>
       {Icon && (
@@ -40,9 +43,9 @@ export function StatCard({ label, value, sub, icon: Icon, tone = 'brand', to }) 
         </div>
       )}
       <div className="min-w-0">
-        <p className="line-clamp-2 text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+        <p className="line-clamp-2 text-xs font-medium uppercase tracking-wide text-slate-500">{tr(t, label)}</p>
         <p className="mt-0.5 break-words text-lg font-semibold text-slate-900 sm:text-xl">{value}</p>
-        {sub && <p className="line-clamp-2 text-xs text-slate-500">{sub}</p>}
+        {sub && <p className="line-clamp-2 text-xs text-slate-500">{tr(t, sub)}</p>}
       </div>
     </Card>
   );

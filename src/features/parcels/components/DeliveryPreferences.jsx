@@ -3,12 +3,14 @@ import { Trash2 } from 'lucide-react';
 import { Button, Card, CardHeader, Checkbox, Input, Spinner } from '../../../components/ui';
 import { date, todayISO } from '../../../lib/format';
 import { COURIERS, useCreatePreference, usePreferences, useRemovePreference } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const initial = () => ({ company: '', oneOff: false, date: todayISO(), note: '' });
 
 // Resident's "leave at gate" rules: the guard logs these deliveries without asking for approval.
 export function DeliveryPreferences() {
   const { data = [], isLoading } = usePreferences();
+  const { t } = useT();
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const create = useCreatePreference({ onSuccess: () => { setForm(initial()); setErrors({}); } });
@@ -33,20 +35,20 @@ export function DeliveryPreferences() {
           {data.map((p) => (
             <li key={p._id} className="flex items-center gap-3 px-5 py-3">
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-slate-900">{p.company || 'Any company'}</p>
+                <p className="font-medium text-slate-900">{p.company || t('Any company')}</p>
                 <p className="text-xs text-slate-500">
-                  {p.oneOffDate ? `Only on ${date(p.oneOffDate)}` : 'Every time'}
+                  {p.oneOffDate ? t('Only on {date}', { date: date(p.oneOffDate) }) : t('Every time')}
                   {p.note ? ` · ${p.note}` : ''}
                 </p>
               </div>
-              <Button size="sm" variant="ghost" icon={Trash2} aria-label="Remove preference" loading={remove.isPending && remove.variables === p._id} onClick={() => remove.mutate(p._id)}>
+              <Button size="sm" variant="ghost" icon={Trash2} aria-label={t('Remove preference')} loading={remove.isPending && remove.variables === p._id} onClick={() => remove.mutate(p._id)}>
                 Remove
               </Button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="px-5 py-4 text-sm text-slate-500">No preferences yet — every delivery waits for you to collect it with an OTP.</p>
+        <p className="px-5 py-4 text-sm text-slate-500">{t('No preferences yet — every delivery waits for you to collect it with an OTP.')}</p>
       )}
       <form onSubmit={submit} className="space-y-3 border-t border-slate-100 p-5">
         <Input label="Company" placeholder="Leave empty for any company" list="pref-couriers" value={form.company} onChange={set('company')} error={errors.company} />

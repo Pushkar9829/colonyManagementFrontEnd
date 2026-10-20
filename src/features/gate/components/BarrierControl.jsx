@@ -3,6 +3,7 @@ import { DoorOpen } from 'lucide-react';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { Button, Card, CardHeader, Input, Modal, Select, StatusBadge } from '../../../components/ui';
 import { timeAgo } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useGates } from '../../gates/api';
 import { useBarrierCommands, useOpenBarrier } from '../api';
 
@@ -11,6 +12,7 @@ import { useBarrierCommands, useOpenBarrier } from '../api';
 //         the gate is picked from a list.
 export function BarrierControl({ compact = false, gate: fixedGate }) {
   const live = useLiveInterval(5000);
+  const { t } = useT();
   const { data: gates = [] } = useGates(undefined, { enabled: !fixedGate });
   const [picked, setPicked] = useState('');
   const gate = fixedGate || gates.find((g) => g._id === picked) || gates[0] || null;
@@ -20,7 +22,7 @@ export function BarrierControl({ compact = false, gate: fixedGate }) {
   const { data } = useBarrierCommands({ limit: compact ? 3 : 8, gate: fixedGate?._id }, { refetchInterval: live });
   return (
     <Card>
-      <CardHeader title={fixedGate ? `Boom barrier · ${fixedGate.name}` : 'Boom barrier'} subtitle="Sends an open command to the gate controller" />
+      <CardHeader title={fixedGate ? t('Boom barrier · {gate}', { gate: fixedGate.name }) : t('Boom barrier')} subtitle="Sends an open command to the gate controller" />
       <div className="space-y-3 p-4">
         <div className={fixedGate ? '' : 'grid gap-3 sm:grid-cols-2'}>
           {!fixedGate && gates.length > 1 && (
@@ -48,8 +50,8 @@ export function BarrierControl({ compact = false, gate: fixedGate }) {
         open={confirming}
         onClose={() => setConfirming(false)}
         size="sm"
-        title={`Open the ${gate?.name || 'gate'} barrier?`}
-        description={reason ? `Reason: ${reason}` : 'The barrier opens within a few seconds.'}
+        title={gate?.name ? t('Open the {gate} barrier?', { gate: gate.name }) : t('Open the gate barrier?')}
+        description={reason ? t('Reason: {reason}', { reason }) : t('The barrier opens within a few seconds.')}
         footer={
           <>
             <Button variant="secondary" size="lg" onClick={() => setConfirming(false)}>Cancel</Button>
@@ -57,7 +59,7 @@ export function BarrierControl({ compact = false, gate: fixedGate }) {
           </>
         }
       >
-        <p className="text-sm text-slate-600">Only open it after you have checked the vehicle.</p>
+        <p className="text-sm text-slate-600">{t('Only open it after you have checked the vehicle.')}</p>
       </Modal>
     </Card>
   );

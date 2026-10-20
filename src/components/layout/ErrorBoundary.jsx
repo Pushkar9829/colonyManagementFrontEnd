@@ -1,5 +1,20 @@
 import { Component } from 'react';
 import { BASE_URL } from '../../api/client';
+import { useT } from '../../context/LanguageContext';
+
+function CrashMessage() {
+  const { t } = useT();
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
+      <p className="text-lg font-semibold text-slate-900">{t('Something went wrong on this page')}</p>
+      <p className="mt-2 max-w-md text-sm text-slate-500">{t('The team has been notified. Try reloading; if it keeps happening, go back to the dashboard.')}</p>
+      <div className="mt-5 flex gap-2">
+        <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">{t('Reload')}</button>
+        <a href="/" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{t('Dashboard')}</a>
+      </div>
+    </div>
+  );
+}
 
 // Sends a crash report to the API (which forwards it to the team's error webhook). Never throws.
 export function reportClientError(error, extra = {}) {
@@ -45,15 +60,6 @@ export class ErrorBoundary extends Component {
 
   render() {
     if (!this.state.error) return this.props.children;
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-        <p className="text-lg font-semibold text-slate-900">Something went wrong on this page</p>
-        <p className="mt-2 max-w-md text-sm text-slate-500">The team has been notified. Try reloading; if it keeps happening, go back to the dashboard.</p>
-        <div className="mt-5 flex gap-2">
-          <button type="button" onClick={() => window.location.reload()} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Reload</button>
-          <a href="/" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">Dashboard</a>
-        </div>
-      </div>
-    );
+    return <CrashMessage />;
   }
 }

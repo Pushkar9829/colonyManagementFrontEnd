@@ -5,22 +5,24 @@ import { cn } from '../../../lib/cn';
 import { date, time } from '../../../lib/format';
 import { usePatrolRounds, usePatrolRoutes } from '../api';
 import { rangeQuery, RoundStatus } from './shared';
+import { useT } from '../../../context/LanguageContext';
 
 const STATUSES = ['completed', 'partial', 'missed', 'in_progress', 'pending'].map((v) => ({ value: v, label: v.replace('_', ' ').replace(/^\w/, (c) => c.toUpperCase()) }));
 
 function RoundRow({ round }) {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const scanned = round.scans?.length || 0;
   return (
     <li>
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
         <div className="min-w-0 flex-1">
-          <p className="truncate font-medium text-slate-900">{round.route?.name || 'Deleted route'}</p>
+          <p className="truncate font-medium text-slate-900">{round.route?.name || t('Deleted route')}</p>
           <p className="text-xs text-slate-500">{date(round.dueAt)} · {time(round.dueAt)} – {time(round.windowEnd)}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
           <span className="text-xs text-slate-500">{scanned}/{round.expected}</span>
-          {round.inOrder === false && <Badge tone="amber">Out of order</Badge>}
+          {round.inOrder === false && <Badge tone="amber">{t('Out of order')}</Badge>}
           <RoundStatus status={round.status} />
         </div>
         <ChevronDown className={cn('size-4 shrink-0 text-slate-400 transition', open && 'rotate-180')} />
@@ -32,18 +34,18 @@ function RoundRow({ round }) {
               {round.scans.map((s, i) => (
                 <li key={`${s.checkpoint?._id || i}`} className="flex flex-wrap items-center gap-x-2">
                   <CheckCircle2 className="size-4 text-emerald-500" />
-                  <span className="font-medium text-slate-800">{s.checkpoint?.name || 'Removed checkpoint'}</span>
+                  <span className="font-medium text-slate-800">{s.checkpoint?.name || t('Removed checkpoint')}</span>
                   <span className="text-xs text-slate-500">{time(s.scannedAt)} · {s.guard?.name || '—'}</span>
-                  {s.gpsOk === false && <span className="flex items-center gap-1 text-xs font-medium text-amber-700"><AlertTriangle className="size-3.5" />GPS mismatch</span>}
+                  {s.gpsOk === false && <span className="flex items-center gap-1 text-xs font-medium text-amber-700"><AlertTriangle className="size-3.5" />{t('GPS mismatch')}</span>}
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-slate-500">No checkpoints scanned.</p>
+            <p className="text-slate-500">{t('No checkpoints scanned.')}</p>
           )}
           {round.missedCheckpoints?.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-600">Missed</p>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-600">{t('Missed')}</p>
               <ul className="space-y-1">
                 {round.missedCheckpoints.map((c) => (
                   <li key={c._id} className="flex items-center gap-2 text-slate-700"><XCircle className="size-4 text-red-500" />{c.name}</li>
@@ -51,7 +53,7 @@ function RoundRow({ round }) {
               </ul>
             </div>
           )}
-          {round.completedAt && <p className="text-xs text-slate-500">Completed at {time(round.completedAt)}</p>}
+          {round.completedAt && <p className="text-xs text-slate-500">{t('Completed at {time}', { time: time(round.completedAt) })}</p>}
         </div>
       )}
     </li>

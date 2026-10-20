@@ -3,6 +3,7 @@ import { Camera, FileText, Loader2, Paperclip, X } from 'lucide-react';
 import { upload } from '../../api/client';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/cn';
+import { useT } from '../../context/LanguageContext';
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf';
 const MAX_MB = 5;
@@ -13,6 +14,7 @@ export function FileUpload({ folder, files, onChange, max = 5, camera = false, l
   const input = useRef(null);
   const [busy, setBusy] = useState(0);
   const toast = useToast();
+  const { t } = useT();
 
   const pick = async (e) => {
     const chosen = [...(e.target.files || [])].slice(0, max - files.length);
@@ -20,7 +22,7 @@ export function FileUpload({ folder, files, onChange, max = 5, camera = false, l
     const added = [];
     for (const file of chosen) {
       if (file.size > MAX_MB * 1024 * 1024) {
-        toast.error(`${file.name} is larger than ${MAX_MB} MB`);
+        toast.error(t('{name} is larger than {mb} MB', { name: file.name, mb: MAX_MB }));
         continue;
       }
       setBusy((b) => b + 1);
@@ -45,7 +47,7 @@ export function FileUpload({ folder, files, onChange, max = 5, camera = false, l
         {files.map((f) => (
           <div key={f._id} className="group relative size-16 overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
             {f.mimetype?.startsWith('image/') ? <img src={f.url} alt={f.name || 'attachment'} className="size-full object-cover" /> : <FileText className="m-auto mt-4 size-7 text-slate-400" />}
-            <button type="button" onClick={() => onChange(files.filter((x) => x._id !== f._id))} className="absolute right-0.5 top-0.5 rounded-full bg-white/90 p-0.5 text-slate-600 shadow hover:text-red-600" aria-label="Remove attachment">
+            <button type="button" onClick={() => onChange(files.filter((x) => x._id !== f._id))} className="absolute right-0.5 top-0.5 rounded-full bg-white/90 p-0.5 text-slate-600 shadow hover:text-red-600" aria-label={t('Remove attachment')}>
               <X className="size-3" />
             </button>
           </div>
@@ -54,12 +56,12 @@ export function FileUpload({ folder, files, onChange, max = 5, camera = false, l
           <button type="button" onClick={() => input.current?.click()} disabled={busy > 0}
             className="flex h-16 min-w-16 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 px-3 text-xs font-medium text-slate-600 hover:border-brand-400 hover:text-brand-700 disabled:opacity-60">
             {busy ? <Loader2 className="size-4 animate-spin" /> : camera ? <Camera className="size-4" /> : <Paperclip className="size-4" />}
-            {busy ? 'Uploading…' : label}
+            {busy ? t('Uploading…') : t(label)}
           </button>
         )}
       </div>
       <input ref={input} type="file" hidden accept={camera ? 'image/*' : ACCEPT} multiple={!camera && max > 1} capture={camera ? 'environment' : undefined} onChange={pick} />
-      <p className="text-[11px] text-slate-400">JPG, PNG, WEBP or PDF · up to {MAX_MB} MB each</p>
+      <p className="text-[11px] text-slate-400">{t('JPG, PNG, WEBP or PDF · up to {mb} MB each', { mb: MAX_MB })}</p>
     </div>
   );
 }

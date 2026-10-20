@@ -7,6 +7,7 @@ import { Badge, Card, EmptyState, FilterBar, Input, Pagination, Select, Spinner 
 import { useAuth } from '../../../context/AuthContext';
 import { dateTime, dayBounds, label } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { useMovements } from '../api';
 import { useGates } from '../../gates/api';
 import { ManualLog } from '../components/ManualLog';
@@ -17,6 +18,7 @@ const MATCH_LABEL = { resident: 'Registered', visitor: 'Visitor', unknown: 'Unkn
 
 export default function VehicleMovementsPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const [params] = useSearchParams();
   const [f, setF] = useState({ match: params.get('match') || '', direction: '', source: '', gate: '', plate: '', date: '', page: 1 });
   const { data: gates = [] } = useGates({ includeInactive: true });
@@ -45,7 +47,7 @@ export default function VehicleMovementsPage() {
             <Select label="Vehicle" value={f.match} onChange={set('match')} placeholder="All vehicles" options={Object.entries(MATCH_LABEL).map(([value, l]) => ({ value, label: l }))} />
             <Select label="Direction" value={f.direction} onChange={set('direction')} placeholder="In & out" options={[{ value: 'in', label: 'In' }, { value: 'out', label: 'Out' }]} />
             <Select label="Source" value={f.source} onChange={set('source')} placeholder="All sources" options={['anpr', 'rfid', 'manual', 'visitor'].map((v) => ({ value: v, label: v === 'anpr' ? 'Camera (ANPR)' : v === 'rfid' ? 'RFID' : label(v) }))} />
-            {gates.length > 1 && <Select label="Gate" value={f.gate} onChange={set('gate')} placeholder="All gates" options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : `${g.name} (closed)` }))} />}
+            {gates.length > 1 && <Select label="Gate" value={f.gate} onChange={set('gate')} placeholder="All gates" options={gates.map((g) => ({ value: g._id, label: g.active ? g.name : t('{name} (closed)', { name: g.name }) }))} />}
           </FilterBar>
           {isLoading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
@@ -56,7 +58,7 @@ export default function VehicleMovementsPage() {
               {rows.map((m) => (
                 <li key={m._id} className={`flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center ${m.decision === 'deny' ? 'bg-red-50/50' : ''}`}>
                   <div className="flex items-center gap-3 sm:w-56">
-                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${m.direction === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`} title={m.direction === 'in' ? 'In' : 'Out'}>
+                    <span className={`flex size-8 shrink-0 items-center justify-center rounded-full ${m.direction === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600'}`} title={m.direction === 'in' ? t('In') : t('Out')}>
                       {m.direction === 'in' ? <ArrowDownLeft className="size-4" /> : <ArrowUpRight className="size-4" />}
                     </span>
                     <div className="min-w-0">
@@ -66,9 +68,9 @@ export default function VehicleMovementsPage() {
                   </div>
                   <div className="min-w-0 flex-1 text-sm">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge tone={MATCH_TONE[m.match]}>{MATCH_LABEL[m.match]}</Badge>
-                      <Badge tone={m.decision === 'allow' ? 'green' : 'red'}>{m.decision === 'allow' ? 'Allowed' : 'Denied'}</Badge>
-                      <span className="text-xs text-slate-500">{m.gate} · {m.source === 'anpr' ? 'Camera' : m.source === 'rfid' ? `RFID${m.tag ? ` ${m.tag}` : ''}` : label(m.source)}</span>
+                      <Badge tone={MATCH_TONE[m.match]}>{t(MATCH_LABEL[m.match])}</Badge>
+                      <Badge tone={m.decision === 'allow' ? 'green' : 'red'}>{m.decision === 'allow' ? t('Allowed') : t('Denied')}</Badge>
+                      <span className="text-xs text-slate-500">{m.gate} · {m.source === 'anpr' ? t('Camera') : m.source === 'rfid' ? `RFID${m.tag ? ` ${m.tag}` : ''}` : t(label(m.source))}</span>
                     </div>
                     <p className="truncate text-slate-600">
                       {m.reason}
@@ -78,7 +80,7 @@ export default function VehicleMovementsPage() {
                     </p>
                   </div>
                   {m.imageUrl && (
-                    <a href={m.imageUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-brand-600 hover:underline">Camera image</a>
+                    <a href={m.imageUrl} target="_blank" rel="noreferrer" className="text-xs font-medium text-brand-600 hover:underline">{t('Camera image')}</a>
                   )}
                 </li>
               ))}

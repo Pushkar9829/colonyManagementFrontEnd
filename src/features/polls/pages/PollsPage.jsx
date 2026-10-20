@@ -3,6 +3,7 @@ import { CheckCircle2, Plus, Trash2, Vote } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, EmptyState, Input, Modal, Pagination, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { dateTime } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
@@ -18,6 +19,7 @@ function PollModal({ open, onClose }) {
   const [audience, setAudience] = useState({ type: 'all', blocks: [], roles: [] });
   const [errors, setErrors] = useState({});
   const create = useCreatePoll({ onSuccess: onClose });
+  const { t } = useT();
   const submit = () =>
     create.mutate(
       { question, description: description || undefined, options: options.map((o) => o.trim()).filter(Boolean), anonymous, audience: cleanAudience(audience), closesAt: closesAt ? new Date(closesAt).toISOString() : undefined },
@@ -29,11 +31,11 @@ function PollModal({ open, onClose }) {
         <Input label="Question" required value={question} onChange={(e) => setQuestion(e.target.value)} error={errors.question} />
         <Textarea label="Details" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-700">Options</p>
+          <p className="text-sm font-medium text-slate-700">{t('Options')}</p>
           {options.map((o, i) => (
             <div key={i} className="flex gap-2">
-              <input value={o} onChange={(e) => setOptions(options.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Option ${i + 1}`} className="h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm" />
-              {options.length > 2 && <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))} className="px-2 text-slate-400 hover:text-red-600" aria-label="Remove option"><Trash2 className="size-4" /></button>}
+              <input value={o} onChange={(e) => setOptions(options.map((x, j) => (j === i ? e.target.value : x)))} placeholder={t('Option {n}', { n: i + 1 })} className="h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm" />
+              {options.length > 2 && <button type="button" onClick={() => setOptions(options.filter((_, j) => j !== i))} className="px-2 text-slate-400 hover:text-red-600" aria-label={t('Remove option')}><Trash2 className="size-4" /></button>}
             </div>
           ))}
           {errors.options && <p className="text-xs text-red-600">{errors.options}</p>}
@@ -63,6 +65,7 @@ function VotersModal({ poll, onClose }) {
 function PollCard({ poll, manager, onVoters }) {
   const vote = useVote();
   const close = useClosePoll();
+  const { t } = useT();
   const voted = poll.myVote !== null;
   const showResults = voted || poll.status === 'closed' || manager;
   return (
@@ -73,8 +76,8 @@ function PollCard({ poll, manager, onVoters }) {
           {poll.description && <p className="mt-1 text-sm text-slate-600">{poll.description}</p>}
         </div>
         <div className="flex gap-1.5">
-          <Badge tone={poll.status === 'open' ? 'green' : 'slate'}>{poll.status === 'open' ? 'Open' : 'Closed'}</Badge>
-          {poll.anonymous && <Badge>Anonymous</Badge>}
+          <Badge tone={poll.status === 'open' ? 'green' : 'slate'}>{poll.status === 'open' ? t('Open') : t('Closed')}</Badge>
+          {poll.anonymous && <Badge>{t('Anonymous')}</Badge>}
         </div>
       </div>
       <div className="mt-4 space-y-2">
@@ -99,16 +102,16 @@ function PollCard({ poll, manager, onVoters }) {
           ))}
         {manager && poll.status === 'open' && !voted && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {poll.options.map((o, i) => <Button key={i} size="sm" variant="secondary" onClick={() => vote.mutate({ id: poll._id, optionIndex: i })}>Vote “{o.text}”</Button>)}
+            {poll.options.map((o, i) => <Button key={i} size="sm" variant="secondary" onClick={() => vote.mutate({ id: poll._id, optionIndex: i })}>{t('Vote “{option}”', { option: o.text })}</Button>)}
           </div>
         )}
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-        <span>{poll.totalVotes} vote{poll.totalVotes === 1 ? '' : 's'} · by {poll.createdBy?.name} · {poll.closesAt ? `closes ${dateTime(poll.closesAt)}` : 'no end date'}</span>
+        <span>{poll.totalVotes === 1 ? t('1 vote') : t('{n} votes', { n: poll.totalVotes })} · {t('by {name}', { name: poll.createdBy?.name })} · {poll.closesAt ? t('closes {when}', { when: dateTime(poll.closesAt) }) : t('no end date')}</span>
         {manager && (
           <div className="flex gap-2">
             {!poll.anonymous && <Button size="sm" variant="ghost" onClick={() => onVoters(poll)}>See votes</Button>}
-            {poll.status === 'open' && <Button size="sm" variant="ghost" onClick={() => window.confirm('Close this poll?') && close.mutate(poll._id)}>Close poll</Button>}
+            {poll.status === 'open' && <Button size="sm" variant="ghost" onClick={() => window.confirm(t('Close this poll?')) && close.mutate(poll._id)}>Close poll</Button>}
           </div>
         )}
       </div>

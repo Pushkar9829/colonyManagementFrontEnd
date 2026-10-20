@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 const ppm = { invalidate: ['ppm', 'assets'] };
 const bd = { invalidate: ['breakdowns', 'assets', 'ppm'] };
@@ -23,7 +24,10 @@ export const usePpmReport = (params, enabled = true) => useQuery({ queryKey: ['p
 // breakdowns
 export const useBreakdowns = (params, enabled = true) => useQuery({ queryKey: ['breakdowns', params], queryFn: () => api.list('/maintenance/breakdowns', params), placeholderData: (p) => p, enabled });
 export const useBreakdown = (id) => useQuery({ queryKey: ['breakdowns', 'detail', id], queryFn: () => api.get(`/maintenance/breakdowns/${id}`), enabled: Boolean(id) });
-export const useCreateBreakdown = (o) => useApiMutation((b) => api.post('/maintenance/breakdowns', b), { ...bd, success: (b) => `Breakdown ${b.number} reported`, ...o });
+export const useCreateBreakdown = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/maintenance/breakdowns', b), { ...bd, success: (b) => t('Breakdown {number} reported', { number: b.number }), ...o });
+};
 export const useAssignBreakdown = (o) => useApiMutation(({ id, ...b }) => api.post(`/maintenance/breakdowns/${id}/assign`, b), { ...bd, success: 'Assigned', ...o });
 export const useBreakdownStatus = (o) => useApiMutation(({ id, ...b }) => api.post(`/maintenance/breakdowns/${id}/status`, b), { ...bd, success: 'Updated', ...o });
 
@@ -31,7 +35,10 @@ export const useBreakdownStatus = (o) => useApiMutation(({ id, ...b }) => api.po
 export const useWorkOrders = (params, enabled = true) => useQuery({ queryKey: ['workOrders', params], queryFn: () => api.list('/work-orders', params), placeholderData: (p) => p, enabled });
 export const useWorkOrder = (id) => useQuery({ queryKey: ['workOrders', 'detail', id], queryFn: () => api.get(`/work-orders/${id}`), enabled: Boolean(id) });
 export const useWorkOrderStats = (enabled = true) => useQuery({ queryKey: ['workOrders', 'stats'], queryFn: () => api.get('/work-orders/stats'), enabled });
-export const useCreateWorkOrder = (o) => useApiMutation((b) => api.post('/work-orders', b), { ...wo, success: (w) => `Work order ${w.number} created`, ...o });
+export const useCreateWorkOrder = (o) => {
+  const { t } = useT();
+  return useApiMutation((b) => api.post('/work-orders', b), { ...wo, success: (w) => t('Work order {number} created', { number: w.number }), ...o });
+};
 export const useUpdateWorkOrder = (o) => useApiMutation(({ id, ...b }) => api.patch(`/work-orders/${id}`, b), { ...wo, success: 'Saved', ...o });
 export const useWorkOrderStatus = (o) => useApiMutation(({ id, ...b }) => api.post(`/work-orders/${id}/status`, b), { ...wo, success: 'Updated', ...o });
 

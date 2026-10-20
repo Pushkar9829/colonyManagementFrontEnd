@@ -3,6 +3,7 @@ import { Siren } from 'lucide-react';
 import { Button, Input, Modal, Textarea } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { useRaiseSos } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const TYPES = [
   { value: 'medical', label: 'Medical' },
@@ -14,6 +15,7 @@ const TYPES = [
 
 export function RaiseSosButton() {
   const [open, setOpen] = useState(false);
+  const { t: tx } = useT();
   const [type, setType] = useState('medical');
   const [message, setMessage] = useState('');
   const [location, setLocation] = useState('');
@@ -60,7 +62,7 @@ export function RaiseSosButton() {
                 onClick={() => setType(t.value)}
                 className={cn('rounded-lg border px-3 py-2 text-sm font-medium', type === t.value ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}
               >
-                {t.label}
+                {tx(t.label)}
               </button>
             ))}
           </div>

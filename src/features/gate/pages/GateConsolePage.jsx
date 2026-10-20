@@ -6,6 +6,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FileUpload, Input, Modal, Spinner, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { label, time, timeAgo } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
@@ -35,12 +36,13 @@ const KIND_WORD = { visitors: 'visitors', deliveries: 'deliveries', vehicles: 'v
 
 // "This gate" / "All gates" for the waiting and inside lists (only when there is more than one gate).
 function ScopeToggle({ scope }) {
+  const { t } = useT();
   if (!scope.multi) return null;
   return (
-    <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium" role="group" aria-label="Show">
+    <div className="flex rounded-lg border border-slate-200 p-0.5 text-xs font-medium" role="group" aria-label={t('Show')}>
       {[['gate', 'This gate'], ['all', 'All gates']].map(([v, l]) => (
         <button key={v} type="button" aria-pressed={scope.value === v} onClick={() => scope.set(v)} className={cn('rounded-md px-2.5 py-1.5', scope.value === v ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50')}>
-          {l}
+          {t(l)}
         </button>
       ))}
     </div>
@@ -69,6 +71,7 @@ function useWide() {
 }
 
 function Notice({ tone, icon: Icon, title, children, onClose }) {
+  const { t } = useT();
   const tones = {
     red: 'border-red-300 bg-red-50 text-red-800',
     amber: 'border-amber-300 bg-amber-50 text-amber-900',
@@ -82,7 +85,7 @@ function Notice({ tone, icon: Icon, title, children, onClose }) {
         <p className="font-semibold">{title}</p>
         {children && <div className="mt-0.5">{children}</div>}
       </div>
-      {onClose && <button type="button" onClick={onClose} className="text-xs font-medium underline">Dismiss</button>}
+      {onClose && <button type="button" onClick={onClose} className="text-xs font-medium underline">{t('Dismiss')}</button>}
     </div>
   );
 }
@@ -90,6 +93,7 @@ function Notice({ tone, icon: Icon, title, children, onClose }) {
 // ---------- new entry ----------
 function NewEntry({ queue, gate }) {
   const toast = useToast();
+  const { t } = useT();
   const { values, set, bind, applyServerErrors, setValues } = useForm({ unit: '', name: '', phone: '', purpose: 'delivery', company: '', vehicleNumber: '', guardApproved: false });
   const [unitLabel, setUnitLabel] = useState('');
   const [photo, setPhoto] = useState([]);
@@ -106,8 +110,8 @@ function NewEntry({ queue, gate }) {
   };
   const log = useLogVisitor({
     onSuccess: (v) => {
-      if (v.flag?.type === 'watch') setOutcome({ tone: 'amber', icon: ShieldAlert, title: `Watchlist: ${v.name}`, body: `${v.flag.reason}. Entry allowed — management alerted.` });
-      else if (v.leaveAtGate) setOutcome({ tone: 'blue', icon: Package, title: 'Leave the parcel at the gate', body: `${v.unit.label} asked deliveries to be left at the gate. No approval needed.` });
+      if (v.flag?.type === 'watch') setOutcome({ tone: 'amber', icon: ShieldAlert, title: t('Watchlist: {name}', { name: v.name }), body: t('{reason}. Entry allowed — management alerted.', { reason: v.flag.reason }) });
+      else if (v.leaveAtGate) setOutcome({ tone: 'blue', icon: Package, title: t('Leave the parcel at the gate'), body: t('{unit} asked deliveries to be left at the gate. No approval needed.', { unit: v.unit.label }) });
       else setOutcome(null);
       resetForm();
     },
@@ -117,10 +121,10 @@ function NewEntry({ queue, gate }) {
   useEffect(() => {
     setPref(null);
     if (!queue.online || values.purpose !== 'delivery' || !values.unit) return undefined;
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api.get('/parcels/preferences/check', { unit: values.unit, company: values.company || undefined }).then(setPref).catch(() => {});
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [values.unit, values.company, values.purpose, queue.online]);
 
   const precheck = async () => {
@@ -140,7 +144,7 @@ function NewEntry({ queue, gate }) {
     const enqueue = () => {
       delete body.photo; // uploads need the network
       queue.enqueue('entry', body, `${values.name} → ${unitLabel || 'unit'}${values.guardApproved ? ' (allowed)' : ''}`);
-      toast.success('Saved offline — will sync when back online');
+      toast.success(t('Saved offline — will sync when back online'));
       resetForm();
     };
     if (!queue.online) return enqueue();
@@ -148,22 +152,22 @@ function NewEntry({ queue, gate }) {
     return log.mutate(body, {
       onError: (err) => {
         if (isNetworkError(err)) return enqueue();
-        if (err.code === 'VISITOR_BLOCKED') setOutcome({ tone: 'red', icon: ShieldX, title: 'Do not allow entry', body: err.message });
-        if (err.code === 'GATE_NOT_ALLOWED') setOutcome({ tone: 'amber', icon: DoorClosed, title: 'Not at this gate', body: err.message, retry: body });
+        if (err.code === 'VISITOR_BLOCKED') setOutcome({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: err.message });
+        if (err.code === 'GATE_NOT_ALLOWED') setOutcome({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: err.message, retry: body });
         return applyServerErrors(err);
       },
     });
   };
   // Override of a gate refusal, recorded on the entry.
-  const override = () => log.mutate({ ...outcome.retry, guardApproved: true }, { onError: (err) => setOutcome({ tone: 'red', icon: AlertTriangle, title: 'Not allowed', body: err.message }) });
+  const override = () => log.mutate({ ...outcome.retry, guardApproved: true }, { onError: (err) => setOutcome({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: err.message }) });
   const kind = visitorKind(values.purpose);
-  const wrongGate = gate && !gateTakes(gate, kind) ? `${gate.name} does not take ${KIND_WORD[kind]}` : gate?.isPedestrianOnly && values.vehicleNumber ? `${gate.name} is for people on foot only` : null;
+  const wrongGate = gate && !gateTakes(gate, kind) ? t(`{gate} does not take ${KIND_WORD[kind]}`, { gate: gate.name }) : gate?.isPedestrianOnly && values.vehicleNumber ? t('{gate} is for people on foot only', { gate: gate.name }) : null;
 
   const pickFrequent = (f) => setValues((v) => ({ ...v, name: f.name, phone: f.phone || '', purpose: f.purpose || 'guest', company: f.company || '', vehicleNumber: f.vehicleNumber || '' }));
 
   return (
     <Card>
-      <CardHeader title="New visitor" subtitle={queue.online ? 'Resident gets an approval request instantly' : 'Offline: saved on this device'} />
+      <CardHeader title="New visitor" subtitle={queue.online ? t('Resident gets an approval request instantly') : t('Offline: saved on this device')} />
       <form onSubmit={submit} className="space-y-4 p-4 sm:p-5">
         {outcome && (
           <Notice tone={outcome.tone} icon={outcome.icon} title={outcome.title} onClose={() => setOutcome(null)}>
@@ -175,17 +179,17 @@ function NewEntry({ queue, gate }) {
           {PURPOSES.map((p) => (
             <button key={p} type="button" onClick={() => set('purpose', p)}
               className={cn('rounded-full border px-3 py-2 text-sm font-medium', values.purpose === p ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}>
-              {label(p)}
+              {t(label(p))}
             </button>
           ))}
         </div>
         {wrongGate && !outcome && (
-          <Notice tone="amber" icon={DoorClosed} title={wrongGate}>Send them to the right gate, or tick "resident confirmed" after a phone call to let them in here.</Notice>
+          <Notice tone="amber" icon={DoorClosed} title={wrongGate}>{t('Send them to the right gate, or tick "resident confirmed" after a phone call to let them in here.')}</Notice>
         )}
         <UnitPicker value={values.unit} onChange={(id, u) => { set('unit', id); setUnitLabel(u?.label || ''); }} required />
         {frequent?.data?.length > 0 && (
           <div>
-            <p className="mb-1 text-xs font-medium text-slate-500">Frequent visitors of {unitLabel}</p>
+            <p className="mb-1 text-xs font-medium text-slate-500">{t('Frequent visitors of {unit}', { unit: unitLabel })}</p>
             <div className="flex flex-wrap gap-1.5">
               {frequent.data.map((f) => (
                 <button key={f._id} type="button" onClick={() => pickFrequent(f)} className="rounded-full border border-slate-200 px-2.5 py-1 text-xs text-slate-700 hover:bg-slate-50">
@@ -196,8 +200,8 @@ function NewEntry({ queue, gate }) {
           </div>
         )}
         {pref?.leaveAtGate && (
-          <Notice tone="blue" icon={Package} title="Household says: leave at gate">
-            {pref.preference.company}{pref.preference.oneOff ? ' (today only)' : ''}{pref.preference.note ? ` — ${pref.preference.note}` : ''}. No approval needed.
+          <Notice tone="blue" icon={Package} title={t('Household says: leave at gate')}>
+            {pref.preference.company}{pref.preference.oneOff ? ` ${t('(today only)')}` : ''}{pref.preference.note ? ` — ${pref.preference.note}` : ''}. {t('No approval needed.')}
           </Notice>
         )}
         {/* Phones: name (and company) full width, phone + vehicle side by side so the form stays short. */}
@@ -208,7 +212,7 @@ function NewEntry({ queue, gate }) {
           <Input label="Vehicle number" autoCapitalize="characters" {...bind('vehicleNumber')} onBlur={precheck} />
         </div>
         {pre && (
-          <Notice tone={pre.status === 'block' ? 'red' : 'amber'} icon={pre.status === 'block' ? ShieldX : ShieldAlert} title={pre.status === 'block' ? 'On the blocklist' : 'On the watchlist'}>
+          <Notice tone={pre.status === 'block' ? 'red' : 'amber'} icon={pre.status === 'block' ? ShieldX : ShieldAlert} title={pre.status === 'block' ? t('On the blocklist') : t('On the watchlist')}>
             {pre.matches.map((m) => <p key={m.entry}>{m.name ? `${m.name}: ` : ''}{m.reason}</p>)}
           </Notice>
         )}
@@ -219,9 +223,9 @@ function NewEntry({ queue, gate }) {
         {/* Stays at the bottom of the screen on phones so the guard never has to scroll to send. */}
         <div className="sticky bottom-0 z-10 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
           <Button type="submit" size="lg" icon={queue.online ? UserPlus : WifiOff} loading={log.isPending} disabled={!values.unit} className="w-full">
-            {queue.online ? 'Request entry' : 'Save entry offline'}
+            {queue.online ? t('Request entry') : t('Save entry offline')}
           </Button>
-          {!values.unit && <p className="mt-1 text-center text-xs text-slate-500 sm:hidden">Pick the flat first</p>}
+          {!values.unit && <p className="mt-1 text-center text-xs text-slate-500 sm:hidden">{t('Pick the flat first')}</p>}
         </div>
       </form>
     </Card>
@@ -231,31 +235,32 @@ function NewEntry({ queue, gate }) {
 // ---------- scan / codes ----------
 function ScanPanel({ queue, gate }) {
   const toast = useToast();
+  const { t } = useT();
   const [mode, setMode] = useState('pass');
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
   const gateId = gate?._id;
   const onDone = (v) => {
-    setResult(v.watch ? { tone: 'amber', icon: ShieldAlert, title: `${v.name} entered — watchlist`, body: `${v.watch.reason} · ${v.unit.label}` } : { tone: 'green', icon: CheckCircle2, title: `${v.name} may enter`, body: `${v.unit.label} · ${v.note || 'Pre-approved pass'}` });
+    setResult(v.watch ? { tone: 'amber', icon: ShieldAlert, title: t('{name} entered — watchlist', { name: v.name }), body: `${v.watch.reason} · ${v.unit.label}` } : { tone: 'green', icon: CheckCircle2, title: t('{name} may enter', { name: v.name }), body: `${v.unit.label} · ${v.note || t('Pre-approved pass')}` });
     setCode('');
   };
   const verify = useVerifyPass({ onSuccess: onDone });
-  const scan = useGateScan({ onSuccess: (r) => { setResult({ tone: 'green', icon: CheckCircle2, title: `${r.help.name} ${r.direction === 'in' ? 'entered' : 'left'}`, body: 'Daily help' }); setCode(''); } });
+  const scan = useGateScan({ onSuccess: (r) => { setResult({ tone: 'green', icon: CheckCircle2, title: r.direction === 'in' ? t('{name} entered', { name: r.help.name }) : t('{name} left', { name: r.help.name }), body: t('Daily help') }); setCode(''); } });
   const busy = verify.isPending || scan.isPending;
 
   // retry: the pass body to send again as an override when the refusal is about the gate.
   const fail = (err, retry) => {
-    if (err.code === 'VISITOR_BLOCKED') setResult({ tone: 'red', icon: ShieldX, title: 'Do not allow entry', body: err.message });
-    else if (err.code === 'GATE_NOT_ALLOWED') setResult({ tone: 'amber', icon: DoorClosed, title: 'Not at this gate', body: err.message, retry });
-    else setResult({ tone: 'red', icon: AlertTriangle, title: 'Not allowed', body: err.message });
+    if (err.code === 'VISITOR_BLOCKED') setResult({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: err.message });
+    else if (err.code === 'GATE_NOT_ALLOWED') setResult({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: err.message, retry });
+    else setResult({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: err.message });
   };
   const override = () => verify.mutate({ ...result.retry, guardApproved: true }, { onError: (err) => fail(err) });
 
   // Offline the guard checks the code against the guest's phone; the server verifies it on sync.
   const queuePass = (body, text) => {
     queue.enqueue('pass', body, `Pass ${text}`);
-    toast.success('Pass saved offline — it is verified when the connection returns');
-    setResult({ tone: 'amber', icon: WifiOff, title: 'Saved offline', body: 'Check the code against the guest’s phone before letting them in.' });
+    toast.success(t('Pass saved offline — it is verified when the connection returns'));
+    setResult({ tone: 'amber', icon: WifiOff, title: t('Saved offline'), body: t('Check the code against the guest’s phone before letting them in.') });
     setCode('');
   };
   const submitPass = (raw, text) => {
@@ -265,11 +270,11 @@ function ScanPanel({ queue, gate }) {
   };
 
   const onScan = (text) => {
-    if (!text) return setResult({ tone: 'red', icon: AlertTriangle, title: 'No QR code found in the photo' });
+    if (!text) return setResult({ tone: 'red', icon: AlertTriangle, title: t('No QR code found in the photo') });
     if (text.startsWith('CHP1.')) return submitPass({ qr: text }, 'QR');
     if (/^\d{6}$/.test(text)) return submitPass({ code: text }, text);
-    if (text.startsWith('CHKPT:')) return setResult({ tone: 'blue', icon: QrCode, title: 'This is a patrol checkpoint', body: 'Scan it from the Patrols page.' });
-    return setResult({ tone: 'red', icon: AlertTriangle, title: 'Not a guest pass QR' });
+    if (text.startsWith('CHKPT:')) return setResult({ tone: 'blue', icon: QrCode, title: t('This is a patrol checkpoint'), body: t('Scan it from the Patrols page.') });
+    return setResult({ tone: 'red', icon: AlertTriangle, title: t('Not a guest pass QR') });
   };
 
   const submitCode = (e) => {
@@ -279,7 +284,7 @@ function ScanPanel({ queue, gate }) {
     if (mode === 'pass') return submitPass({ code }, code);
     if (!queue.online) {
       queue.enqueue('help_scan', { passcode: code }, `Daily help ${code}`);
-      toast.success('Saved offline');
+      toast.success(t('Saved offline'));
       return setCode('');
     }
     return scan.mutate({ passcode: code, gateId }, { onError: (err) => (isNetworkError(err) ? queue.enqueue('help_scan', { passcode: code }, `Daily help ${code}`) : fail(err)) });
@@ -289,7 +294,7 @@ function ScanPanel({ queue, gate }) {
     <div className="grid gap-6 md:grid-cols-2">
       <Card>
         <CardHeader title="Scan guest pass QR" />
-        <div className="p-4"><QrScanner onScan={onScan} paused={busy} fallbackHint="Or type the 6-digit code from the guest’s phone in the box below." /></div>
+        <div className="p-4"><QrScanner onScan={onScan} paused={busy} fallbackHint={t('Or type the 6-digit code from the guest’s phone in the box below.')} /></div>
       </Card>
       <div className="space-y-4">
         {result && (
@@ -308,11 +313,11 @@ function ScanPanel({ queue, gate }) {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               placeholder="••••••"
-              aria-label="Code"
+              aria-label={t('Code')}
               className="block h-14 w-full rounded-lg border border-slate-300 text-center font-mono text-3xl tracking-[0.5em] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
             <Button type="submit" size="lg" icon={KeyRound} loading={busy} disabled={mode === 'pass' ? code.length !== 6 : code.length < 4} className="w-full">
-              {mode === 'pass' ? 'Verify & let in' : 'Mark entry / exit'}
+              {mode === 'pass' ? t('Verify & let in') : t('Mark entry / exit')}
             </Button>
           </form>
         </Card>
@@ -323,22 +328,23 @@ function ScanPanel({ queue, gate }) {
 
 // ---------- pending / inside ----------
 function ContactsModal({ visitor, onClose }) {
+  const { t } = useT();
   const { data, isLoading } = useHouseholdContacts(visitor?._id);
   return (
-    <Modal open={Boolean(visitor)} onClose={onClose} title={`Call ${visitor?.unit?.label || 'household'}`} description={visitor ? `${visitor.name} is waiting at the gate` : ''} size="sm" footer={<Button onClick={onClose}>Close</Button>}>
+    <Modal open={Boolean(visitor)} onClose={onClose} title={visitor?.unit?.label ? t('Call {unit}', { unit: visitor.unit.label }) : t('Call household')} description={visitor ? t('{name} is waiting at the gate', { name: visitor.name }) : ''} size="sm" footer={<Button onClick={onClose}>Close</Button>}>
       {isLoading ? (
         <div className="flex justify-center py-6"><Spinner /></div>
       ) : !data?.length ? (
-        <p className="text-sm text-slate-500">No residents registered for this unit.</p>
+        <p className="text-sm text-slate-500">{t('No residents registered for this unit.')}</p>
       ) : (
         <ul className="space-y-2">
           {data.map((c) => (
             <li key={`${c.name}-${c.phone}`} className="flex items-center gap-3 rounded-lg border border-slate-200 p-3">
               <div className="min-w-0 flex-1">
                 <p className="font-medium text-slate-900">{c.name}</p>
-                <p className="text-xs text-slate-500">{label(c.residentType)}{c.phone ? ` · ${c.phone}` : ' · no phone'}</p>
+                <p className="text-xs text-slate-500">{t(label(c.residentType))}{c.phone ? ` · ${c.phone}` : ` · ${t('no phone')}`}</p>
               </div>
-              {c.phone && <a href={`tel:${c.phone}`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700"><Phone className="size-4" />Call</a>}
+              {c.phone && <a href={`tel:${c.phone}`} className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-emerald-600 px-4 text-sm font-medium text-white hover:bg-emerald-700"><Phone className="size-4" />{t('Call')}</a>}
             </li>
           ))}
         </ul>
@@ -349,6 +355,7 @@ function ContactsModal({ visitor, onClose }) {
 
 // "Let in" / "Send back" ask once more in a large dialog, so a wrong tap on a busy gate does not decide.
 function DecisionModal({ decision, onClose, onConfirm, busy }) {
+  const { t } = useT();
   const v = decision?.visitor;
   const letIn = decision?.kind === 'in';
   return (
@@ -356,17 +363,17 @@ function DecisionModal({ decision, onClose, onConfirm, busy }) {
       open={Boolean(decision)}
       onClose={onClose}
       size="sm"
-      title={letIn ? `Let ${v?.name} in?` : `Send ${v?.name} back?`}
-      description={v ? `${label(v.purpose)} for ${v.unit?.label || 'the flat'}` : ''}
+      title={letIn ? t('Let {name} in?', { name: v?.name }) : t('Send {name} back?', { name: v?.name })}
+      description={v ? (v.unit?.label ? t('{purpose} for {unit}', { purpose: t(label(v.purpose)), unit: v.unit.label }) : t('{purpose} for the flat', { purpose: t(label(v.purpose)) })) : ''}
       footer={
         <>
           <Button variant="secondary" size="lg" onClick={onClose}>Cancel</Button>
-          <Button variant={letIn ? 'success' : 'danger'} size="lg" loading={busy} onClick={onConfirm}>{letIn ? 'Yes, let in' : 'Yes, send back'}</Button>
+          <Button variant={letIn ? 'success' : 'danger'} size="lg" loading={busy} onClick={onConfirm}>{letIn ? t('Yes, let in') : t('Yes, send back')}</Button>
         </>
       }
     >
       <p className="text-sm text-slate-600">
-        {letIn ? 'Only let them in if the resident said yes (for example on a phone call).' : 'The visitor is turned away and the household sees that entry was refused.'}
+        {letIn ? t('Only let them in if the resident said yes (for example on a phone call).') : t('The visitor is turned away and the household sees that entry was refused.')}
       </p>
     </Modal>
   );
@@ -374,6 +381,7 @@ function DecisionModal({ decision, onClose, onConfirm, busy }) {
 
 function PendingList({ online, scope }) {
   const { user } = useAuth();
+  const { t } = useT();
   const live5 = useLiveInterval(5000);
   const { data } = useVisitors({ status: 'pending', limit: 30, gate: scope.gateId }, { refetchInterval: live5, enabled: online });
   const allow = useGuardCheckIn();
@@ -392,7 +400,7 @@ function PendingList({ online, scope }) {
   };
   return (
     <Card>
-      <CardHeader title={`Waiting for approval (${rows.length})`} subtitle={online ? 'Updates live · if the resident does not answer, call them' : 'Offline — list may be out of date'} action={<ScopeToggle scope={scope} />} />
+      <CardHeader title={t('Waiting for approval ({count})', { count: rows.length })} subtitle={online ? t('Updates live · if the resident does not answer, call them') : t('Offline — list may be out of date')} action={<ScopeToggle scope={scope} />} />
       {!rows.length ? (
         <EmptyState title="No one waiting" description="Visitors you log wait here until the resident answers." />
       ) : (
@@ -418,6 +426,7 @@ function PendingList({ online, scope }) {
 // gate: the console's gate (visitors leave by it); scope.gateId: list only those who came in by it.
 function InsideList({ queue, gate, scope }) {
   const toast = useToast();
+  const { t } = useT();
   const live15 = useLiveInterval(15000);
   const { data } = useVisitors({ status: 'checked_in', limit: 50, gate: scope.gateId }, { refetchInterval: live15, enabled: queue.online });
   const { data: help } = useDailyHelp({ inside: true, limit: 50, gate: scope.gateId }, { refetchInterval: live15, enabled: queue.online });
@@ -432,7 +441,7 @@ function InsideList({ queue, gate, scope }) {
   const checkOut = (v) => {
     const enqueue = () => {
       queue.enqueue('checkout', { visitorId: v._id }, `${v.name} (${v.unit?.label || ''}) out`);
-      toast.success('Check-out saved offline');
+      toast.success(t('Check-out saved offline'));
     };
     if (!queue.online) return enqueue();
     return out.mutate({ id: v._id, gateId: gate?._id }, { onError: (err) => isNetworkError(err) && enqueue() });
@@ -442,12 +451,12 @@ function InsideList({ queue, gate, scope }) {
   const count = visible.length + offlineInside.length + (help?.data.length || 0);
   return (
     <Card>
-      <CardHeader title={`Inside now (${count})`} subtitle={scope.gateId && gate ? `Came in by ${gate.name}` : undefined} action={<ScopeToggle scope={scope} />} />
+      <CardHeader title={t('Inside now ({count})', { count })} subtitle={scope.gateId && gate ? t('Came in by {gate}', { gate: gate.name }) : undefined} action={<ScopeToggle scope={scope} />} />
       {!count && <EmptyState title="Nobody inside" />}
       <ul className="divide-y divide-slate-100">
         {offlineInside.map((o) => (
           <li key={o.key} className="flex items-center gap-3 px-4 py-3 text-sm">
-            <Badge tone="amber"><WifiOff className="mr-1 size-3" />Not synced</Badge>
+            <Badge tone="amber"><WifiOff className="mr-1 size-3" />{t('Not synced')}</Badge>
             <span className="min-w-0 flex-1 truncate font-medium text-slate-800">{o.label}</span>
             <span className="text-xs text-slate-400">{time(o.occurredAt)}</span>
             <Button size="sm" variant="secondary" icon={LogOut} onClick={() => queue.enqueue('checkout', { entryKey: o.key }, `${o.data.name} out`)}>Out</Button>
@@ -458,9 +467,9 @@ function InsideList({ queue, gate, scope }) {
         ))}
         {help?.data.map((h) => (
           <li key={h._id} className="flex items-center gap-3 px-4 py-3 text-sm">
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">Daily help</span>
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">{t('Daily help')}</span>
             <span className="font-medium text-slate-800">{h.name}</span>
-            <span className="truncate text-slate-500">{label(h.type)} · {h.units.map((u) => u.label).join(', ')}</span>
+            <span className="truncate text-slate-500">{t(label(h.type))} · {h.units.map((u) => u.label).join(', ')}</span>
             <span className="ml-auto text-xs text-slate-400">{timeAgo(h.lastSeenAt)}</span>
           </li>
         ))}
@@ -471,25 +480,27 @@ function InsideList({ queue, gate, scope }) {
 
 // ---------- parcels / vehicles ----------
 function ParcelsPanel({ online, gate, gates }) {
+  const { t } = useT();
   if (!online) return <Card><EmptyState icon={WifiOff} title="Parcels need a connection" description="Keep the parcel aside and log it when the network is back." /></Card>;
   if (gate && !gateTakes(gate, 'deliveries')) {
-    const to = gates.filter((g) => gateTakes(g, 'deliveries')).map((g) => g.name).join(' or ');
-    return <Card><EmptyState icon={DoorClosed} title={`${gate.name} does not take deliveries`} description={to ? `Send couriers to ${to}.` : undefined} /></Card>;
+    const to = gates.filter((g) => gateTakes(g, 'deliveries')).map((g) => g.name).join(` ${t('or')} `);
+    return <Card><EmptyState icon={DoorClosed} title={t('{gate} does not take deliveries', { gate: gate.name })} description={to ? t('Send couriers to {gates}.', { gates: to }) : undefined} /></Card>;
   }
   return (
     <div className="space-y-4">
       <LogParcelForm gateId={gate?._id} />
-      <Link to="/parcels" className="block text-center text-sm font-medium text-brand-600 hover:underline">Open the parcel register to hand over parcels →</Link>
+      <Link to="/parcels" className="block text-center text-sm font-medium text-brand-600 hover:underline">{t('Open the parcel register to hand over parcels →')}</Link>
     </div>
   );
 }
 
 function VehiclesPanel({ online, gate }) {
+  const { t } = useT();
   if (!online) return <Card><EmptyState icon={WifiOff} title="Vehicle checks need a connection" /></Card>;
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {gate && !gateTakes(gate, 'vehicles') ? (
-        <Card><EmptyState icon={DoorClosed} title={`${gate.name} takes no vehicles`} description="Vehicle checks are logged at the vehicle gates." /></Card>
+        <Card><EmptyState icon={DoorClosed} title={t('{gate} takes no vehicles', { gate: gate.name })} description="Vehicle checks are logged at the vehicle gates." /></Card>
       ) : (
         <ManualLog gate={gate} />
       )}
@@ -500,6 +511,7 @@ function VehiclesPanel({ online, gate }) {
 
 export default function GateConsolePage() {
   const { user } = useAuth();
+  const { t } = useT();
   const current = useCurrentGate();
   const { gate } = current;
   const queue = useGateQueue(user.society?._id || user.society, gate);
@@ -562,11 +574,11 @@ export default function GateConsolePage() {
       {!wide && queue.online && (
         <div className="sticky top-16 z-10 -mx-4 mb-3 flex border-y border-slate-200 bg-white/95 text-sm font-semibold backdrop-blur sm:mx-0 sm:rounded-lg sm:border">
           <button type="button" onClick={() => setTab('pending')} className={cn('flex-1 px-3 py-2.5 text-center', waitingCount ? 'text-amber-700' : 'text-slate-600')}>
-            Waiting: {waitingCount}
+            {t('Waiting: {count}', { count: waitingCount })}
           </button>
           <span className="w-px bg-slate-200" aria-hidden="true" />
           <button type="button" onClick={() => setTab('inside')} className="flex-1 px-3 py-2.5 text-center text-slate-700">
-            Inside: {insideCount}
+            {t('Inside: {count}', { count: insideCount })}
           </button>
         </div>
       )}

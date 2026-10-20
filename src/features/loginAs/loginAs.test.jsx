@@ -7,7 +7,7 @@ import { minutesLeft } from './session';
 
 const auth = { user: null, exitLoginAs: vi.fn() };
 vi.mock('../../context/AuthContext', () => ({ useAuth: () => auth }));
-vi.mock('../../context/LanguageContext', () => ({ useT: () => ({ t: (s) => s }) }));
+vi.mock('../../context/LanguageContext', () => ({ useT: () => ({ t: (s, vars) => (vars ? s.replace(/\{(\w+)\}/g, (_, k) => vars[k]) : s) }) }));
 vi.mock('./api', () => ({ useActingCheck: () => ({ error: null }) }));
 
 const { ActingAsBanner } = await import('./components/ActingAsBanner');

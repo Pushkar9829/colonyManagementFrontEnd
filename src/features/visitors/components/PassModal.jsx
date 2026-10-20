@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Download } from 'lucide-react';
 import { Button, Input, Modal, Select, Tabs } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { dateTime } from '../../../lib/format';
 import { useCreatePass } from '../api';
@@ -15,12 +16,16 @@ const toLocalInput = (d) => {
   return new Date(d.getTime() - off).toISOString().slice(0, 16);
 };
 
-export const passWindow = (p) => (p.kind === 'recurring' && p.recurrence ? `${p.recurrence.days.map((d) => DAY_NAMES[d]).join(', ')} · ${p.recurrence.startTime}–${p.recurrence.endTime}` : null);
+// `t` (optional) translates the day names.
+export const passWindow = (p, t = (s) => s) => (p.kind === 'recurring' && p.recurrence ? `${p.recurrence.days.map((d) => t(DAY_NAMES[d])).join(', ')} · ${p.recurrence.startTime}–${p.recurrence.endTime}` : null);
 
 // QR + code + share buttons for a pass. The QR carries a signed token the guard scans.
 export function PassCard({ pass }) {
-  const win = passWindow(pass);
-  const share = `You're invited! Show this code at the gate: ${pass.code}.${win ? ` Valid ${win}` : ''} Until ${dateTime(pass.validTo)}.`;
+  const { t } = useT();
+  const win = passWindow(pass, t);
+  const share = win
+    ? t("You're invited! Show this code at the gate: {code}. Valid {when}. Until {until}.", { code: pass.code, when: win, until: dateTime(pass.validTo) })
+    : t("You're invited! Show this code at the gate: {code}. Until {until}.", { code: pass.code, until: dateTime(pass.validTo) });
   const download = async () => {
     const a = document.createElement('a');
     a.href = await qrDataUrl(pass.qrToken, 600);
@@ -29,20 +34,20 @@ export function PassCard({ pass }) {
   };
   return (
     <div className="text-center">
-      <p className="text-sm text-slate-500">Share this with {pass.guestName}</p>
-      {pass.qrToken && <QrImage value={pass.qrToken} size={200} className="mx-auto my-3 rounded-lg border border-slate-200 p-2" label={`Pass QR for ${pass.guestName}`} />}
+      <p className="text-sm text-slate-500">{t('Share this with {name}', { name: pass.guestName })}</p>
+      {pass.qrToken && <QrImage value={pass.qrToken} size={200} className="mx-auto my-3 rounded-lg border border-slate-200 p-2" label={t('Pass QR for {name}', { name: pass.guestName })} />}
       <p className="font-mono text-3xl font-bold tracking-[0.3em] text-brand-700">{pass.code}</p>
       <p className="mt-2 text-xs text-slate-500">
         {win ? `${win} · ` : ''}
         {dateTime(pass.validFrom)} – {dateTime(pass.validTo)}
-        {pass.kind !== 'recurring' ? ` · ${pass.maxUses} entr${pass.maxUses > 1 ? 'ies' : 'y'}` : ''}
+        {pass.kind !== 'recurring' ? ` · ${pass.maxUses > 1 ? t('{n} entries', { n: pass.maxUses }) : t('{n} entry', { n: pass.maxUses })}` : ''}
       </p>
-      {pass.gates?.length > 0 && pass.gates[0]?.name && <p className="mt-1 text-xs font-medium text-slate-600">Only at {pass.gates.map((g) => g.name).join(' or ')}</p>}
+      {pass.gates?.length > 0 && pass.gates[0]?.name && <p className="mt-1 text-xs font-medium text-slate-600">{t('Only at {gates}', { gates: pass.gates.map((g) => g.name).join(t(' or ')) })}</p>}
       <div className="mt-4 flex flex-wrap justify-center gap-2">
         <Button size="sm" variant="secondary" onClick={() => navigator.clipboard?.writeText(share)}>Copy message</Button>
         {pass.qrToken && <Button size="sm" variant="secondary" icon={Download} onClick={download}>Save QR</Button>}
         <a className="inline-flex h-8 items-center rounded-lg bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700" href={`https://wa.me/?text=${encodeURIComponent(share)}`} target="_blank" rel="noreferrer">
-          Share on WhatsApp
+          {t('Share on WhatsApp')}
         </a>
       </div>
     </div>
@@ -67,6 +72,7 @@ export function PassModal({ open, onClose, initial }) {
     untilDate: toLocalInput(new Date(now.getTime() + 30 * 86400000)).slice(0, 10),
   });
   const create = useCreatePass({ onSuccess: setCreated });
+  const { t } = useT();
 
   const close = () => {
     setCreated(null);
@@ -112,12 +118,12 @@ export function PassModal({ open, onClose, initial }) {
         ) : (
           <>
             <div className="sm:col-span-2">
-              <p className="mb-1.5 text-sm font-medium text-slate-700">Days</p>
+              <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Days')}</p>
               <div className="flex flex-wrap gap-1.5">
                 {DAY_NAMES.map((n, d) => (
                   <button key={n} type="button" onClick={() => toggleDay(d)}
                     className={cn('h-9 w-12 rounded-lg border text-sm font-medium', days.includes(d) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50')}>
-                    {n}
+                    {t(n)}
                   </button>
                 ))}
               </div>

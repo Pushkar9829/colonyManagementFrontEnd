@@ -4,6 +4,7 @@ import { AlertTriangle, CheckCircle2, FilePlus2, FileUp, HandCoins, IndianRupee,
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, FilterBar, Input, Modal, Pagination, Select, StatCard, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { currentPeriod, date, label, money, periodLabel, toPaise, todayISO } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
@@ -30,7 +31,7 @@ import { useOnlinePaymentStatus } from '../../colonyPayments/api';
 import { OpeningBalancesModal } from '../components/OpeningBalancesModal';
 import { SendOnWhatsApp } from '../../whatsapp/components/SendOnWhatsApp';
 
-const periodText = (p) => (p === 'OPENING' ? 'Opening balance' : periodLabel(p));
+const periodText = (p, t = (s) => s) => (p === 'OPENING' ? t('Opening balance') : periodLabel(p));
 
 // Finance staff: this month's numbers, labelled with the month, plus all-time dues so the tiles
 // line up with the dashboard (which shows dues across every month).
@@ -56,6 +57,7 @@ const shortDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric
 
 // Resident: what is due right now and one big button to pay it (oldest open bill first).
 function DueHero({ onPay, paying, online }) {
+  const { t } = useT();
   const { data: bills, isLoading } = useBills({ limit: 100 });
   const { data: s } = useBillingSummary(undefined);
   if (isLoading || !bills) return null;
@@ -65,8 +67,8 @@ function DueHero({ onPay, paying, online }) {
       <Card className="mb-4 flex items-center gap-3 border-emerald-200 bg-emerald-50 p-5">
         <CheckCircle2 className="size-8 shrink-0 text-emerald-600" />
         <div>
-          <p className="text-lg font-semibold text-emerald-800">You're all paid up</p>
-          {s?.advance > 0 && <p className="text-sm text-emerald-700">{money(s.advance)} advance balance · used on your next bills</p>}
+          <p className="text-lg font-semibold text-emerald-800">{t("You're all paid up")}</p>
+          {s?.advance > 0 && <p className="text-sm text-emerald-700">{t('{amount} advance balance · used on your next bills', { amount: money(s.advance) })}</p>}
         </div>
       </Card>
     );
@@ -78,19 +80,19 @@ function DueHero({ onPay, paying, online }) {
     <Card className="mb-4 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
         {open.length > 1 ? (
-          <p className="text-2xl font-bold text-slate-900">{open.length} bills · {money(total)} due</p>
+          <p className="text-2xl font-bold text-slate-900">{t('{count} bills · {amount} due', { count: open.length, amount: money(total) })}</p>
         ) : (
-          <p className="text-2xl font-bold text-slate-900">{money(first.balance)} due by {shortDate(first.dueDate)}</p>
+          <p className="text-2xl font-bold text-slate-900">{t('{amount} due by {date}', { amount: money(first.balance), date: shortDate(first.dueDate) })}</p>
         )}
         <p className={late ? 'text-sm font-medium text-red-600' : 'text-sm text-slate-500'}>
-          {late ? `Overdue since ${shortDate(first.dueDate)}` : `${periodText(first.period)} · ${first.billNumber}`}
-          {open.length > 1 && ` · Pay now pays the oldest (${money(first.balance)})`}
+          {late ? t('Overdue since {date}', { date: shortDate(first.dueDate) }) : `${periodText(first.period, t)} · ${first.billNumber}`}
+          {open.length > 1 && ` · ${t('Pay now pays the oldest ({amount})', { amount: money(first.balance) })}`}
         </p>
       </div>
       {online ? (
         <Button size="lg" className="w-full sm:w-auto" loading={paying === first._id} onClick={() => onPay(first._id)}>Pay now</Button>
       ) : (
-        <p className="max-w-xs text-sm text-slate-500">Online payment isn't switched on for your society yet. Please pay at the society office.</p>
+        <p className="max-w-xs text-sm text-slate-500">{t("Online payment isn't switched on for your society yet. Please pay at the society office.")}</p>
       )}
     </Card>
   );
@@ -98,6 +100,7 @@ function DueHero({ onPay, paying, online }) {
 
 // Resident tiles: just the three numbers a household cares about.
 function ResidentSummary() {
+  const { t } = useT();
   const { data: s } = useBillingSummary(undefined);
   const year = todayISO().slice(0, 4);
   const { data: st } = useStatement({ from: `${year}-01-01` });
@@ -106,8 +109,8 @@ function ResidentSummary() {
   const paidThisYear = st ? st.entries.reduce((sum, e) => sum + (e.type === 'payment' ? e.credit : e.type === 'bounce' ? -e.debit : 0), 0) : null;
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
-      <StatCard icon={IndianRupee} tone={s.outstanding ? 'amber' : 'green'} label="Due now" value={money(s.outstanding)} sub={s.overdue ? `${money(s.overdue)} overdue` : undefined} />
-      <StatCard icon={Wallet} tone="green" label={`Paid in ${year}`} value={paidThisYear == null ? '…' : money(paidThisYear)} />
+      <StatCard icon={IndianRupee} tone={s.outstanding ? 'amber' : 'green'} label="Due now" value={money(s.outstanding)} sub={s.overdue ? t('{amount} overdue', { amount: money(s.overdue) }) : undefined} />
+      <StatCard icon={Wallet} tone="green" label={t('Paid in {year}', { year })} value={paidThisYear == null ? '…' : money(paidThisYear)} />
       <StatCard icon={PiggyBank} tone="green" label="Advance balance" value={money(s.advance)} sub="Used on your next bills" />
     </div>
   );
@@ -176,17 +179,19 @@ function RecordPaymentModal({ open, onClose, presetBill }) {
 }
 
 function PayAdvanceModal({ onClose }) {
+  const { t } = useT();
   const [amount, setAmount] = useState('');
   const pay = usePayOnline({ onSuccess: onClose });
   return (
     <Modal open onClose={onClose} title="Pay in advance" description="The amount is kept as credit and adjusted against your next bills."
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!(Number(amount) >= 1)} loading={pay.isPending} onClick={() => pay.mutate({ advance: toPaise(amount) })}>Pay {amount ? money(toPaise(amount)) : ''}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!(Number(amount) >= 1)} loading={pay.isPending} onClick={() => pay.mutate({ advance: toPaise(amount) })}>{amount ? t('Pay {amount}', { amount: money(toPaise(amount)) }) : t('Pay')}</Button></>}>
       <Input label="Amount (₹)" type="number" min={1} value={amount} onChange={(e) => setAmount(e.target.value)} />
     </Modal>
   );
 }
 
 function BillsTable({ finance, onOpen, onPay, payingId, online }) {
+  const { t } = useT();
   const [filters, setFilters] = useState({ period: '', status: '', overdue: '', page: 1 });
   const { data, isLoading } = useBills({ period: filters.period || undefined, status: filters.status || undefined, overdue: filters.overdue || undefined, page: filters.page });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
@@ -208,13 +213,13 @@ function BillsTable({ finance, onOpen, onPay, payingId, online }) {
         columns={[
           { key: 'billNumber', header: 'Bill', render: (b) => <span className="font-medium text-slate-900">{b.billNumber}</span> },
           ...(finance ? [{ key: 'unit', header: 'Unit', render: (b) => b.unit?.label }] : []),
-          { key: 'period', header: 'Month', render: (b) => periodText(b.period) },
+          { key: 'period', header: 'Month', render: (b) => periodText(b.period, t) },
           { key: 'total', header: 'Total', render: (b) => money(b.total) },
           { key: 'balance', header: 'Balance', render: (b) => <span className={b.balance ? 'font-medium text-slate-900' : 'text-slate-400'}>{money(b.balance)}</span> },
           { key: 'dueDate', header: 'Due', render: (b) => <span className={b.balance && new Date(b.dueDate) < new Date() ? 'text-red-600' : ''}>{date(b.dueDate)}</span> },
           { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
           ...(!finance && online
-            ? [{ key: 'pay', header: '', render: (b) => b.balance > 0 && b.status !== 'cancelled' && <Button size="sm" loading={payingId === b._id} onClick={(e) => { e.stopPropagation(); onPay(b._id); }}>Pay {money(b.balance)}</Button> }]
+            ? [{ key: 'pay', header: '', render: (b) => b.balance > 0 && b.status !== 'cancelled' && <Button size="sm" loading={payingId === b._id} onClick={(e) => { e.stopPropagation(); onPay(b._id); }}>{t('Pay {amount}', { amount: money(b.balance) })}</Button> }]
             : []),
         ]}
       />
@@ -224,6 +229,7 @@ function BillsTable({ finance, onOpen, onPay, payingId, online }) {
 }
 
 function PaymentsTable({ finance, onReceipt }) {
+  const { t } = useT();
   const [filters, setFilters] = useState({ page: 1, status: '', purpose: '', method: '' });
   const { data, isLoading } = usePayments({ page: filters.page, status: filters.status || undefined, purpose: filters.purpose || undefined, method: filters.method || undefined });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
@@ -240,11 +246,11 @@ function PaymentsTable({ finance, onReceipt }) {
         columns={[
           { key: 'receiptNumber', header: 'Receipt', render: (p) => <span className="font-medium text-slate-900">{p.receiptNumber || '—'}</span> },
           ...(finance ? [{ key: 'unit', header: 'Unit', render: (p) => p.unit?.label }] : []),
-          { key: 'bill', header: 'Against', render: (p) => p.bill?.billNumber || <Badge tone="green">Advance</Badge> },
-          { key: 'amount', header: 'Amount', render: (p) => <span>{money(p.amount)}{p.bill && p.advanceAmount > 0 && <span className="ml-1 text-xs text-emerald-700">({money(p.advanceAmount)} adv.)</span>}</span> },
-          { key: 'method', header: 'Mode', render: (p) => `${label(p.method)}${p.reference ? ` · ${p.reference}` : ''}` },
+          { key: 'bill', header: 'Against', render: (p) => p.bill?.billNumber || <Badge tone="green">{t('Advance')}</Badge> },
+          { key: 'amount', header: 'Amount', render: (p) => <span>{money(p.amount)}{p.bill && p.advanceAmount > 0 && <span className="ml-1 text-xs text-emerald-700">{t('({amount} adv.)', { amount: money(p.advanceAmount) })}</span>}</span> },
+          { key: 'method', header: 'Mode', render: (p) => `${t(label(p.method))}${p.reference ? ` · ${p.reference}` : ''}` },
           { key: 'paidAt', header: 'Date', render: (p) => date(p.paidAt) },
-          { key: 'status', header: 'Status', render: (p) => (p.status === 'bounced' ? <Badge tone="red">Bounced</Badge> : <StatusBadge status={p.status === 'success' ? 'paid' : p.status} />) },
+          { key: 'status', header: 'Status', render: (p) => (p.status === 'bounced' ? <Badge tone="red">{t('Bounced')}</Badge> : <StatusBadge status={p.status === 'success' ? 'paid' : p.status} />) },
         ]} />
       <Pagination meta={data?.meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
     </Card>
@@ -272,6 +278,7 @@ function DefaultersTable() {
 
 export default function BillingPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const finance = user.role !== ROLES.RESIDENT;
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'bills';
@@ -308,7 +315,7 @@ export default function BillingPage() {
         description={finance ? 'Generate maintenance bills, record payments and follow up on dues.' : 'Pay maintenance online, see your statement and download receipts.'}
         actions={finance ? (
           <>
-            <Button variant="secondary" icon={Percent} loading={lateFees.isPending} onClick={() => window.confirm('Apply late fee to all overdue bills (once per bill)?') && lateFees.mutate()}>Apply late fees</Button>
+            <Button variant="secondary" icon={Percent} loading={lateFees.isPending} onClick={() => window.confirm(t('Apply late fee to all overdue bills (once per bill)?')) && lateFees.mutate()}>Apply late fees</Button>
             <Button variant="secondary" icon={FileUp} onClick={() => setModal('opening')}>Opening balances</Button>
             <Button variant="secondary" icon={HandCoins} onClick={() => setModal('advance')}>Record advance</Button>
             <Button variant="secondary" icon={Wallet} onClick={() => { setPresetBill(null); setModal('pay'); }}>Record payment</Button>
@@ -337,12 +344,12 @@ export default function BillingPage() {
           bill && bill.balance > 0 && bill.status !== 'cancelled' ? (
             finance ? (
               <>
-                {bill.paid === 0 && <Button variant="ghost" onClick={() => window.confirm('Cancel this bill?') && cancel.mutate(bill._id, { onSuccess: () => setBillId(null) })}>Cancel bill</Button>}
+                {bill.paid === 0 && <Button variant="ghost" onClick={() => window.confirm(t('Cancel this bill?')) && cancel.mutate(bill._id, { onSuccess: () => setBillId(null) })}>Cancel bill</Button>}
                 <Button variant="secondary" onClick={() => { setWaiverBill(bill); setBillId(null); }}>Request waiver</Button>
                 <Button onClick={() => { setPresetBill(bill); setBillId(null); setModal('pay'); }}>Record payment</Button>
               </>
             ) : (
-              online ? <Button loading={pay.isPending} onClick={() => pay.mutate(bill._id, { onSuccess: () => setBillId(null) })}>Pay {money(bill.balance)}</Button> : <p className="text-sm text-slate-500">Pay at the society office</p>
+              online ? <Button loading={pay.isPending} onClick={() => pay.mutate(bill._id, { onSuccess: () => setBillId(null) })}>{t('Pay {amount}', { amount: money(bill.balance) })}</Button> : <p className="text-sm text-slate-500">{t('Pay at the society office')}</p>
             )
           ) : null
         }

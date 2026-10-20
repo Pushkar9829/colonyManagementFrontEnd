@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
 
 // Key prefixes match the server's realtime invalidation: 'emergency', 'children', 'childAlerts'.
 
@@ -20,8 +21,14 @@ export const useChildren = (params, options) =>
 export const useCreateChild = (o) => useApiMutation((b) => api.post('/emergency/children', b), { invalidate: ['children'], success: 'Child added', ...o });
 export const useUpdateChild = (o) => useApiMutation(({ id, ...b }) => api.patch(`/emergency/children/${id}`, b), { invalidate: ['children'], success: 'Saved', ...o });
 export const useRemoveChild = () => useApiMutation((id) => api.del(`/emergency/children/${id}`), { invalidate: ['children'], success: 'Removed' });
-export const useRaiseExitAlert = (o) =>
-  useApiMutation(({ id, ...b }) => api.post(`/emergency/children/${id}/exit-alert`, b), { invalidate: ['childAlerts'], success: (a) => `Parents of ${a.child?.name || 'the child'} alerted`, ...o });
+export const useRaiseExitAlert = (o) => {
+  const { t } = useT();
+  return useApiMutation(({ id, ...b }) => api.post(`/emergency/children/${id}/exit-alert`, b), {
+    invalidate: ['childAlerts'],
+    success: (a) => (a.child?.name ? t('Parents of {name} alerted', { name: a.child.name }) : t('Parents of the child alerted')),
+    ...o,
+  });
+};
 
 // ---- child exit alerts ----
 export const useChildAlerts = (params, options) =>
@@ -29,6 +36,7 @@ export const useChildAlerts = (params, options) =>
 export const useAcknowledgeAlert = (o) =>
   useApiMutation(({ id, ...b }) => api.post(`/emergency/child-alerts/${id}/acknowledge`, b), {
     invalidate: ['childAlerts', 'notifications'],
+    // plain strings: useApiMutation translates them
     success: (a) => (a.response === 'stop' ? 'Guard asked to hold your child' : 'Guard told it is OK'),
     ...o,
   });

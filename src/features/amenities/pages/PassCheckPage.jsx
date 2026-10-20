@@ -5,9 +5,11 @@ import { Button, Card, Input, Select } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { date as fmtDate } from '../../../lib/format';
 import { useAmenities, useCheckPass } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 // Rear-camera QR reader; reports each decoded text once every few seconds.
 function Scanner({ onScan }) {
+  const { t } = useT();
   const video = useRef(null);
   const last = useRef({ text: '', at: 0 });
   const cb = useRef(onScan);
@@ -60,8 +62,8 @@ function Scanner({ onScan }) {
         {(!on || error) && (
           <button type="button" onClick={start} className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-slate-200 transition hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-brand-400">
             <Camera className="size-10 text-slate-300" />
-            <span className="text-base font-semibold text-white">{error ? 'Tap to try again' : 'Tap to scan pass'}</span>
-            {error && <span className="text-sm text-slate-300">{error}</span>}
+            <span className="text-base font-semibold text-white">{error ? t('Tap to try again') : t('Tap to scan pass')}</span>
+            {error && <span className="text-sm text-slate-300">{t(error)}</span>}
           </button>
         )}
       </div>
@@ -71,6 +73,7 @@ function Scanner({ onScan }) {
 }
 
 export default function PassCheckPage() {
+  const { t } = useT();
   const { data: amenities = [] } = useAmenities();
   const [amenity, setAmenity] = useState('');
   const [code, setCode] = useState('');
@@ -94,16 +97,16 @@ export default function PassCheckPage() {
           </form>
         </Card>
         <Card className={cn('flex flex-col items-center justify-center p-6 text-center', result && (result.valid ? 'border-emerald-300 bg-emerald-50' : 'border-red-300 bg-red-50'))}>
-          {!result ? <p className="text-sm text-slate-500">The result shows here.</p> : (
+          {!result ? <p className="text-sm text-slate-500">{t('The result shows here.')}</p> : (
             <>
               {result.valid ? <CheckCircle2 className="size-14 text-emerald-600" /> : <XCircle className="size-14 text-red-600" />}
-              <p className={cn('mt-2 text-xl font-semibold', result.valid ? 'text-emerald-800' : 'text-red-800')}>{result.valid ? 'Valid pass' : 'Not valid'}</p>
+              <p className={cn('mt-2 text-xl font-semibold', result.valid ? 'text-emerald-800' : 'text-red-800')}>{result.valid ? t('Valid pass') : t('Not valid')}</p>
               {result.reason && <p className="text-sm text-red-700">{result.reason}</p>}
               {result.pass && (
                 <div className="mt-3 text-sm text-slate-700">
                   <p className="font-medium">{result.pass.holder?.name}{result.pass.unit ? ` · ${result.pass.unit.label}` : ''}</p>
                   <p>{result.pass.amenity?.name} · {result.pass.plan?.name}</p>
-                  <p className="text-xs text-slate-500">Valid {fmtDate(result.pass.validFrom)} – {fmtDate(result.pass.validTo)}{result.pass.entries ? ` · entry #${result.pass.entries}` : ''}</p>
+                  <p className="text-xs text-slate-500">{t('Valid {from} – {to}', { from: fmtDate(result.pass.validFrom), to: fmtDate(result.pass.validTo) })}{result.pass.entries ? ` · ${t('entry #{n}', { n: result.pass.entries })}` : ''}</p>
                 </div>
               )}
             </>

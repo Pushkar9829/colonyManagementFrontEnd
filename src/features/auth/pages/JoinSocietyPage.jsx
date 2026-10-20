@@ -4,8 +4,10 @@ import { CheckCircle2 } from 'lucide-react';
 import { api } from '../../../api/client';
 import { Button, Input, Select } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 
 export default function JoinSocietyPage() {
+  const { t } = useT();
   const [step, setStep] = useState('code'); // code -> details -> done
   const [society, setSociety] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -57,21 +59,23 @@ export default function JoinSocietyPage() {
     return (
       <div className="text-center">
         <CheckCircle2 className="mx-auto size-12 text-emerald-500" />
-        <h1 className="mt-4 text-2xl font-semibold text-slate-900">Request sent</h1>
-        <p className="mt-2 text-sm text-slate-500">The {society?.society?.name} admin will review your request. You can log in once it is approved.</p>
+        <h1 className="mt-4 text-2xl font-semibold text-slate-900">{t('Request sent')}</h1>
+        <p className="mt-2 text-sm text-slate-500">{t('The {name} admin will review your request. You can log in once it is approved.', { name: society?.society?.name })}</p>
         <Link to="/login" className="mt-6 inline-block font-medium text-brand-600 hover:underline">
-          Back to login
+          {t('Back to login')}
         </Link>
       </div>
     );
   }
 
+  // the society name is shown in bold inside the translated sentence
+  const [joinBefore, joinAfter = ''] = t('Joining {name}').split('{name}');
   const units = (society?.units || []).filter((u) => !values.block || String(u.block) === values.block);
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-900">Join your society</h1>
-      <p className="mt-1 text-sm text-slate-500">Ask your society office for the 6-character joining code.</p>
+      <h1 className="text-2xl font-semibold text-slate-900">{t('Join your society')}</h1>
+      <p className="mt-1 text-sm text-slate-500">{t('Ask your society office for the 6-character joining code.')}</p>
 
       {step === 'code' ? (
         <form onSubmit={lookup} className="mt-6 space-y-4">
@@ -84,7 +88,7 @@ export default function JoinSocietyPage() {
       ) : (
         <form onSubmit={submit} className="mt-6 space-y-4">
           <div className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-700">
-            Joining <strong>{society.society.name}</strong>
+            {joinBefore}<strong>{society.society.name}</strong>{joinAfter}
             {society.society.city ? `, ${society.society.city}` : ''}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -116,9 +120,9 @@ export default function JoinSocietyPage() {
         </form>
       )}
       <p className="mt-6 text-sm text-slate-600">
-        Already approved?{' '}
+        {t('Already approved?')}{' '}
         <Link to="/login" className="font-medium text-brand-600 hover:underline">
-          Log in
+          {t('Log in')}
         </Link>
       </p>
     </div>

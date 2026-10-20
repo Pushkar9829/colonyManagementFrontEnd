@@ -25,8 +25,8 @@ export default function PatrolsPage() {
 
   const [params, setParams] = useSearchParams();
   const requested = params.get('tab');
-  const tab = tabs.some((t) => t.value === requested) ? requested : tabs[0].value;
-  const setTab = (t) => setParams((p) => { p.set('tab', t); return p; }, { replace: true });
+  const tab = tabs.some((x) => x.value === requested) ? requested : tabs[0].value;
+  const setTab = (v) => setParams((p) => { p.set('tab', v); return p; }, { replace: true });
 
   return (
     <div>

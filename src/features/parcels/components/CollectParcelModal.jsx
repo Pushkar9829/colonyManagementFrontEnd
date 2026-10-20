@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Button, Field, Input, Modal } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { COLLECTOR_TYPES, useCollectParcel } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 function CollectBody({ parcel, onClose, onDone }) {
   const [otp, setOtp] = useState('');
+  const { t: tx } = useT();
   const [type, setType] = useState('resident');
   const [name, setName] = useState('');
   const [errors, setErrors] = useState({});
@@ -37,7 +39,7 @@ function CollectBody({ parcel, onClose, onDone }) {
           value={otp}
           onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 4))}
           placeholder="••••"
-          aria-label="OTP"
+          aria-label={tx('OTP')}
           className={cn(
             'block h-16 w-full rounded-xl border bg-white text-center font-mono text-4xl font-semibold tracking-[0.5em] text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20',
             errors.otp ? 'border-red-400' : 'border-slate-300',
@@ -56,7 +58,7 @@ function CollectBody({ parcel, onClose, onDone }) {
                 type === t.value ? 'border-brand-600 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white text-slate-700 hover:border-brand-300',
               )}
             >
-              {t.label}
+              {tx(t.label)}
             </button>
           ))}
         </div>

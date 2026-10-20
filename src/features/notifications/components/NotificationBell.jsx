@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { cn } from '../../../lib/cn';
 import { timeAgo } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useMarkAllRead, useMarkRead, useNotifications } from '../api';
 
 export function NotificationBell() {
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -29,7 +31,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={ref}>
-      <button type="button" onClick={() => setOpen((o) => !o)} className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700" aria-label="Notifications">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700" aria-label={t('Notifications')}>
         <Bell className="size-5" />
         {unread > 0 && (
           <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
@@ -40,15 +42,15 @@ export function NotificationBell() {
       {open && (
         <div className="absolute right-0 z-40 mt-2 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
           <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-            <p className="font-semibold text-slate-900">Notifications</p>
+            <p className="font-semibold text-slate-900">{t('Notifications')}</p>
             {unread > 0 && (
               <button type="button" onClick={() => markAll.mutate()} className="text-xs font-medium text-brand-600 hover:underline">
-                Mark all read
+                {t('Mark all read')}
               </button>
             )}
           </div>
           <ul className="max-h-96 divide-y divide-slate-100 overflow-y-auto">
-            {!data?.data?.length && <li className="px-4 py-8 text-center text-sm text-slate-500">You're all caught up</li>}
+            {!data?.data?.length && <li className="px-4 py-8 text-center text-sm text-slate-500">{t("You're all caught up")}</li>}
             {data?.data?.map((n) => (
               <li key={n._id}>
                 <button type="button" onClick={() => openItem(n)} className={cn('w-full px-4 py-3 text-left hover:bg-slate-50', !n.readAt && 'bg-brand-50/50')}>
