@@ -4,12 +4,16 @@ import { Badge, Card, Checkbox, FilterBar, Input, Modal, Pagination, Spinner, Ta
 import { dateTime, label } from '../../../lib/format';
 import { useHouseholds, useUnitHousehold } from '../api';
 import { HouseholdDetail } from '../components/HouseholdDetail';
+import { useAuth } from '../../../context/AuthContext';
+import { UnitPeopleDetails } from '../../people/components/UnitPeopleDetails';
 
 function UnitModal({ unit, onClose }) {
   const { data, isLoading } = useUnitHousehold(unit._id);
+  const { user } = useAuth();
   return (
     <Modal open onClose={onClose} title={`Household ${unit.label}`} description={label(unit.occupancy)} size="lg">
-      {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : <HouseholdDetail {...data} />}
+      {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : <HouseholdDetail {...data} unitLabel={unit.label} />}
+      {user.role === 'admin' && <UnitPeopleDetails unitId={unit._id} />}
     </Modal>
   );
 }

@@ -30,7 +30,7 @@ export function PreferencesMenu({ className, placement = "down" }) {
     <div className={cn('relative', className)} ref={ref}>
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1 rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700" aria-label={`${t('Language')} / ${t('Theme')}`} aria-expanded={open}>
         <Languages className="size-5" />
-        <span className="text-xs font-semibold">{{ en: 'EN', hi: 'हि', mr: 'म' }[lang] || lang.toUpperCase()}</span>
+        <span className="text-xs font-semibold">{{ en: 'EN', hi: 'हि', mr: 'म', pa: 'ਪੰ' }[lang] || lang.toUpperCase()}</span>
         <ThemeIcon className="ml-0.5 size-4" />
       </button>
       {open && (

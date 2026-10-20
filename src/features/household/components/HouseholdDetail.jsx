@@ -1,11 +1,12 @@
 import { Badge, Card, CardHeader } from '../../../components/ui';
 import { label } from '../../../lib/format';
+import { LoginAsButton } from '../../loginAs/components/LoginAsModal';
 
 const flags = (p) => [p.bloodGroup && <Badge key="b" tone="red">{p.bloodGroup}</Badge>, p.elderly && <Badge key="e" tone="amber">Senior</Badge>, p.specialNeeds && <Badge key="s" tone="amber">Special needs</Badge>].filter(Boolean);
 const notes = (p) => [p.conditions, p.allergies && `Allergic to ${p.allergies}`].filter(Boolean).join(' · ');
 
 // Read-only household view used by managers and by responders (SOS context).
-export function HouseholdDetail({ residents = [], members = [], pets = [], emergencyContacts = [], medicalNotes }) {
+export function HouseholdDetail({ residents = [], members = [], pets = [], emergencyContacts = [], medicalNotes, unitLabel }) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
@@ -14,7 +15,7 @@ export function HouseholdDetail({ residents = [], members = [], pets = [], emerg
           {!residents.length && !members.length && <li className="px-5 py-3 text-slate-500">Nobody listed</li>}
           {residents.map((r) => (
             <li key={`r-${r.membership || r.name}`} className="px-5 py-2">
-              <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-900">{r.name}</span><span className="text-xs text-slate-500">{label(r.residentType)}</span>{flags(r)}</div>
+              <div className="flex flex-wrap items-center gap-2"><span className="font-medium text-slate-900">{r.name}</span><span className="text-xs text-slate-500">{label(r.residentType)}</span>{flags(r)}{r.membership && <LoginAsButton className="ml-auto" target={{ membershipId: r.membership, user: r.user, name: r.name, role: 'resident', unitLabel }} />}</div>
               <p className="text-xs text-slate-500">{[r.phone, notes(r)].filter(Boolean).join(' · ')}</p>
             </li>
           ))}

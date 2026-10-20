@@ -15,6 +15,7 @@ export const ROLE_LABELS = {
   resident: 'Resident',
   staff: 'Staff',
   super_admin: 'Super Admin',
+  reseller_admin: 'Partner admin',
 };
 
 // Admin implicitly has every permission, mirroring the backend authorize() middleware.

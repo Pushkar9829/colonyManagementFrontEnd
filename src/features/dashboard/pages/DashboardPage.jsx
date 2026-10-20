@@ -38,6 +38,7 @@ import { MyTicketsCard } from '../../staffhr/components/MyTicketsCard';
 import { useT } from '../../../context/LanguageContext';
 import { SetupChecklist } from '../components/SetupChecklist';
 import { TodayJobs } from '../components/TodayJobs';
+import { TodayBirthdaysCard } from '../../celebrations/components/TodayBirthdaysCard';
 import { useChecklistDay, useCurrentPatrol, useMaintenanceNumbers, useParcelWaiting, useStaffToday, useWorkOrderNumbers } from '../api';
 
 function useDashboard() {
@@ -353,6 +354,7 @@ export default function DashboardPage() {
         description={showing ? `${showing} · ${user.society?.name}` : `${user.society?.name}${user.unit?.label ? ` · ${user.unit.label}` : ''}`}
       />
       {user.role === 'admin' && user.society && <SetupChecklist />}
+      {user.society && <TodayBirthdaysCard />}
       {isLoading ? <PageLoader /> : error ? <ErrorState error={error} onRetry={refetch} /> : <View d={data} />}
     </div>
   );

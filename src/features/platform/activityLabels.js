@@ -24,6 +24,8 @@ export const ACTION_LABELS = {
   'role.updated': 'Edited a role',
   'role.deleted': 'Deleted a role',
   'luckydraw.cancelled': 'Cancelled a lucky draw',
+  'whatsapp.settings_changed': 'Changed a society’s WhatsApp mode',
+  'whatsapp.credits_added': 'Added WhatsApp credits',
 };
 
 // Filter options: whole areas first, then each action.
@@ -38,6 +40,7 @@ export const ACTION_AREAS = [
   { value: 'team', label: 'Team' },
   { value: 'role', label: 'Roles' },
   { value: 'luckydraw', label: 'Lucky draws' },
+  { value: 'whatsapp', label: 'WhatsApp' },
 ];
 
 const words = (s) => s.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
@@ -59,6 +62,10 @@ export function describeDetails(row) {
       if (d.platformNotes !== undefined) parts.push('notes edited');
       return parts.join(' · ');
     }
+    case 'whatsapp.credits_added':
+      return [d.amount && `+${d.amount} credits`, d.note].filter(Boolean).join(' · ');
+    case 'whatsapp.settings_changed':
+      return [d.mode && `Mode ${d.mode.replace(/_/g, ' ')}`, d.lowBalanceThreshold !== undefined && `warn below ${d.lowBalanceThreshold}`].filter(Boolean).join(' · ');
     case 'society.features_changed':
       return Object.entries(d.overrides || {}).map(([k, v]) => `${k} ${v === null ? 'reset' : v ? 'on' : 'off'}`).join(', ');
     case 'plan.price_updated':

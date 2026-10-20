@@ -8,6 +8,7 @@ import { useForm } from '../../../hooks/useForm';
 import { date, label } from '../../../lib/format';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { UnitPicker } from '../../units/components/UnitPicker';
+import { LoginAsButton } from '../../loginAs/components/LoginAsModal';
 import { useApproveMember, useCreateMember, useMembers, useRejectMember, useResetPassword, useUpdateMember } from '../api';
 
 const ROLE_OPTIONS = ['resident', 'admin', 'accountant', 'facility_manager', 'guard', 'staff'].map((r) => ({ value: r, label: ROLE_LABELS[r] }));
@@ -101,6 +102,7 @@ export default function MembersPage() {
                     </>
                   ) : String(m.user) !== String(user._id) && (
                     <>
+                      {m.status === 'active' && <LoginAsButton target={{ membershipId: m._id, user: m.user, name: m.name, role: m.role, unitLabel: m.unit?.label }} />}
                       <Button size="sm" variant="ghost" onClick={() => setEditing(m)}>Edit</Button>
                       <Button size="sm" variant="ghost" icon={KeyRound} title="Reset password" onClick={() => { const pw = window.prompt(`New password for ${m.name} (min 8 characters)`); if (pw) resetPw.mutate({ id: m._id, password: pw }); }} />
                       {['active', 'inactive'].includes(m.status) && (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
-import { ChevronDown, Home, LogOut, Menu, UserCircle, WifiOff, X } from 'lucide-react';
+import { ChevronDown, LogOut, Menu, UserCircle, WifiOff, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { BOTTOM_BAR, navFor, navGroupsFor } from '../../app/navigation';
 import { cn } from '../../lib/cn';
@@ -14,6 +14,10 @@ import { useT } from '../../context/LanguageContext';
 import { useFeatures } from '../../features/features/api';
 import { PreferencesMenu } from './PreferencesMenu';
 import { SearchButton } from '../../features/search/components/CommandPalette';
+import { ActingAsBanner } from '../../features/loginAs/components/ActingAsBanner';
+import { AdBanner } from '../../features/ads/components/AdBanner';
+import { AdPopup } from '../../features/ads/components/AdPopup';
+import { SidebarBrand } from '../../features/whitelabel/components/BrandMark';
 
 const OPEN_KEY = 'cms.navOpen';
 const readOpen = () => {
@@ -64,7 +68,7 @@ function Sidebar({ onNavigate }) {
   return (
     <nav className="flex h-full flex-col" aria-label={t('Menu')}>
       <Link to="/" onClick={onNavigate} className="flex h-16 items-center gap-2 px-5 text-lg font-semibold text-brand-700">
-        <Home className="size-6" /> ColonyHub
+        <SidebarBrand />
       </Link>
       <HomeSwitcher onSwitched={onNavigate} />
       <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-3 pb-4">
@@ -259,6 +263,8 @@ function Shell() {
             <LogOut className="size-5" />
           </button>
         </header>
+        <ActingAsBanner />
+        <AdBanner />
         {!online && (
           <div role="status" className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800 sm:px-6">
             <WifiOff className="size-4 shrink-0" />
@@ -272,6 +278,7 @@ function Shell() {
         </main>
       </div>
       {hasBottomBar && <BottomBar onMenu={() => setMobileOpen(true)} />}
+      <AdPopup />
     </div>
   );
 }

@@ -8,7 +8,10 @@ import { Badge, Button, FilterBar, Input, Modal, Pagination, Select, Spinner, Ta
 import { date, dateTime, label, money, timeAgo } from '../../../lib/format';
 import { PLANS, usePlatformSocieties, usePlatformSociety, useUpdatePlatformSociety } from '../api';
 import { FeatureFlagsPanel, SubscriptionPanel } from '../components/SocietyBillingPanels';
+import { PlatformPaymentsPanel } from '../../colonyPayments/components/PlatformPaymentsPanel';
+import { SocietyMembersPanel } from '../../loginAs/components/SocietyMembersPanel';
 import { PermissionGate } from '../components/PermissionGate';
+import { WhatsAppPanel } from '../components/WhatsAppPanel';
 import { useCan } from '../useCan';
 
 function SocietyModal({ id, onClose }) {
@@ -74,7 +77,10 @@ function SocietyModal({ id, onClose }) {
           {canEdit && <div className="sm:col-span-3"><Button loading={update.isPending} onClick={savePlan}>Save plan & notes</Button></div>}
         </div>
         <SubscriptionPanel societyId={id} />
+        <PlatformPaymentsPanel societyId={id} />
         <FeatureFlagsPanel societyId={id} />
+        {s.active && <SocietyMembersPanel societyId={id} />}
+        {can('whatsapp.manage') && <WhatsAppPanel societyId={id} />}
         <div>
           <p className="mb-2 font-medium text-slate-700">Recent activity</p>
           <ul className="space-y-1 text-xs text-slate-500">

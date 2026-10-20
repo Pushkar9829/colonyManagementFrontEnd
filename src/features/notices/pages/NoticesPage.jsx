@@ -8,6 +8,7 @@ import { cn } from '../../../lib/cn';
 import { dateTime, label } from '../../../lib/format';
 import { isManager, ROLE_LABELS } from '../../../lib/roles';
 import { AudienceFields, cleanAudience } from '../../community/AudienceFields';
+import { SendOnWhatsApp } from '../../whatsapp/components/SendOnWhatsApp';
 import { useAckNotice, useCreateNotice, useDeleteNotice, useMarkNoticeRead, useNoticeAcks, useNotices, useRemindAcks, useUpdateNotice } from '../api';
 
 const CATEGORIES = ['general', 'maintenance', 'event', 'meeting', 'emergency'];
@@ -161,6 +162,7 @@ export default function NoticesPage() {
                       <button type="button" title="Who has acknowledged" onClick={() => setAcksFor(n)} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:min-h-0 sm:p-1.5"><ClipboardCheck className="size-4" />{n.ackCount} acknowledged</button>
                     )}
                     <button type="button" title={n.pinned ? 'Unpin' : 'Pin to top'} onClick={() => update.mutate({ id: n._id, pinned: !n.pinned })} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700 sm:min-h-0 sm:p-1.5"><Pin className="size-4" />{n.pinned ? 'Unpin' : 'Pin'}</button>
+                    <SendOnWhatsApp text={`*${n.title}*\n\n${n.body}\n\n— ${user.society?.name || 'Society management'}`} label="Share on WhatsApp" className="self-center" />
                     <button type="button" title="Delete" onClick={() => window.confirm('Delete this notice?') && remove.mutate(n._id)} className="flex min-h-10 items-center gap-1 rounded-md px-3 text-xs text-slate-500 hover:bg-red-50 hover:text-red-600 sm:min-h-0 sm:p-1.5"><Trash2 className="size-4" />Delete</button>
                   </div>
                 )}

@@ -145,5 +145,6 @@ export const api = {
   list: (path, query) => unwrap(request('GET', path, { query }), true),
   post: (path, body, opts) => unwrap(request('POST', path, { body: body ?? {}, ...opts })),
   patch: (path, body) => unwrap(request('PATCH', path, { body })),
+  put: (path, body) => unwrap(request('PUT', path, { body })),
   del: (path) => unwrap(request('DELETE', path)),
 };

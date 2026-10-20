@@ -31,6 +31,9 @@ import { Boxes as AssetsIcon, CalendarClock as PpmIcon, Warehouse as InventoryIc
 import { Gift as LuckyDrawIcon } from 'lucide-react';
 import { UsersRound as PlatformTeamIcon, ShieldUser as PlatformRolesIcon, History as PlatformActivityIcon } from 'lucide-react';
 import { DoorClosed as GatesIcon } from 'lucide-react';
+import { PartyPopper as CelebrationsIcon } from 'lucide-react';
+import { BadgePercent as AdsIcon, ScanEye as LoginAsIcon } from 'lucide-react';
+import { Wallet as OnlinePaymentsIcon, Handshake as ResellersIcon, KeyRound as PartnerConsoleIcon } from 'lucide-react';
 
 export const A = 'admin';
 export const ACC = 'accountant';
@@ -106,6 +109,15 @@ export const NAV_ITEMS = [
   { to: '/settings', label: 'Society settings', icon: Settings, roles: [A], section: 'Settings' },
 
   // ---- feature module nav items (add below this line; keep the section field) ----
+  { to: '/settings/payments', label: 'Online payments', icon: OnlinePaymentsIcon, roles: [A, ACC], section: 'Settings' },
+  { to: '/platform/resellers', label: 'Resellers', icon: ResellersIcon, roles: [SA], section: 'Platform', permission: 'whitelabel.manage' },
+  // White-label partner admins (role reseller_admin): their console is the home page.
+  { to: '/', label: 'Partner console', icon: PartnerConsoleIcon, roles: ['reseller_admin'], end: true },
+  { to: '/ads', label: 'Ads', icon: AdsIcon, roles: [A, FM], section: 'Community' },
+  { to: '/login-as', label: 'Log in as', icon: LoginAsIcon, roles: [A], section: 'Settings' },
+  { to: '/platform/ads', label: 'Ads', icon: AdsIcon, roles: [SA], section: 'Platform', permission: 'ads.manage' },
+  { to: '/platform/login-as', label: 'Log in as', icon: LoginAsIcon, roles: [SA], section: 'Platform', permission: 'impersonation.manage' },
+  { to: '/celebrations', label: 'Celebrations', icon: CelebrationsIcon, roles: [A], section: 'Residents' },
   { to: '/gates', label: 'Gates', icon: GatesIcon, roles: [A, FM], section: 'Security' },
   { to: '/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [A, ACC, FM, R], section: 'Community' },
   { to: '/platform/lucky-draws', label: 'Lucky draws', icon: LuckyDrawIcon, roles: [SA], section: 'Platform', permission: 'luckydraw.oversee' },

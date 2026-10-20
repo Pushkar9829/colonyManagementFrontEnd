@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookUser, Briefcase, EyeOff, Mail, MessageCircle, Phone, Search, ShieldCheck, UserRound } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
@@ -9,6 +9,9 @@ import { useBlocks } from '../../units/api';
 import { Avatar } from '../../forum/components/RichText';
 import { useOpenDirect } from '../../chat/api';
 import { useDirectory, useDirectoryContacts, useMyDirectoryProfile, useUpdateDirectoryProfile } from '../api';
+import { Cake, GraduationCap } from 'lucide-react';
+import { OCCUPATION_TYPES, WORK_CATEGORIES, dayMonth, occupationSummary } from '../../people/constants';
+import { useMyPersonalDetails } from '../../people/api';
 
 function PersonCard({ p, onMessage, messaging, onPrivacy }) {
   return (
@@ -26,6 +29,12 @@ function PersonCard({ p, onMessage, messaging, onPrivacy }) {
           {p.profession && <p className="flex items-center gap-1.5 text-sm text-slate-700"><Briefcase className="size-4 text-slate-400" />{p.profession}</p>}
           {p.skills?.length > 0 && <div className="flex flex-wrap gap-1">{p.skills.map((s) => <Badge key={s} tone="blue">{s}</Badge>)}</div>}
           {p.about && <p className="text-xs text-slate-500">{p.about}</p>}
+        </div>
+      )}
+      {(p.birthday || p.occupation) && (
+        <div className="mt-2 space-y-1">
+          {p.occupation && <p className="flex items-center gap-1.5 text-sm text-slate-700">{p.occupation.type === 'student' ? <GraduationCap className="size-4 text-slate-400" /> : <Briefcase className="size-4 text-slate-400" />}{occupationSummary(p.occupation)}</p>}
+          {p.birthday && <p className="flex items-center gap-1.5 text-sm text-slate-700"><Cake className="size-4 text-slate-400" />Birthday {dayMonth(p.birthday)}</p>}
         </div>
       )}
       {p.isMe && onPrivacy && (
@@ -46,9 +55,13 @@ function Neighbours({ listed, onEdit }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [block, setBlock] = useState('');
+  const [occ, setOcc] = useState({ occupationType: '', occupationCategory: '', institution: '' });
   const [page, setPage] = useState(1);
   const { data: blocks = [] } = useBlocks();
-  const { data, isLoading } = useDirectory({ search: search || undefined, block: block || undefined, page, limit: 24 });
+  const institution = occ.institution.trim().length >= 2 ? occ.institution.trim() : undefined;
+  const { data, isLoading } = useDirectory({ search: search || undefined, block: block || undefined, occupationType: occ.occupationType || undefined, occupationCategory: occ.occupationCategory || undefined, institution, page, limit: 24 });
+  const setO = (k) => (e) => { setOcc((o) => ({ ...o, [k]: e.target.value })); setPage(1); };
+  const filtersOn = [block, occ.occupationType, occ.occupationCategory, institution].filter(Boolean).length;
   const open = useOpenDirect({ onSuccess: (c) => navigate(`/messages/${c._id}`) });
   return (
     <div className="space-y-4">
@@ -59,17 +72,20 @@ function Neighbours({ listed, onEdit }) {
         </Card>
       )}
       <Card>
-        <FilterBar cols={2} active={block ? 1 : 0} className="border-b-0" search={(
+        <FilterBar cols={4} active={filtersOn} className="border-b-0" search={(
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search name, flat, block or profession" aria-label="Search name, flat, block or profession" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
         </div>
         )}>
           <Select value={block} onChange={(e) => { setBlock(e.target.value); setPage(1); }} placeholder="All blocks" aria-label="Block" options={blocks.map((b) => ({ value: b._id, label: `Block ${b.name}` }))} />
+          <Select value={occ.occupationType} onChange={setO('occupationType')} placeholder="Any occupation" aria-label="Occupation" options={OCCUPATION_TYPES} />
+          <Select value={occ.occupationCategory} onChange={setO('occupationCategory')} placeholder="Any work category" aria-label="Work category" options={WORK_CATEGORIES} />
+          <Input value={occ.institution} onChange={setO('institution')} placeholder="School / college" aria-label="School or college" />
         </FilterBar>
       </Card>
       {isLoading ? <div className="flex justify-center py-12"><Spinner /></div> : !data?.data.length ? (
-        <Card><EmptyState icon={BookUser} title={search || block ? 'No one matches' : 'No one has listed themselves yet'} description="Residents choose what to share. Only people who opted in appear here." /></Card>
+        <Card><EmptyState icon={BookUser} title={search || filtersOn ? 'No one matches' : 'No one has listed themselves yet'} description="Residents choose what to share. Only people who opted in appear here." /></Card>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -107,6 +123,7 @@ function Contacts() {
 function MyListing() {
   const { user } = useAuth();
   const { data, isLoading } = useMyDirectoryProfile();
+  const { data: personal } = useMyPersonalDetails();
   const save = useUpdateDirectoryProfile();
   const [form, setForm] = useState(null);
   useEffect(() => {
@@ -120,6 +137,8 @@ function MyListing() {
     ...(form.showPhone && user.phone ? { phone: user.phone } : {}),
     ...(form.showEmail && user.email ? { email: user.email } : {}),
     ...(form.showProfession ? { profession: form.profession, skills, about: form.about } : {}),
+    ...(form.listed && form.showOccupation && personal?.occupation ? { occupation: personal.occupation } : {}),
+    ...(form.listed && form.showBirthday && personal?.dateOfBirth ? { birthday: personal.dateOfBirth.slice(5) } : {}),
   };
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
@@ -131,11 +150,14 @@ function MyListing() {
             <Checkbox label={`Show my phone${user.phone ? ` (${user.phone})` : ''}`} checked={form.showPhone} onChange={set('showPhone')} />
             <Checkbox label={`Show my email${user.email ? ` (${user.email})` : ''}`} checked={form.showEmail} onChange={set('showEmail')} />
             <Checkbox label="Show my profession and skills" checked={form.showProfession} onChange={set('showProfession')} />
+            <Checkbox label={`Show my occupation${personal?.occupation ? ` (${occupationSummary(personal.occupation)})` : ''}`} checked={form.showOccupation} onChange={set('showOccupation')} />
           </div>
+          <Checkbox label={`Show my birthday — day and month only, never the year${personal?.dateOfBirth ? ` (${dayMonth(personal.dateOfBirth.slice(5))})` : ''}. Also puts you on the “Today's birthdays” card.`} checked={form.showBirthday} onChange={set('showBirthday')} />
+          {!personal?.dateOfBirth && !personal?.occupation && <p className="text-xs text-slate-500">Add your birthday and occupation in <Link to="/profile" className="font-medium text-brand-700 hover:underline">My profile</Link>.</p>}
           <Input label="Profession" placeholder="e.g. Pediatrician, CA, Yoga teacher" value={form.profession} onChange={set('profession')} />
           <Input label="Skills / can help with" hint="Comma separated, up to 10" placeholder="e.g. Math tuition, Plumbing advice" value={form.skills} onChange={set('skills')} />
           <Textarea label="About" rows={2} maxLength={300} value={form.about} onChange={set('about')} />
-          <Button loading={save.isPending} onClick={() => save.mutate({ listed: form.listed, showPhone: form.showPhone, showEmail: form.showEmail, showProfession: form.showProfession, profession: form.profession, skills, about: form.about })}>Save</Button>
+          <Button loading={save.isPending} onClick={() => save.mutate({ listed: form.listed, showPhone: form.showPhone, showEmail: form.showEmail, showProfession: form.showProfession, showOccupation: form.showOccupation, showBirthday: form.showBirthday, profession: form.profession, skills, about: form.about })}>Save</Button>
         </div>
       </Card>
       <div>

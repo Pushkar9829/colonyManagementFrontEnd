@@ -8,6 +8,8 @@ import { KycPanel } from '../../kyc/components/KycPanel';
 import { LeasePanel } from '../../tenancy/components/LeasePanel';
 import { useAddHouseholdItem, useMyHousehold, useRemoveHouseholdItem, useSetMyMedical, useUpdateHousehold, useUpdateHouseholdItem } from '../api';
 import { BLOOD_GROUPS, PET_TYPES, RELATIONS } from '../constants';
+import { PersonalDetailsFields, personalBody, personalForm } from '../../people/components/PersonalDetailsFields';
+import { occupationSummary } from '../../people/constants';
 
 const nullable = (v) => (v === '' ? null : v);
 
@@ -29,10 +31,18 @@ function MemberModal({ member, onClose }) {
   const editing = Boolean(member?._id);
   const [v, setV] = useState({ name: '', relation: 'spouse', dob: '', age: '', phone: '', ...member, age: member?.dob ? '' : String(member?.age ?? '') });
   const [photo, setPhoto] = useState([]);
+  // Anniversary, gender, occupation (people feature); the DOB field above stays the source for dob.
+  const [personal, setPersonal] = useState(() => personalForm(member));
+  const [showBirthday, setShowBirthday] = useState(Boolean(member?.showBirthday));
+  const [errors, setErrors] = useState({});
   const set = (k, x) => setV((s) => ({ ...s, [k]: x }));
   const add = useAddHouseholdItem('members', { onSuccess: onClose });
   const update = useUpdateHouseholdItem('members', { onSuccess: onClose });
+  const onError = (e) => setErrors(e.fieldErrors || {});
+  const { dateOfBirth: _dob, ...personalFields } = personalBody(personal);
   const body = () => ({
+    ...personalFields,
+    showBirthday,
     name: v.name,
     relation: v.relation,
     dob: nullable(v.dob || ''),
@@ -47,9 +57,9 @@ function MemberModal({ member, onClose }) {
   });
   return (
     <Modal open onClose={onClose} title={editing ? `Edit ${member.name}` : 'Add family member'} description="For people without their own app login. Residents with a login manage their own medical details." size="lg"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={add.isPending || update.isPending} onClick={() => (editing ? update.mutate({ id: member._id, ...body() }) : add.mutate(body()))}>Save</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={add.isPending || update.isPending} onClick={() => (editing ? update.mutate({ id: member._id, ...body() }, { onError }) : add.mutate(body(), { onError }))}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Input label="Name" required value={v.name} onChange={(e) => set('name', e.target.value)} />
+        <Input label="Name" required value={v.name} onChange={(e) => set('name', e.target.value)} error={errors['body.name']} />
         <Select label="Relation" options={RELATIONS} value={v.relation} onChange={(e) => set('relation', e.target.value)} />
         <Input label="Date of birth" type="date" value={v.dob || ''} onChange={(e) => set('dob', e.target.value)} />
         <Input label="Age (if DOB unknown)" type="number" min={0} max={120} disabled={Boolean(v.dob)} value={v.age} onChange={(e) => set('age', e.target.value)} />
@@ -59,6 +69,9 @@ function MemberModal({ member, onClose }) {
           <FileUpload folder="household" files={photo} onChange={setPhoto} max={1} label={member?.photo ? 'Replace photo' : 'Add photo'} />
         </div>
         <MedicalFields v={v} set={set} />
+        <p className="pt-2 text-sm font-semibold text-slate-700 sm:col-span-2">Personal details</p>
+        <PersonalDetailsFields hideDob value={personal} onChange={setPersonal} errors={errors} />
+        <Checkbox className="sm:col-span-2" label="Show on the society's “Today's birthdays” card" checked={showBirthday} onChange={(e) => setShowBirthday(e.target.checked)} />
       </div>
     </Modal>
   );
@@ -128,6 +141,7 @@ function Family({ h }) {
                   {m.specialNeeds && <Badge tone="amber">Special needs</Badge>}
                 </div>
                 {(m.allergies || m.conditions) && <p className="text-xs text-slate-500">{[m.conditions, m.allergies && `Allergic to ${m.allergies}`].filter(Boolean).join(' · ')}</p>}
+                {m.occupation && <p className="text-xs text-slate-600">{occupationSummary(m.occupation)}</p>}
               </div>
               <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={`Edit ${m.name}`} onClick={() => setEditing(m)}><Pencil className="size-4" /></button>
               <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600" aria-label={`Remove ${m.name}`} onClick={() => window.confirm(`Remove ${m.name}?`) && remove.mutate(m._id)}><Trash2 className="size-4" /></button>

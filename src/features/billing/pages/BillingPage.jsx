@@ -27,6 +27,7 @@ import { WaiverRequestModal, WaiversPanel } from '../components/WaiversPanel';
 import { AdvanceModal, CreditsPanel } from '../components/CreditsPanel';
 import { AutopayCard, MandatesPanel } from '../components/AutopayPanels';
 import { OpeningBalancesModal } from '../components/OpeningBalancesModal';
+import { SendOnWhatsApp } from '../../whatsapp/components/SendOnWhatsApp';
 
 const periodText = (p) => (p === 'OPENING' ? 'Opening balance' : periodLabel(p));
 
@@ -257,6 +258,8 @@ function DefaultersTable() {
           { key: 'net', header: 'Net due', render: (d) => <span className="font-semibold text-red-600">{money(d.net)}</span> },
           { key: 'bills', header: 'Overdue bills' },
           { key: 'oldestDue', header: 'Oldest due', render: (d) => date(d.oldestDue) },
+          // Click-to-chat societies send reminders themselves (the button renders only in that mode).
+          { key: 'remind', header: '', mobile: false, render: (d) => <SendOnWhatsApp label="Remind" text={`Reminder from the society office: maintenance dues of ${money(d.net)} for ${d.unit.label} are overdue since ${date(d.oldestDue)}. Please pay in the ColonyHub app. Thank you.`} /> },
         ]} />
     </Card>
   );

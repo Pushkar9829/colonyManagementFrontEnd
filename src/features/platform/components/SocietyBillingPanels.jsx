@@ -55,7 +55,7 @@ export function SubscriptionPanel({ societyId }) {
         <Badge>Next: {data.nextInvoice.total ? `${money(data.nextInvoice.total)} on ${date(data.nextInvoice.startsOn)}` : 'free'}</Badge>
       </div>
       {canManage && <div className="grid gap-3 sm:grid-cols-4">
-        <Select label="Cycle" value={v.billingCycle} onChange={(e) => setForm({ ...v, billingCycle: e.target.value })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'yearly', label: 'Yearly' }]} />
+        <Select label="Cycle" value={v.billingCycle} onChange={(e) => setForm({ ...v, billingCycle: e.target.value })} options={[{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'yearly', label: 'Yearly' }, { value: 'one_time', label: 'One-time licence' }]} />
         <Input label="Due after (days)" type="number" min={0} max={60} value={v.dueDays} onChange={(e) => setForm({ ...v, dueDays: e.target.value })} />
         <Input label="Grace period (days)" type="number" min={0} max={90} value={v.graceDays} onChange={(e) => setForm({ ...v, graceDays: e.target.value })} hint="Then auto-suspend" />
         <div className="flex items-end"><Button size="sm" disabled={!form} loading={update.isPending} onClick={() => update.mutate({ billingCycle: v.billingCycle, graceDays: Number(v.graceDays), dueDays: Number(v.dueDays) }, { onSuccess: () => setForm(null) })}>Save</Button></div>

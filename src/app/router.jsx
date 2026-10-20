@@ -37,11 +37,12 @@ const guarded = (roles, children) => ({ element: <RequireRole roles={roles} />, 
 
 const DashboardPage = lazy(() => import('../features/dashboard/pages/DashboardPage'));
 const PlatformOverviewPage = lazy(() => import('../features/platform/pages/PlatformOverviewPage'));
+const ResellerConsolePage = lazy(() => import('../features/whitelabel/pages/ResellerConsolePage'));
 
 // "/" is the society dashboard, or the platform overview when no society is open.
 function Home() {
   const { user } = useAuth();
-  return <Suspense fallback={<PageLoader />}>{user.society ? <DashboardPage /> : <PlatformOverviewPage />}</Suspense>;
+  return <Suspense fallback={<PageLoader />}>{user.society ? <DashboardPage /> : user.role === 'reseller_admin' ? <ResellerConsolePage /> : <PlatformOverviewPage />}</Suspense>;
 }
 
 export const router = createBrowserRouter([
@@ -100,6 +101,18 @@ export const router = createBrowserRouter([
           ]),
           guarded([A], [{ path: 'devices', element: page(() => import('../features/devices/pages/DevicesPage')) }]),
           // ---- feature module routes (add below this line; use guarded([roles], [...]) and page(() => import(...))) ----
+          guarded([ACC], [{ path: 'settings/payments', element: page(() => import('../features/colonyPayments/pages/OnlinePaymentsPage')) }]),
+          { element: <RequirePlatform />, children: [{ path: 'platform/resellers', element: page(() => import('../features/whitelabel/pages/PlatformResellersPage')) }] },
+          guarded([FM], [{ path: 'ads', element: page(() => import('../features/ads/pages/SocietyAdsPage')) }]),
+          guarded([A], [{ path: 'login-as', element: page(() => import('../features/loginAs/pages/LoginAsRulesPage')) }]),
+          {
+            element: <RequirePlatform />,
+            children: [
+              { path: 'platform/ads', element: page(() => import('../features/ads/pages/PlatformAdsPage')) },
+              { path: 'platform/login-as', element: page(() => import('../features/loginAs/pages/PlatformLoginAsPage')) },
+            ],
+          },
+          guarded([A], [{ path: 'celebrations', element: page(() => import('../features/celebrations/pages/CelebrationsPage')) }]),
           guarded([FM], [{ path: 'gates', element: page(() => import('../features/gates/pages/GatesPage')) }]),
           {
             element: <RequirePlatform />,

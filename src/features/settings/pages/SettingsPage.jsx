@@ -7,6 +7,8 @@ import { Button, Card, CardHeader, Checkbox, Input, PageLoader, Select } from '.
 import { useApiMutation } from '../../../hooks/useApiMutation';
 import { useToast } from '../../../context/ToastContext';
 import { money, toPaise, toRupees } from '../../../lib/format';
+import { Link } from 'react-router-dom';
+import { WhatsAppCard } from '../../whatsapp/components/WhatsAppCard';
 
 // Long forms keep their save button in view: it sticks to the bottom of the screen (above the phone
 // shortcut bar) while the card is on screen.
@@ -180,6 +182,11 @@ export default function SettingsPage() {
       <BillingCard society={society} />
       <OperationsCard society={society} />
       <SecurityCard society={society} />
+      <WhatsAppCard />
+      <Card className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm">
+        <div><p className="font-semibold text-slate-900">Celebrations</p><p className="text-slate-500">Birthday and anniversary wishes: on/off, send time, channels and message text.</p></div>
+        <Link to="/celebrations?tab=settings" className="font-medium text-brand-600 hover:underline">Open settings</Link>
+      </Card>
       <ProfileCard society={society} />
     </div>
   );

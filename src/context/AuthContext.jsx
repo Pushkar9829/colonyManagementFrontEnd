@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useQueryClient } from '@tanstack/react-query';
 import { api, refreshSession, tokens } from '../api/client';
 import { unsubscribeOnLogout } from '../features/notifications/push';
+import { beginActing, exitActing, resumeActing, takeActingReturn } from '../features/loginAs/session';
 
 const AuthContext = createContext(null);
 
@@ -27,6 +28,12 @@ export function AuthProvider({ children }) {
       setUser(null);
       queryClient.clear();
     });
+    // A "Log in as" session open in this tab (or one that ended while the tab was closed).
+    const acting = resumeActing();
+    if (acting) {
+      acting.then(setUser).catch(() => setUser(null)).finally(() => setBooting(false));
+      return;
+    }
     if (!tokens.hasRefresh()) {
       setBooting(false);
       return;
@@ -63,7 +70,7 @@ export function AuthProvider({ children }) {
       },
       async logout() {
         await unsubscribeOnLogout();
-        const refreshToken = tokens.refreshToken();
+        const refreshToken = tokens.refreshToken() || takeActingReturn();
         endSession();
         await api.post('/auth/logout', { refreshToken }, { auth: false }).catch(() => {});
       },
@@ -74,6 +81,19 @@ export function AuthProvider({ children }) {
         startSession(session);
       },
       // Platform owner: time-limited, audited admin access to a society for support.
+      // "Log in as" someone below you: confirmed with your own password (+ two-step code), time-limited, audited.
+      async loginAs(payload) {
+        const session = await api.post('/login-as', payload);
+        queryClient.clear();
+        beginActing(session);
+        setUser(session.user);
+      },
+      // Back to your own account (also used when the session runs out).
+      async exitLoginAs() {
+        const own = await exitActing().catch(() => null);
+        queryClient.clear();
+        setUser(own);
+      },
       async startSupportSession(societyId, reason) {
         const session = await api.post('/auth/support-session', { societyId, reason });
         queryClient.clear();

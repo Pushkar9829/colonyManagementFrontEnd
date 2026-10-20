@@ -9,6 +9,9 @@ export const useSubscriptionInvoices = (params) =>
   useQuery({ queryKey: ['subscription', 'invoices', params], queryFn: () => api.list('/subscription/invoices', params), placeholderData: (p) => p });
 export const useSubscriptionInvoice = (id) => useQuery({ queryKey: ['subscription', 'invoice', id], queryFn: () => api.get(`/subscription/invoices/${id}`), enabled: Boolean(id) });
 export const useUpdateSubscription = (o) => useApiMutation((b) => api.patch('/subscription', b), { ...inv, success: 'Billing details saved', ...o });
+// White-label licence key: sets the plan, prepays the term and links the society to the provider's brand.
+export const useApplyLicence = (o) =>
+  useApiMutation((key) => api.post('/licence/apply', { key }), { invalidate: ['subscription', 'branding', 'features'], success: (r) => `Licence applied: ${r.plan} plan${r.lifetime ? ' for life' : ''}`, ...o });
 
 let razorpayScript;
 function loadRazorpay() {

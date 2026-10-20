@@ -11,6 +11,8 @@ import { ChannelPrefs } from '../../notifications/components/ChannelPrefs';
 import { SessionsCard } from '../components/SessionsCard';
 import { TwoStepCard } from '../components/TwoStepCard';
 import { PrivacyCard } from '../components/PrivacyCard';
+import { AccountActivityCard } from '../../loginAs/components/AccountActivityCard';
+import { PersonalDetailsCard } from '../../people/components/PersonalDetailsCard';
 
 export default function ProfilePage() {
   const { user, reloadUser } = useAuth();
@@ -56,6 +58,7 @@ export default function ProfilePage() {
           </Button>
         </div>
       </Card>
+      {user.society && <PersonalDetailsCard />}
       <Card>
         <CardHeader title="Change password" subtitle="You'll stay logged in here; other devices are signed out." />
         <div className="space-y-4 p-5">
@@ -72,6 +75,7 @@ export default function ProfilePage() {
       </Card>
       <TwoStepCard />
       <SessionsCard />
+      <AccountActivityCard />
       <PrivacyCard />
     </div>
   );

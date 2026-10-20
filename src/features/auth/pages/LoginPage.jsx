@@ -5,6 +5,7 @@ import { Button, Input, Tabs } from '../../../components/ui';
 import { useT } from '../../../context/LanguageContext';
 import { OtpLoginForm } from '../components/OtpLoginForm';
 import { MfaStep } from '../components/MfaStep';
+import { LoginBrandBanner, useLoginBrand } from '../../whitelabel/components/BrandMark';
 
 const DEMO = [
   ['Admin', 'admin@demo.test'],
@@ -20,6 +21,7 @@ const PLATFORM_DEMO = [
   ['Billing', 'billing@demo.test'],
   ['Support', 'support@demo.test'],
   ['Viewer', 'viewer@demo.test'],
+  ['Reseller', 'reseller@demo.test'],
 ];
 const DEMO_PASSWORD = 'Password@123';
 
@@ -34,6 +36,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('password');
   const [mfaToken, setMfaToken] = useState(null);
+  const brand = useLoginBrand();
   const done = () => navigate(location.state?.from || '/', { replace: true });
 
   const signIn = async (id, pw) => {
@@ -68,6 +71,7 @@ export default function LoginPage() {
 
   return (
     <div>
+      <LoginBrandBanner brand={brand} />
       <h1 className="text-2xl font-semibold text-slate-900">{t('Welcome back')}</h1>
       <p className="mt-1 text-sm text-slate-500">{t('Log in with your password or a one-time SMS code.')}</p>
 
