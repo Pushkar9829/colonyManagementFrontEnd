@@ -26,6 +26,7 @@ import { StatementPanel } from '../components/StatementPanel';
 import { WaiverRequestModal, WaiversPanel } from '../components/WaiversPanel';
 import { AdvanceModal, CreditsPanel } from '../components/CreditsPanel';
 import { AutopayCard, MandatesPanel } from '../components/AutopayPanels';
+import { useOnlinePaymentStatus } from '../../colonyPayments/api';
 import { OpeningBalancesModal } from '../components/OpeningBalancesModal';
 import { SendOnWhatsApp } from '../../whatsapp/components/SendOnWhatsApp';
 
@@ -54,7 +55,7 @@ const isOpen = (b) => b.balance > 0 && ['unpaid', 'partial'].includes(b.status);
 const shortDate = (d) => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 
 // Resident: what is due right now and one big button to pay it (oldest open bill first).
-function DueHero({ onPay, paying }) {
+function DueHero({ onPay, paying, online }) {
   const { data: bills, isLoading } = useBills({ limit: 100 });
   const { data: s } = useBillingSummary(undefined);
   if (isLoading || !bills) return null;
@@ -86,7 +87,11 @@ function DueHero({ onPay, paying }) {
           {open.length > 1 && ` · Pay now pays the oldest (${money(first.balance)})`}
         </p>
       </div>
-      <Button size="lg" className="w-full sm:w-auto" loading={paying === first._id} onClick={() => onPay(first._id)}>Pay now</Button>
+      {online ? (
+        <Button size="lg" className="w-full sm:w-auto" loading={paying === first._id} onClick={() => onPay(first._id)}>Pay now</Button>
+      ) : (
+        <p className="max-w-xs text-sm text-slate-500">Online payment isn't switched on for your society yet. Please pay at the society office.</p>
+      )}
     </Card>
   );
 }
@@ -181,7 +186,7 @@ function PayAdvanceModal({ onClose }) {
   );
 }
 
-function BillsTable({ finance, onOpen, onPay, payingId }) {
+function BillsTable({ finance, onOpen, onPay, payingId, online }) {
   const [filters, setFilters] = useState({ period: '', status: '', overdue: '', page: 1 });
   const { data, isLoading } = useBills({ period: filters.period || undefined, status: filters.status || undefined, overdue: filters.overdue || undefined, page: filters.page });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
@@ -208,7 +213,7 @@ function BillsTable({ finance, onOpen, onPay, payingId }) {
           { key: 'balance', header: 'Balance', render: (b) => <span className={b.balance ? 'font-medium text-slate-900' : 'text-slate-400'}>{money(b.balance)}</span> },
           { key: 'dueDate', header: 'Due', render: (b) => <span className={b.balance && new Date(b.dueDate) < new Date() ? 'text-red-600' : ''}>{date(b.dueDate)}</span> },
           { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
-          ...(!finance
+          ...(!finance && online
             ? [{ key: 'pay', header: '', render: (b) => b.balance > 0 && b.status !== 'cancelled' && <Button size="sm" loading={payingId === b._id} onClick={(e) => { e.stopPropagation(); onPay(b._id); }}>Pay {money(b.balance)}</Button> }]
             : []),
         ]}
@@ -277,6 +282,8 @@ export default function BillingPage() {
   const [presetBill, setPresetBill] = useState(null);
   const [waiverBill, setWaiverBill] = useState(null);
   const pay = usePayOnline();
+  // Residents only see Pay buttons once the society has switched online payments on.
+  const online = useOnlinePaymentStatus(!finance).data?.online === true;
   const lateFees = useApplyLateFees();
   const cancel = useCancelBill();
 
@@ -308,13 +315,13 @@ export default function BillingPage() {
             <Button icon={FilePlus2} onClick={() => setModal('generate')}>Generate bills</Button>
           </>
         ) : (
-          <Button variant="secondary" icon={PiggyBank} onClick={() => setModal('payAdvance')}>Pay in advance</Button>
+          online ? <Button variant="secondary" icon={PiggyBank} onClick={() => setModal('payAdvance')}>Pay in advance</Button> : null
         )}
       />
-      {finance ? <SummaryCards period={currentPeriod()} /> : <><DueHero onPay={(id) => pay.mutate(id)} paying={pay.isPending ? pay.variables : null} /><ResidentSummary /></>}
+      {finance ? <SummaryCards period={currentPeriod()} /> : <><DueHero online={online} onPay={(id) => pay.mutate(id)} paying={pay.isPending ? pay.variables : null} /><ResidentSummary /></>}
       <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={setTab} tabs={tabs} />
-      {tab === 'bills' && <BillsTable finance={finance} onOpen={setBillId} onPay={(id) => pay.mutate(id)} payingId={pay.isPending ? pay.variables : null} />}
-      {!finance && tab === 'bills' && <AutopayCard />}
+      {tab === 'bills' && <BillsTable finance={finance} online={online} onOpen={setBillId} onPay={(id) => pay.mutate(id)} payingId={pay.isPending ? pay.variables : null} />}
+      {!finance && online && tab === 'bills' && <AutopayCard />}
       {tab === 'payments' && <PaymentsTable finance={finance} onReceipt={setReceiptId} />}
       {tab === 'statement' && <StatementPanel finance={finance} />}
       {finance && tab === 'waivers' && <WaiversPanel />}
@@ -335,7 +342,7 @@ export default function BillingPage() {
                 <Button onClick={() => { setPresetBill(bill); setBillId(null); setModal('pay'); }}>Record payment</Button>
               </>
             ) : (
-              <Button loading={pay.isPending} onClick={() => pay.mutate(bill._id, { onSuccess: () => setBillId(null) })}>Pay {money(bill.balance)}</Button>
+              online ? <Button loading={pay.isPending} onClick={() => pay.mutate(bill._id, { onSuccess: () => setBillId(null) })}>Pay {money(bill.balance)}</Button> : <p className="text-sm text-slate-500">Pay at the society office</p>
             )
           ) : null
         }

@@ -1,3 +1,4 @@
+import { useOnlinePaymentStatus } from '../../colonyPayments/api';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Ban, CalendarDays, Camera, Check, CreditCard, HelpCircle, ImagePlus, MapPin, Minus, Pencil, Plus, QrCode, ScanLine, Ticket, Trash2, Undo2, Users, X } from 'lucide-react';
@@ -29,6 +30,7 @@ function RsvpPanel({ e }) {
   const rsvp = useRsvp();
   const cancel = useCancelRsvp();
   const pay = usePayTicket();
+  const online = useOnlinePaymentStatus().data?.online === true;
   const paid = e.ticketPrice > 0;
   const send = (response) => rsvp.mutate({ id: e._id, response, guests: response === 'yes' ? guests : 0, paymentMode: paid ? mode : undefined });
   const locked = mine?.paymentStatus === 'paid';
@@ -71,7 +73,7 @@ function RsvpPanel({ e }) {
       {mine?.state === 'confirmed' && (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
           <Button icon={QrCode} variant="secondary" onClick={() => setTicketOpen(true)}>Show ticket</Button>
-          {mine.paymentStatus === 'pending' && mine.paymentMode === 'online' && <Button icon={CreditCard} loading={pay.isPending} onClick={() => pay.mutate(e._id)}>Pay {money(mine.amountDue)}</Button>}
+          {mine.paymentStatus === 'pending' && mine.paymentMode === 'online' && (online ? <Button icon={CreditCard} loading={pay.isPending} onClick={() => pay.mutate(e._id)}>Pay {money(mine.amountDue)}</Button> : <Badge tone="amber" className="self-center">{money(mine.amountDue)} payable at the society office</Badge>)}
           {mine.paymentStatus === 'pending' && mine.paymentMode === 'venue' && <Badge tone="amber" className="self-center">{money(mine.amountDue)} payable at the venue</Badge>}
           {mine.paymentStatus === 'paid' && <Badge tone="green" className="self-center">Paid</Badge>}
         </div>

@@ -1,3 +1,4 @@
+import { useOnlinePaymentStatus } from '../../colonyPayments/api';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { BarChart3, CalendarDays, Clock, Pencil, Plus, Ticket, Trash2, Users } from 'lucide-react';
@@ -139,11 +140,13 @@ function BookingPanel({ amenity }) {
   const [notes, setNotes] = useState('');
   const { data, isLoading } = useAvailability(amenity._id, day);
   const pay = usePayBooking();
+  // Only open the payment window when the society takes online payments.
+  const online = useOnlinePaymentStatus().data?.online === true;
   const book = useBook({
     onSuccess: (b) => {
       setSlot(null);
       setNotes('');
-      if (b.status === 'payment_pending') pay.mutate(b);
+      if (b.status === 'payment_pending' && online) pay.mutate(b);
     },
   });
   const now = new Date();
@@ -288,7 +291,7 @@ function BookingsTable({ params, manager, showDecide }) {
                     <Button size="sm" variant="ghost" onClick={() => { const note = window.prompt('Reason for rejection'); if (note !== null) decide.mutate({ id: b._id, approve: false, note: note || undefined }); }}>Reject</Button>
                   </>
                 )}
-                {!manager && b.status === 'payment_pending' && <Button size="sm" loading={pay.isPending && pay.variables?._id === b._id} onClick={() => pay.mutate(b)}>Pay {money(b.fee + b.deposit)}</Button>}
+                {!manager && b.status === 'payment_pending' && (online ? <Button size="sm" loading={pay.isPending && pay.variables?._id === b._id} onClick={() => pay.mutate(b)}>Pay {money(b.fee + b.deposit)}</Button> : <span className="text-xs text-slate-500">Pay {money(b.fee + b.deposit)} at the society office</span>)}
                 {manager && ['pay_at_desk', 'pending'].includes(b.paymentStatus) && ['confirmed', 'payment_pending', 'pending'].includes(b.status) && <Button size="sm" variant="secondary" onClick={() => setDesk(b)}>Record payment</Button>}
                 {manager && b.depositStatus === 'held' && bookingEnd(b) < now && <Button size="sm" variant="secondary" onClick={() => setDeposit(b)}>Refund deposit</Button>}
                 {manager && b.status === 'confirmed' && !b.attendance && bookingStart(b) < now && (
