@@ -3,6 +3,7 @@ import { AlertTriangle, BatteryCharging, Car, Clock, SquareParking, Users } from
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Card, EmptyState, StatCard, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { hasRole, isManager, ROLES } from '../../../lib/roles';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { useParkingSummary } from '../api';
@@ -13,12 +14,13 @@ import { ViolationsTab } from '../components/ViolationsTab';
 import { VisitorParkingTab } from '../components/VisitorParkingTab';
 
 function Summary() {
+  const { t } = useT();
   const live = useLiveInterval(15000);
   const { data } = useParkingSummary({ refetchInterval: live });
   if (!data) return null;
   return (
     <div className="mb-6 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <StatCard icon={SquareParking} label="Resident slots" value={data.residentSlots} sub={`${data.allotted} allotted`} />
+      <StatCard icon={SquareParking} label="Resident slots" value={data.residentSlots} sub={t('{count} allotted', { count: data.allotted })} />
       <StatCard icon={Car} tone="green" label="Free slots" value={data.free} />
       <StatCard icon={Users} tone="sky" label="Visitor cars" value={`${data.visitorsParked}/${data.visitorSlots}`} sub="parked / visitor slots" />
       <StatCard icon={Clock} tone={data.overstays ? 'red' : 'slate'} label="Overstays" value={data.overstays} />

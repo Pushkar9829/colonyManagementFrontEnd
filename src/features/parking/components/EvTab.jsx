@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BatteryCharging, Pencil, Plus, Zap } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { date as fmtDate, label, money, toPaise, toRupees, todayISO } from '../../../lib/format';
 import { UnitPicker } from '../../units/components/UnitPicker';
@@ -21,6 +22,7 @@ import {
 } from '../api';
 
 function ChargerModal({ charger, onClose }) {
+  const { t } = useT();
   const editing = Boolean(charger?._id);
   const { values, bind, set, applyServerErrors } = useForm({
     name: charger?.name || '',
@@ -52,7 +54,7 @@ function ChargerModal({ charger, onClose }) {
     else create.mutate(body, { onError: applyServerErrors });
   };
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${charger.name}` : 'Add EV charger'} size="lg"
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: charger.name }) : 'Add EV charger'} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={save}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Name" required placeholder="e.g. Charger 1" {...bind('name')} />
@@ -60,7 +62,7 @@ function ChargerModal({ charger, onClose }) {
         <Input label="Connector" placeholder="Type 2, CCS2, 15A socket" {...bind('connector')} />
         <Input label="Power (kW)" type="number" min="0" step="0.1" {...bind('powerKw')} />
         <Input label="Rate (₹ per kWh)" type="number" min="0" step="0.01" {...bind('rate')} error={bind('ratePerKwh').error} />
-        <Select label="Slot length" options={[15, 30, 60, 90, 120, 180, 240].map((m) => ({ value: String(m), label: `${m} min` }))} {...bind('slotMinutes')} />
+        <Select label="Slot length" options={[15, 30, 60, 90, 120, 180, 240].map((m) => ({ value: String(m), label: t('{m} min', { m }) }))} {...bind('slotMinutes')} />
         <Input label="Opens at" type="time" {...bind('openTime')} />
         <Input label="Closes at" type="time" {...bind('closeTime')} />
         <Input label="Max hours per booking" type="number" min="1" max="24" {...bind('maxHoursPerBooking')} />
@@ -73,6 +75,7 @@ function ChargerModal({ charger, onClose }) {
 const overlaps = (s, e, booked) => booked.some((b) => s < toMin(b.endTime) && e > toMin(b.startTime));
 
 function BookingPanel({ chargers, chargerId, setChargerId, staff, resident }) {
+  const { t } = useT();
   const [day, setDay] = useState(todayISO());
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -107,12 +110,12 @@ function BookingPanel({ chargers, chargerId, setChargerId, staff, resident }) {
     return { starts: s, ends: e };
   }, [charger, day, booked, start]);
 
-  const est = charger && start && end ? `up to ~${Math.round(((toMin(end) - toMin(start)) / 60) * (charger.powerKw || 0) * 10) / 10} kWh` : null;
+  const est = charger && start && end ? t('up to ~{kwh} kWh', { kwh: Math.round(((toMin(end) - toMin(start)) / 60) * (charger.powerKw || 0) * 10) / 10 }) : null;
 
   if (!chargers.length) return null;
   return (
     <Card>
-      <CardHeader title="Book a charger" subtitle={charger ? `${charger.openTime}–${charger.closeTime} · ${charger.slotMinutes} min blocks · max ${charger.maxHoursPerBooking} h` : undefined} />
+      <CardHeader title="Book a charger" subtitle={charger ? t('{open}–{close} · {minutes} min blocks · max {hours} h', { open: charger.openTime, close: charger.closeTime, minutes: charger.slotMinutes, hours: charger.maxHoursPerBooking }) : undefined} />
       <div className="grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <Select label="Charger" options={chargers.map((c) => ({ value: c._id, label: c.name }))} value={chargerId} onChange={(e) => { setChargerId(e.target.value); setStart(''); setEnd(''); }} />
         <Input label="Date" type="date" min={todayISO()} value={day} onChange={(e) => { setDay(e.target.value); setStart(''); setEnd(''); }} />
@@ -124,18 +127,18 @@ function BookingPanel({ chargers, chargerId, setChargerId, staff, resident }) {
         )}
       </div>
       <div className="border-t border-slate-100 px-4 py-3">
-        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Booked on {fmtDate(day)}</p>
+        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">{t('Booked on {date}', { date: fmtDate(day) })}</p>
         {isLoading ? (
           <Spinner className="size-5" />
         ) : !booked.length ? (
-          <p className="text-sm text-emerald-700">Free all day</p>
+          <p className="text-sm text-emerald-700">{t('Free all day')}</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {booked.map((b) => (
               <span key={`${b.startTime}-${b.endTime}`} className={cn('rounded-md px-2 py-1 text-xs font-medium', b.mine ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700')}>
                 {b.startTime}–{b.endTime}
-                {b.mine ? ' · yours' : b.unit?.label ? ` · ${b.unit.label}` : ''}
-                {b.status === 'charging' ? ' · charging' : ''}
+                {b.mine ? ` · ${t('yours')}` : b.unit?.label ? ` · ${b.unit.label}` : ''}
+                {b.status === 'charging' ? ` · ${t('charging')}` : ''}
               </span>
             ))}
           </div>
@@ -143,7 +146,7 @@ function BookingPanel({ chargers, chargerId, setChargerId, staff, resident }) {
       </div>
       <div className="flex flex-col gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-slate-600">
-          {charger?.ratePerKwh ? `${money(charger.ratePerKwh)} per kWh` : 'Free to use'}
+          {charger?.ratePerKwh ? t('{rate} per kWh', { rate: money(charger.ratePerKwh) }) : t('Free to use')}
           {est && charger.powerKw ? ` · ${est}` : ''}
         </p>
         <Button
@@ -160,6 +163,7 @@ function BookingPanel({ chargers, chargerId, setChargerId, staff, resident }) {
 }
 
 function CompleteModal({ booking, onClose }) {
+  const { t } = useT();
   const [kwh, setKwh] = useState('');
   const complete = useCompleteCharging({ onSuccess: onClose });
   const rate = booking.charger?.ratePerKwh || 0;
@@ -170,7 +174,7 @@ function CompleteModal({ booking, onClose }) {
       <div className="space-y-3">
         <Input label="Energy used (kWh)" type="number" min="0" step="0.1" required autoFocus value={kwh} onChange={(e) => setKwh(e.target.value)} hint="Read it off the charger display" />
         <p className="text-sm text-slate-600">
-          Cost estimate: <span className="font-semibold text-slate-900">{estimate === null ? '—' : money(estimate)}</span>
+          {t('Cost estimate:')} <span className="font-semibold text-slate-900">{estimate === null ? '—' : money(estimate)}</span>
           {rate ? <span className="text-slate-500"> ({money(rate)}/kWh)</span> : null}
         </p>
       </div>
@@ -179,6 +183,7 @@ function CompleteModal({ booking, onClose }) {
 }
 
 function BookingsList({ resident, manager }) {
+  const { t } = useT();
   const [filters, setFilters] = useState({ date: resident ? '' : todayISO(), status: '', page: 1 });
   const { data, isLoading } = useEvBookings({ ...filters, limit: 20 });
   const [completing, setCompleting] = useState(null);
@@ -210,18 +215,18 @@ function BookingsList({ resident, manager }) {
                   {!resident && b.unit?.label ? `${b.unit.label} · ` : ''}
                   {b.vehicle?.number ? `${b.vehicle.number} · ` : ''}
                   {b.charger?.location || ''}
-                  {b.status === 'completed' && ` · ${b.kwh ?? 0} kWh · est. ${money(b.costEstimate)}`}
+                  {b.status === 'completed' && ` · ${t('{kwh} kWh · est. {cost}', { kwh: b.kwh ?? 0, cost: money(b.costEstimate) })}`}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone={TONES[b.status]}>{label(b.status)}</Badge>
+                <Badge tone={TONES[b.status]}>{t(label(b.status))}</Badge>
                 {b.status === 'booked' && <Button size="sm" variant="secondary" loading={busy(startCharge, b._id)} onClick={() => startCharge.mutate(b._id)}>Start</Button>}
                 {['booked', 'charging'].includes(b.status) && <Button size="sm" variant="success" onClick={() => setCompleting(b)}>Complete</Button>}
                 {b.status === 'booked' && (resident || manager) && (
-                  <Button size="sm" variant="ghost" loading={busy(cancel, b._id) && !cancel.variables?.noShow} onClick={() => window.confirm('Cancel this booking?') && cancel.mutate({ id: b._id })}>Cancel</Button>
+                  <Button size="sm" variant="ghost" loading={busy(cancel, b._id) && !cancel.variables?.noShow} onClick={() => window.confirm(t('Cancel this booking?')) && cancel.mutate({ id: b._id })}>Cancel</Button>
                 )}
                 {b.status === 'booked' && manager && (
-                  <Button size="sm" variant="ghost" loading={busy(cancel, b._id) && cancel.variables?.noShow} onClick={() => window.confirm('Mark this booking as a no-show?') && cancel.mutate({ id: b._id, noShow: true })}>No-show</Button>
+                  <Button size="sm" variant="ghost" loading={busy(cancel, b._id) && cancel.variables?.noShow} onClick={() => window.confirm(t('Mark this booking as a no-show?')) && cancel.mutate({ id: b._id, noShow: true })}>No-show</Button>
                 )}
               </div>
             </li>
@@ -236,6 +241,7 @@ function BookingsList({ resident, manager }) {
 
 // Who may do what mirrors parking.routes.js: residents & managers book/cancel, everyone starts/completes.
 export function EvTab({ manager, resident }) {
+  const { t } = useT();
   const { data: chargers = [], isLoading } = useChargers(manager ? { all: true } : {});
   const [editing, setEditing] = useState(null);
   const [selected, setSelected] = useState('');
@@ -261,18 +267,18 @@ export function EvTab({ manager, resident }) {
                     {c.location && <p className="truncate text-xs text-slate-500">{c.location}</p>}
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    {!c.active && <Badge>Inactive</Badge>}
+                    {!c.active && <Badge>{t('Inactive')}</Badge>}
                     {manager && (
-                      <button type="button" onClick={() => setEditing(c)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={`Edit ${c.name}`}>
+                      <button type="button" onClick={() => setEditing(c)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={t('Edit {name}', { name: c.name })}>
                         <Pencil className="size-4" />
                       </button>
                     )}
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-slate-600">
-                  {[c.connector, c.powerKw ? `${c.powerKw} kW` : null, c.ratePerKwh ? `${money(c.ratePerKwh)}/kWh` : 'Free'].filter(Boolean).join(' · ')}
+                  {[c.connector, c.powerKw ? `${c.powerKw} kW` : null, c.ratePerKwh ? `${money(c.ratePerKwh)}/kWh` : t('Free')].filter(Boolean).join(' · ')}
                 </p>
-                <p className="text-xs text-slate-500">{c.openTime}–{c.closeTime} · {c.slotMinutes} min blocks · max {c.maxHoursPerBooking} h</p>
+                <p className="text-xs text-slate-500">{t('{open}–{close} · {minutes} min blocks · max {hours} h', { open: c.openTime, close: c.closeTime, minutes: c.slotMinutes, hours: c.maxHoursPerBooking })}</p>
                 {canBook && c.active && c._id !== chargerId && (
                   <Button size="sm" variant="ghost" className="mt-2 -ml-2" onClick={() => setSelected(c._id)}>Book this</Button>
                 )}

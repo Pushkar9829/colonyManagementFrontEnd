@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Input, PageLoader } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { label, money, toPaise, toRupees } from '../../../lib/format';
 import { usePlans, useUpdatePlan } from '../billingApi';
 import { useFeatureCatalogue } from '../../features/api';
@@ -14,6 +15,7 @@ function PlanCard({ plan, features }) {
   const [form, setForm] = useState(null);
   const update = useUpdatePlan();
   const canManage = useCan()('plans.manage');
+  const { t } = useT();
   const v = form ?? {
     perUnit: toRupees(plan.perUnitMonthly),
     flat: toRupees(plan.flatMonthly),
@@ -33,10 +35,10 @@ function PlanCard({ plan, features }) {
     oneTimeValidityMonths: v.validity === '' ? null : Number(v.validity),
   };
   const save = () => update.mutate({ plan: plan.plan, ...prices, description: v.description || undefined }, { onSuccess: () => setForm(null) });
-  const examples = cycleExamples(UNITS_EXAMPLE, prices);
+  const examples = cycleExamples(UNITS_EXAMPLE, prices, t);
   return (
     <Card>
-      <CardHeader title={label(plan.plan)} subtitle={plan.custom ? 'Custom price' : 'Price for new societies'} action={<Badge tone="brand">{features?.length ? `${features.length} modules` : 'core only'}</Badge>} />
+      <CardHeader title={label(plan.plan)} subtitle={plan.custom ? 'Custom price' : 'Price for new societies'} action={<Badge tone="brand">{features?.length ? t('{n} modules', { n: features.length }) : t('core only')}</Badge>} />
       <div className="grid gap-3 p-5 sm:grid-cols-3">
         <Input label="Per unit / month (₹)" disabled={!canManage} type="number" min={0} step="0.01" value={v.perUnit} onChange={set('perUnit')} />
         <Input label="Flat fee / month (₹)" disabled={!canManage} type="number" min={0} step="0.01" value={v.flat} onChange={set('flat')} />
@@ -49,11 +51,11 @@ function PlanCard({ plan, features }) {
         <div />
         <Input className="sm:col-span-3" label="Description" disabled={!canManage} value={v.description} onChange={set('description')} placeholder="Shown to the sales team" />
         <ul className="space-y-0.5 text-xs text-slate-500 sm:col-span-2">
-          <li className="font-medium text-slate-600">Example for {UNITS_EXAMPLE} units, incl. 18% GST:</li>
+          <li className="font-medium text-slate-600">{t('Example for {n} units, incl. 18% GST:', { n: UNITS_EXAMPLE })}</li>
           {examples.map((e) => <li key={e.cycle}>{e.label}: {money(e.total)}{e.note ? ` (${e.note})` : ''}</li>)}
         </ul>
         <div className="sm:text-right">{canManage && <Button size="sm" disabled={!form} loading={update.isPending} onClick={save}>Save</Button>}</div>
-        {features?.length > 0 && <p className="text-xs text-slate-500 sm:col-span-3">Includes: {features.map(label).join(', ')}</p>}
+        {features?.length > 0 && <p className="text-xs text-slate-500 sm:col-span-3">{t('Includes: {modules}', { modules: features.map((f) => t(label(f))).join(', ') })}</p>}
       </div>
     </Card>
   );

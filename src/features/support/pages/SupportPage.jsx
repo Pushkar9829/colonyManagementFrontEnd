@@ -7,6 +7,7 @@ import { useForm } from '../../../hooks/useForm';
 import { label, timeAgo } from '../../../lib/format';
 import { CATEGORIES, PRIORITIES, useCloseTicket, useCreateTicket, useReopenTicket, useReplyTicket, useTicket, useTickets } from '../api';
 import { PRIORITY_TEXT, PriorityText, SlaBadge, TicketThread } from '../components/TicketThread';
+import { useT } from '../../../context/LanguageContext';
 
 const opts = (list) => list.map((v) => ({ value: v, label: label(v) }));
 
@@ -29,26 +30,27 @@ function NewTicketModal({ onClose }) {
 }
 
 function TicketModal({ id, onClose }) {
-  const { data: t, isLoading } = useTicket(id);
+  const { t } = useT();
+  const { data: tk, isLoading } = useTicket(id);
   const [text, setText] = useState('');
   const [files, setFiles] = useState([]);
   const reply = useReplyTicket(id);
   const close = useCloseTicket(id);
   const reopen = useReopenTicket(id);
-  const closed = t?.status === 'closed';
+  const closed = tk?.status === 'closed';
   const send = () => reply.mutate({ text, attachments: files.length ? files.map((f) => f._id) : undefined }, { onSuccess: () => { setText(''); setFiles([]); } });
 
   return (
-    <Modal open onClose={onClose} size="lg" title={t ? `${t.number} · ${t.subject}` : 'Ticket'}
-      footer={t && (
+    <Modal open onClose={onClose} size="lg" title={tk ? `${tk.number} · ${tk.subject}` : 'Ticket'}
+      footer={tk && (
         <>
-          {['resolved', 'closed'].includes(t.status) && <Button variant="secondary" loading={reopen.isPending} onClick={() => { const note = window.prompt('What is still wrong?'); if (note) reopen.mutate({ note }); }}>Reopen</Button>}
-          {!closed && <Button variant="secondary" loading={close.isPending} onClick={() => { const r = window.prompt('Close this ticket. Rate the support from 1 to 5 (optional):', '5'); if (r !== null) close.mutate({ rating: Number(r) >= 1 && Number(r) <= 5 ? Number(r) : undefined }); }}>Close ticket</Button>}
+          {['resolved', 'closed'].includes(tk.status) && <Button variant="secondary" loading={reopen.isPending} onClick={() => { const note = window.prompt(t('What is still wrong?')); if (note) reopen.mutate({ note }); }}>Reopen</Button>}
+          {!closed && <Button variant="secondary" loading={close.isPending} onClick={() => { const r = window.prompt(t('Close this ticket. Rate the support from 1 to 5 (optional):'), '5'); if (r !== null) close.mutate({ rating: Number(r) >= 1 && Number(r) <= 5 ? Number(r) : undefined }); }}>Close ticket</Button>}
         </>
       )}>
-      {isLoading || !t ? <PageLoader /> : (
+      {isLoading || !tk ? <PageLoader /> : (
         <div className="space-y-4">
-          <TicketThread ticket={t} viewer="society" />
+          <TicketThread ticket={tk} viewer="society" />
           {!closed && (
             <div className="space-y-2 border-t border-slate-100 pt-4">
               <Textarea label="Reply" rows={3} value={text} onChange={(e) => setText(e.target.value)} />
@@ -63,6 +65,7 @@ function TicketModal({ id, onClose }) {
 }
 
 export default function SupportPage() {
+  const { t } = useT();
   const [params, setParams] = useSearchParams();
   const openId = params.get('ticket');
   const [creating, setCreating] = useState(false);
@@ -76,12 +79,12 @@ export default function SupportPage() {
       <PageHeader title="Support" description="Tickets with the ColonyHub team about the app, your plan or invoices." actions={<Button icon={Plus} onClick={() => setCreating(true)}>New ticket</Button>} />
       <Tabs className="mb-4 w-fit" value={tab} onChange={(v) => { setTab(v); setPage(1); }} tabs={[{ value: 'active', label: 'Active' }, { value: 'all', label: 'All' }]} />
       <Card>
-        <Table loading={isLoading} rows={data?.data} empty="No tickets" onRowClick={(t) => openTicket(t._id)}
+        <Table loading={isLoading} rows={data?.data} empty="No tickets" onRowClick={(tk) => openTicket(tk._id)}
           columns={[
-            { key: 'number', header: 'Ticket', render: (t) => <div><p className="font-medium text-slate-900">{t.subject}</p><p className="text-xs text-slate-500">{label(t.category)}</p></div> },
-            { key: 'priority', header: 'Priority', render: (t) => <PriorityText priority={t.priority} /> },
-            { key: 'status', header: 'Status', render: (t) => <div className="flex flex-wrap gap-1"><StatusBadge status={t.status} />{t.awaiting === 'society' && <Badge tone="blue">Your reply needed</Badge>}<SlaBadge ticket={t} /></div> },
-            { key: 'lastActivityAt', header: 'Updated', render: (t) => timeAgo(t.lastActivityAt) },
+            { key: 'number', header: 'Ticket', render: (tk) => <div><p className="font-medium text-slate-900">{tk.subject}</p><p className="text-xs text-slate-500">{t(label(tk.category))}</p></div> },
+            { key: 'priority', header: 'Priority', render: (tk) => <PriorityText priority={tk.priority} /> },
+            { key: 'status', header: 'Status', render: (tk) => <div className="flex flex-wrap gap-1"><StatusBadge status={tk.status} />{tk.awaiting === 'society' && <Badge tone="blue">{t('Your reply needed')}</Badge>}<SlaBadge ticket={tk} /></div> },
+            { key: 'lastActivityAt', header: 'Updated', render: (tk) => timeAgo(tk.lastActivityAt) },
           ]} />
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>

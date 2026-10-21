@@ -9,6 +9,7 @@ import { isManager } from '../../../lib/roles';
 import { useCreateDrill, useCreateExtinguisher, useCreateNoc, useDrills, useExtinguishers, useFireSummary, useNocs, useRefillExtinguisher, useUpdateExtinguisher } from '../api';
 import { EXTINGUISHER_TYPES } from '../constants';
 import { DUE_TONES, clean } from '../shared';
+import { useT } from '../../../context/LanguageContext';
 
 const STATE_TEXT = { ok: 'OK', due_soon: 'Due soon', overdue: 'Overdue', none: '—' };
 
@@ -32,10 +33,11 @@ function ExtinguisherModal({ open, onClose }) {
 }
 
 function RefillModal({ item, onClose }) {
+  const { t } = useT();
   const { values, bind, applyServerErrors } = useForm({ lastRefillDate: todayISO(), nextRefillDue: '', expiryDate: item?.expiryDate || '' });
   const refill = useRefillExtinguisher({ onSuccess: onClose });
   return (
-    <Modal open={Boolean(item)} onClose={onClose} title={`Refill ${item?.code}`} description={item?.location} size="sm"
+    <Modal open={Boolean(item)} onClose={onClose} title={t('Refill {code}', { code: item?.code })} description={item?.location} size="sm"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={refill.isPending} onClick={() => refill.mutate({ id: item._id, ...clean(values) }, { onError: applyServerErrors })}>Save</Button></>}>
       <div className="space-y-4">
         <Input label="Refilled on" type="date" {...bind('lastRefillDate')} />
@@ -85,6 +87,7 @@ function NocModal({ open, onClose }) {
 }
 
 export default function FireSafetyPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const manager = isManager(user);
   const [tab, setTab] = useState('extinguishers');
@@ -116,11 +119,11 @@ export default function FireSafetyPage() {
           <StatCard icon={FireExtinguisher} label="Extinguishers" value={summary.extinguishers} />
           <StatCard icon={RefreshCcw} tone={summary.refillDue ? 'amber' : 'slate'} label="Due in 30 days" value={summary.refillDue} sub="Refill or expiry" />
           <StatCard icon={RefreshCcw} tone={summary.overdue ? 'red' : 'slate'} label="Overdue" value={summary.overdue} sub="Refill or expiry passed" />
-          <StatCard icon={Users} tone="sky" label="Last drill" value={summary.lastDrill ? date(summary.lastDrill.date) : 'None'} sub={summary.lastDrill ? `${summary.lastDrill.attendance} attended` : undefined} />
-          <StatCard icon={FileBadge} tone={summary.noc ? (summary.noc.state === 'ok' ? 'green' : 'red') : 'slate'} label="Fire NOC" value={summary.noc ? date(summary.noc.expiryDate) : 'Not recorded'} sub={summary.noc ? (summary.noc.daysLeft < 0 ? 'Expired' : `${summary.noc.daysLeft} days left`) : undefined} />
+          <StatCard icon={Users} tone="sky" label="Last drill" value={summary.lastDrill ? date(summary.lastDrill.date) : t('None')} sub={summary.lastDrill ? t('{n} attended', { n: summary.lastDrill.attendance }) : undefined} />
+          <StatCard icon={FileBadge} tone={summary.noc ? (summary.noc.state === 'ok' ? 'green' : 'red') : 'slate'} label="Fire NOC" value={summary.noc ? date(summary.noc.expiryDate) : t('Not recorded')} sub={summary.noc ? (summary.noc.daysLeft < 0 ? 'Expired' : t('{n} days left', { n: summary.noc.daysLeft })) : undefined} />
         </div>
       )}
-      <Tabs className="mb-4" value={tab} onChange={(t) => { setTab(t); setPage(1); }} tabs={[{ value: 'extinguishers', label: 'Extinguishers' }, { value: 'drills', label: 'Drills' }, ...(manager ? [{ value: 'noc', label: 'NOC' }] : [])]} />
+      <Tabs className="mb-4" value={tab} onChange={(v) => { setTab(v); setPage(1); }} tabs={[{ value: 'extinguishers', label: 'Extinguishers' }, { value: 'drills', label: 'Drills' }, ...(manager ? [{ value: 'noc', label: 'NOC' }] : [])]} />
       <Card>
         {tab === 'extinguishers' && (
           <>
@@ -130,16 +133,16 @@ export default function FireSafetyPage() {
             <Table loading={ext.isLoading} rows={ext.data?.data} empty="No extinguishers registered"
               columns={[
                 { key: 'code', header: 'Code', render: (e) => <span className="font-mono text-xs font-semibold">{e.code}</span> },
-                { key: 'location', header: 'Location', render: (e) => <div><p className="font-medium text-slate-900">{e.location}</p><p className="text-xs text-slate-500">{EXTINGUISHER_TYPES.find((t) => t.value === e.type)?.label}{e.capacityKg ? ` · ${e.capacityKg} kg` : ''}</p></div> },
-                { key: 'refill', header: 'Next refill', render: (e) => (e.nextRefillDue ? <span className="flex items-center gap-2">{date(e.nextRefillDue)}<Badge tone={DUE_TONES[e.refillState]}>{STATE_TEXT[e.refillState]}</Badge></span> : '—') },
-                { key: 'expiry', header: 'Expiry', render: (e) => (e.expiryDate ? <span className="flex items-center gap-2">{date(e.expiryDate)}{e.expiryState !== 'ok' && <Badge tone={DUE_TONES[e.expiryState]}>{STATE_TEXT[e.expiryState]}</Badge>}</span> : '—') },
-                { key: 'active', header: '', render: (e) => (!e.active ? <Badge>Removed</Badge> : null) },
+                { key: 'location', header: 'Location', render: (e) => <div><p className="font-medium text-slate-900">{e.location}</p><p className="text-xs text-slate-500">{t(EXTINGUISHER_TYPES.find((x) => x.value === e.type)?.label || '')}{e.capacityKg ? ` · ${t('{n} kg', { n: e.capacityKg })}` : ''}</p></div> },
+                { key: 'refill', header: 'Next refill', render: (e) => (e.nextRefillDue ? <span className="flex items-center gap-2">{date(e.nextRefillDue)}<Badge tone={DUE_TONES[e.refillState]}>{t(STATE_TEXT[e.refillState])}</Badge></span> : '—') },
+                { key: 'expiry', header: 'Expiry', render: (e) => (e.expiryDate ? <span className="flex items-center gap-2">{date(e.expiryDate)}{e.expiryState !== 'ok' && <Badge tone={DUE_TONES[e.expiryState]}>{t(STATE_TEXT[e.expiryState])}</Badge>}</span> : '—') },
+                { key: 'active', header: '', render: (e) => (!e.active ? <Badge>{t('Removed')}</Badge> : null) },
                 { key: 'act', header: '', render: (e) => e.active && (
                   <div className="flex gap-1">
                     <Button size="sm" variant="secondary" onClick={() => setRefill(e)}>Mark refilled</Button>
                     {manager && (
                       <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" loading={update.isPending && update.variables?.id === e._id}
-                        onClick={() => window.confirm(`Remove extinguisher ${e.code} (${e.location}) from the register? Reminders for it will stop.`) && update.mutate({ id: e._id, active: false })}>
+                        onClick={() => window.confirm(t('Remove extinguisher {code} ({location}) from the register? Reminders for it will stop.', { code: e.code, location: e.location })) && update.mutate({ id: e._id, active: false })}>
                         Remove
                       </Button>
                     )}
@@ -154,9 +157,9 @@ export default function FireSafetyPage() {
             <Table loading={drills.isLoading} rows={drills.data?.data} empty="No drills logged"
               columns={[
                 { key: 'date', header: 'Date', render: (d) => `${date(d.date)}${d.time ? ` ${d.time}` : ''}` },
-                { key: 'scenario', header: 'Scenario', className: 'max-w-xs whitespace-normal', render: (d) => <div><p className="font-medium text-slate-900">{d.scenario || 'Drill'}</p>{d.notes && <p className="text-xs text-slate-500">{d.notes}</p>}</div> },
+                { key: 'scenario', header: 'Scenario', className: 'max-w-xs whitespace-normal', render: (d) => <div><p className="font-medium text-slate-900">{d.scenario || t('Drill')}</p>{d.notes && <p className="text-xs text-slate-500">{d.notes}</p>}</div> },
                 { key: 'attendance', header: 'Attended' },
-                { key: 'evacuationMinutes', header: 'Evacuation', render: (d) => (d.evacuationMinutes ? `${d.evacuationMinutes} min` : '—') },
+                { key: 'evacuationMinutes', header: 'Evacuation', render: (d) => (d.evacuationMinutes ? t('{n} min', { n: d.evacuationMinutes }) : '—') },
                 { key: 'conductedBy', header: 'Conducted by', render: (d) => d.conductedBy || d.by?.name || '—' },
                 { key: 'files', header: '', render: (d) => <Attachments items={d.attachments} /> },
               ]} />
@@ -166,10 +169,10 @@ export default function FireSafetyPage() {
         {tab === 'noc' && (
           <Table loading={nocs.isLoading} rows={nocs.data} empty="No fire NOC recorded"
             columns={[
-              { key: 'number', header: 'NOC no.', render: (n) => <span className="font-medium">{n.number}{n.current && <Badge tone="brand" className="ml-2">Current</Badge>}</span> },
+              { key: 'number', header: 'NOC no.', render: (n) => <span className="font-medium">{n.number}{n.current && <Badge tone="brand" className="ml-2">{t('Current')}</Badge>}</span> },
               { key: 'issuedBy', header: 'Issued by', render: (n) => n.issuedBy || '—' },
               { key: 'issueDate', header: 'Issued', render: (n) => (n.issueDate ? date(n.issueDate) : '—') },
-              { key: 'expiryDate', header: 'Valid till', render: (n) => <span className="flex items-center gap-2">{date(n.expiryDate)}{n.current && <Badge tone={DUE_TONES[n.state]}>{n.daysLeft < 0 ? 'Expired' : `${n.daysLeft} days`}</Badge>}</span> },
+              { key: 'expiryDate', header: 'Valid till', render: (n) => <span className="flex items-center gap-2">{date(n.expiryDate)}{n.current && <Badge tone={DUE_TONES[n.state]}>{n.daysLeft < 0 ? t('Expired') : t('{n} days', { n: n.daysLeft })}</Badge>}</span> },
               { key: 'docs', header: '', render: (n) => <Attachments items={n.documents} /> },
             ]} />
         )}

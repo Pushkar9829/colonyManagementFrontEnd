@@ -6,6 +6,7 @@ import { useT } from '../../../context/LanguageContext';
 import { OtpLoginForm } from '../components/OtpLoginForm';
 import { MfaStep } from '../components/MfaStep';
 import { LoginBrandBanner, useLoginBrand } from '../../whitelabel/components/BrandMark';
+import { errorText } from '../../../lib/errorText';
 
 const DEMO = [
   ['Admin', 'admin@demo.test'],
@@ -47,7 +48,7 @@ export default function LoginPage() {
       if (pending?.mfaRequired) setMfaToken(pending.mfaToken);
       else done();
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
     } finally {
       setLoading(false);
     }

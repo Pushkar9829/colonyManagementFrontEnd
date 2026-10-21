@@ -6,12 +6,13 @@ import { useBouncePayment, useDownload, useEmailReceipt, useReceipt } from '../a
 import { useT } from '../../../context/LanguageContext';
 
 function BounceForm({ payment, onDone }) {
+  const { t } = useT();
   const [reason, setReason] = useState('');
   const [charge, setCharge] = useState(true);
   const bounce = useBouncePayment({ onSuccess: onDone });
   return (
     <div className="space-y-3 rounded-lg border border-red-200 bg-red-50/50 p-3">
-      <p className="font-medium text-red-800">Mark cheque {payment.reference || ''} as bounced</p>
+      <p className="font-medium text-red-800">{t('Mark cheque {ref} as bounced', { ref: payment.reference || '' })}</p>
       <Input label="Reason" placeholder="e.g. Insufficient funds" value={reason} onChange={(e) => setReason(e.target.value)} />
       <Checkbox label="Add the society's cheque bounce charge to the next bill" checked={charge} onChange={(e) => setCharge(e.target.checked)} />
       <Button variant="danger" size="sm" disabled={reason.trim().length < 3} loading={bounce.isPending} onClick={() => bounce.mutate({ id: payment._id, reason: reason.trim(), charge })}>Confirm bounce</Button>

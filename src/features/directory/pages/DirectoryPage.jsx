@@ -35,7 +35,7 @@ function PersonCard({ p, onMessage, messaging, onPrivacy }) {
       )}
       {(p.birthday || p.occupation) && (
         <div className="mt-2 space-y-1">
-          {p.occupation && <p className="flex items-center gap-1.5 text-sm text-slate-700">{p.occupation.type === 'student' ? <GraduationCap className="size-4 text-slate-400" /> : <Briefcase className="size-4 text-slate-400" />}{occupationSummary(p.occupation)}</p>}
+          {p.occupation && <p className="flex items-center gap-1.5 text-sm text-slate-700">{p.occupation.type === 'student' ? <GraduationCap className="size-4 text-slate-400" /> : <Briefcase className="size-4 text-slate-400" />}{occupationSummary(p.occupation, t)}</p>}
           {p.birthday && <p className="flex items-center gap-1.5 text-sm text-slate-700"><Cake className="size-4 text-slate-400" />{t('Birthday {date}', { date: dayMonth(p.birthday) })}</p>}
         </div>
       )}
@@ -155,7 +155,7 @@ function MyListing() {
             <Checkbox label={user.phone ? t('Show my phone ({phone})', { phone: user.phone }) : t('Show my phone')} checked={form.showPhone} onChange={set('showPhone')} />
             <Checkbox label={user.email ? t('Show my email ({email})', { email: user.email }) : t('Show my email')} checked={form.showEmail} onChange={set('showEmail')} />
             <Checkbox label="Show my profession and skills" checked={form.showProfession} onChange={set('showProfession')} />
-            <Checkbox label={personal?.occupation ? t('Show my occupation ({occupation})', { occupation: occupationSummary(personal.occupation) }) : t('Show my occupation')} checked={form.showOccupation} onChange={set('showOccupation')} />
+            <Checkbox label={personal?.occupation ? t('Show my occupation ({occupation})', { occupation: occupationSummary(personal.occupation, t) }) : t('Show my occupation')} checked={form.showOccupation} onChange={set('showOccupation')} />
           </div>
           <Checkbox label={personal?.dateOfBirth ? t('Show my birthday — day and month only, never the year ({date}). Also puts you on the “Today\'s birthdays” card.', { date: dayMonth(personal.dateOfBirth.slice(5)) }) : t('Show my birthday — day and month only, never the year. Also puts you on the “Today\'s birthdays” card.')} checked={form.showBirthday} onChange={set('showBirthday')} />
           {!personal?.dateOfBirth && !personal?.occupation && <p className="text-xs text-slate-500">{t('Add your birthday and occupation in')} <Link to="/profile" className="font-medium text-brand-700 hover:underline">{t('My profile')}</Link>.</p>}

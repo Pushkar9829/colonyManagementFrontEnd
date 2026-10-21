@@ -10,10 +10,12 @@ import { CATEGORIES, PRIORITIES, STATUSES, useAssignTicket, usePlatformReply, us
 import { SlaBadge, TicketThread } from '../components/TicketThread';
 import { PermissionGate } from '../../platform/components/PermissionGate';
 import { useCan } from '../../platform/useCan';
+import { useT } from '../../../context/LanguageContext';
 
 const opts = (list) => list.map((v) => ({ value: v, label: label(v) }));
 
 function ConsoleTicketModal({ id, onClose }) {
+  const { t: tx } = useT();
   const { data: t, isLoading } = usePlatformTicket(id);
   const [text, setText] = useState('');
   const [after, setAfter] = useState('waiting_on_customer');
@@ -27,7 +29,7 @@ function ConsoleTicketModal({ id, onClose }) {
   const team = useQuery({ queryKey: ['platform', 'support', 'team'], queryFn: () => api.get('/platform/support/team'), enabled: canAssign });
 
   return (
-    <Modal open onClose={onClose} size="lg" title={t ? `${t.number} · ${t.subject}` : 'Ticket'} description={t ? `${t.society?.name} (${t.society?.code}) · raised by ${t.raisedBy?.name} (${label(t.raisedByRole)}) · ${t.raisedBy?.email || t.raisedBy?.phone || ''}` : undefined}
+    <Modal open onClose={onClose} size="lg" title={t ? `${t.number} · ${t.subject}` : 'Ticket'} description={t ? tx('{society} ({code}) · raised by {name} ({role}) · {contact}', { society: t.society?.name, code: t.society?.code, name: t.raisedBy?.name, role: tx(label(t.raisedByRole)), contact: t.raisedBy?.email || t.raisedBy?.phone || '' }) : undefined}
       footer={t && t.status !== 'closed' && canReply && (
         <>
           {!t.assignedTo && <Button variant="secondary" loading={assign.isPending} onClick={() => assign.mutate({})}>Assign to me</Button>}
@@ -40,7 +42,7 @@ function ConsoleTicketModal({ id, onClose }) {
           {canAssign && t.status !== 'closed' ? (
             <Select className="sm:w-64" label="Owner" placeholder="Unassigned" value={t.assignedTo?._id || ''} disabled={assign.isPending}
               options={(team.data || []).map((m) => ({ value: m._id, label: m.name }))} onChange={(e) => e.target.value && assign.mutate({ assignedTo: e.target.value })} />
-          ) : t.assignedTo && <p className="text-xs text-slate-500">Assigned to {t.assignedTo.name}</p>}
+          ) : t.assignedTo && <p className="text-xs text-slate-500">{tx('Assigned to {name}', { name: t.assignedTo.name })}</p>}
           <TicketThread ticket={t} viewer="platform" />
           {t.status !== 'closed' && canReply && (
             <div className="space-y-2 border-t border-slate-100 pt-4">
@@ -66,6 +68,7 @@ export default function PlatformSupportPage() {
 }
 
 function SupportTickets() {
+  const { t: tx } = useT();
   const [params, setParams] = useSearchParams();
   const openId = params.get('ticket');
   const [f, setF] = useState({ status: '', priority: '', category: '', awaiting: 'platform', breached: '', search: '', page: 1 });
@@ -93,14 +96,14 @@ function SupportTickets() {
           <Select placeholder="Anyone’s turn" value={f.awaiting} onChange={set('awaiting')} options={[{ value: 'platform', label: 'Waiting for us' }, { value: 'society', label: 'Waiting for society' }]} />
         </div>
         <div className="flex gap-3 px-4 pt-3">
-          <label className="inline-flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.breached === 'true'} onChange={(e) => setF((x) => ({ ...x, breached: e.target.checked ? 'true' : '', page: 1 }))} /> SLA missed only</label>
+          <label className="inline-flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.breached === 'true'} onChange={(e) => setF((x) => ({ ...x, breached: e.target.checked ? 'true' : '', page: 1 }))} /> {tx('SLA missed only')}</label>
         </div>
         <Table loading={isLoading} rows={data?.data} empty="No tickets match" onRowClick={(t) => setParams({ ticket: t._id })}
           columns={[
-            { key: 'subject', header: 'Ticket', render: (t) => <div><p className="font-medium text-slate-900">{t.subject}</p><p className="text-xs text-slate-500">{t.number} · {label(t.category)}</p></div> },
+            { key: 'subject', header: 'Ticket', render: (t) => <div><p className="font-medium text-slate-900">{t.subject}</p><p className="text-xs text-slate-500">{t.number} · {tx(label(t.category))}</p></div> },
             { key: 'society', header: 'Society', render: (t) => <div><p>{t.society?.name}</p><p className="text-xs text-slate-500">{t.raisedBy?.name}</p></div> },
             { key: 'priority', header: 'Priority', render: (t) => <StatusBadge status={t.priority} /> },
-            { key: 'status', header: 'Status', render: (t) => <div className="flex flex-wrap gap-1"><StatusBadge status={t.status} />{t.awaiting === 'platform' && <Badge tone="amber">Needs reply</Badge>}<SlaBadge ticket={t} /></div> },
+            { key: 'status', header: 'Status', render: (t) => <div className="flex flex-wrap gap-1"><StatusBadge status={t.status} />{t.awaiting === 'platform' && <Badge tone="amber">{tx('Needs reply')}</Badge>}<SlaBadge ticket={t} /></div> },
             { key: 'assignedTo', header: 'Owner', render: (t) => t.assignedTo?.name || '—' },
             { key: 'lastActivityAt', header: 'Updated', render: (t) => timeAgo(t.lastActivityAt) },
           ]} />

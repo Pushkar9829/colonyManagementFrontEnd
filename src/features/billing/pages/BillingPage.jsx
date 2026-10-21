@@ -36,6 +36,7 @@ const periodText = (p, t = (s) => s) => (p === 'OPENING' ? t('Opening balance') 
 // Finance staff: this month's numbers, labelled with the month, plus all-time dues so the tiles
 // line up with the dashboard (which shows dues across every month).
 function SummaryCards({ period }) {
+  const { t } = useT();
   const { data: s } = useBillingSummary(period);
   const { data: all } = useBillingSummary(undefined);
   if (!s) return null;
@@ -43,11 +44,11 @@ function SummaryCards({ period }) {
   const month = periodLabel(period);
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 lg:grid-cols-5">
-      <StatCard icon={Receipt} label={`Billed · ${month}`} value={money(s.billed)} sub={`${s.bills} bills`} />
-      <StatCard icon={Wallet} tone="green" label={`Collected · ${month}`} value={money(s.collected)} sub={`${rate}% of this month's bills`} />
-      <StatCard icon={IndianRupee} tone="amber" label={`Outstanding · ${month}`} value={money(s.outstanding)} sub="Unpaid on this month's bills" />
-      <StatCard icon={AlertTriangle} tone="red" label={`Overdue · ${month}`} value={money(s.overdue)} sub="Past due date" />
-      <StatCard icon={IndianRupee} tone={all?.outstanding ? 'red' : 'green'} label="All-time dues" value={all ? money(all.outstanding) : '…'} sub={all?.overdue ? `${money(all.overdue)} overdue, all months` : 'Nothing overdue'} />
+      <StatCard icon={Receipt} label={t('Billed · {month}', { month })} value={money(s.billed)} sub={t(s.bills === 1 ? '{count} bill' : '{count} bills', { count: s.bills })} />
+      <StatCard icon={Wallet} tone="green" label={t('Collected · {month}', { month })} value={money(s.collected)} sub={t("{rate}% of this month's bills", { rate })} />
+      <StatCard icon={IndianRupee} tone="amber" label={t('Outstanding · {month}', { month })} value={money(s.outstanding)} sub="Unpaid on this month's bills" />
+      <StatCard icon={AlertTriangle} tone="red" label={t('Overdue · {month}', { month })} value={money(s.overdue)} sub="Past due date" />
+      <StatCard icon={IndianRupee} tone={all?.outstanding ? 'red' : 'green'} label="All-time dues" value={all ? money(all.outstanding) : '…'} sub={all?.overdue ? t('{amount} overdue, all months', { amount: money(all.overdue) }) : 'Nothing overdue'} />
     </div>
   );
 }
@@ -145,6 +146,7 @@ function GenerateModal({ open, onClose }) {
 }
 
 function RecordPaymentModal({ open, onClose, presetBill }) {
+  const { t } = useT();
   const [unit, setUnit] = useState('');
   const [keepExcess, setKeepExcess] = useState(true);
   const { values, bind, set, applyServerErrors, errors } = useForm({ bill: '', amount: presetBill ? String(presetBill.balance / 100) : '', method: 'upi', reference: '', paidAt: todayISO() });
@@ -162,15 +164,15 @@ function RecordPaymentModal({ open, onClose, presetBill }) {
       <div className="grid gap-4 sm:grid-cols-2">
         {!presetBill && <div className="sm:col-span-2"><UnitPicker value={unit} onChange={(id) => { setUnit(id); set('bill', ''); }} /></div>}
         <Select className="sm:col-span-2" label="Bill" required placeholder={unit || presetBill ? 'Select bill' : 'Pick a unit first'} error={errors.bill}
-          options={openBills.map((b) => ({ value: b._id, label: `${b.billNumber} · ${periodText(b.period)} · due ${money(b.balance)}` }))}
+          options={openBills.map((b) => ({ value: b._id, label: t('{bill} · {period} · due {amount}', { bill: b.billNumber, period: periodText(b.period, t), amount: money(b.balance) }) }))}
           value={billId} onChange={(e) => { set('bill', e.target.value); const b = openBills.find((x) => x._id === e.target.value); if (b) set('amount', String(b.balance / 100)); }} disabled={Boolean(presetBill)} />
-        <Input label="Amount (₹)" type="number" min={1} required hint={selected ? `Balance ${money(selected.balance)}` : undefined} {...bind('amount')} />
+        <Input label="Amount (₹)" type="number" min={1} required hint={selected ? t('Balance {amount}', { amount: money(selected.balance) }) : undefined} {...bind('amount')} />
         <Select label="Mode" options={['upi', 'cash', 'cheque', 'bank'].map((m) => ({ value: m, label: label(m) }))} {...bind('method')} />
         <Input label="Reference" placeholder="UTR / cheque no." {...bind('reference')} />
         <Input label="Paid on" type="date" {...bind('paidAt')} />
         {excess > 0 && (
           <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800 sm:col-span-2">
-            <Checkbox label={`Keep the extra ${money(excess)} as advance for future bills`} checked={keepExcess} onChange={(e) => setKeepExcess(e.target.checked)} />
+            <Checkbox label={t('Keep the extra {amount} as advance for future bills', { amount: money(excess) })} checked={keepExcess} onChange={(e) => setKeepExcess(e.target.checked)} />
           </div>
         )}
       </div>
@@ -258,6 +260,7 @@ function PaymentsTable({ finance, onReceipt }) {
 }
 
 function DefaultersTable() {
+  const { t } = useT();
   const { data, isLoading } = useDefaulters();
   return (
     <Card>
@@ -270,7 +273,7 @@ function DefaultersTable() {
           { key: 'bills', header: 'Overdue bills' },
           { key: 'oldestDue', header: 'Oldest due', render: (d) => date(d.oldestDue) },
           // Click-to-chat societies send reminders themselves (the button renders only in that mode).
-          { key: 'remind', header: '', mobile: false, render: (d) => <SendOnWhatsApp label="Remind" text={`Reminder from the society office: maintenance dues of ${money(d.net)} for ${d.unit.label} are overdue since ${date(d.oldestDue)}. Please pay in the ColonyHub app. Thank you.`} /> },
+          { key: 'remind', header: '', mobile: false, render: (d) => <SendOnWhatsApp label={t('Remind')} text={t('Reminder from the society office: maintenance dues of {amount} for {unit} are overdue since {date}. Please pay in the ColonyHub app. Thank you.', { amount: money(d.net), unit: d.unit.label, date: date(d.oldestDue) })} /> },
         ]} />
     </Card>
   );
@@ -282,7 +285,7 @@ export default function BillingPage() {
   const finance = user.role !== ROLES.RESIDENT;
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'bills';
-  const setTab = (t) => setParams(t === 'bills' ? {} : { tab: t }, { replace: true });
+  const setTab = (v) => setParams(v === 'bills' ? {} : { tab: v }, { replace: true });
   const [modal, setModal] = useState(null);
   const [billId, setBillId] = useState(null);
   const [receiptId, setReceiptId] = useState(null);

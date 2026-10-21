@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { useT } from '../../context/LanguageContext';
+import { tt } from '../../lib/i18n/toastText';
 
 // Society side: how residents' online payments reach this society (Settings → Online payments).
 const KEY = ['paymentSettings'];
@@ -31,8 +33,9 @@ function loadRazorpay() {
 }
 
 // ₹1 through the chosen account. The mock gateway completes it on the server; Razorpay opens checkout.
-export const useTestPayment = () =>
-  useApiMutation(
+export const useTestPayment = () => {
+  const { t } = useT();
+  return useApiMutation(
     async () => {
       const res = await api.post('/payment-settings/test-payment');
       if (res.instant) return res.settings;
@@ -43,16 +46,17 @@ export const useTestPayment = () =>
           order_id: res.order.orderId,
           amount: res.order.amount,
           currency: res.order.currency,
-          name: 'Test payment',
+          name: t('Test payment'),
           description: res.order.description,
           handler: (r) => api.post('/payment-settings/test-payment/verify', { orderId: r.razorpay_order_id, paymentId: r.razorpay_payment_id, signature: r.razorpay_signature }).then(resolve, reject),
-          modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
+          modal: { ondismiss: () => reject(new Error(t('Payment cancelled'))) },
         });
         rzp.open();
       });
     },
     { ...inv, success: (s) => (s.testPayment?.ok ? 'Test payment of ₹1 succeeded' : 'Test payment did not go through') },
   );
+};
 
 // Platform console: per-society controls (permission payments.manage).
 export const usePlatformPaymentSettings = (societyId) =>
@@ -60,4 +64,4 @@ export const usePlatformPaymentSettings = (societyId) =>
 export const useUpdatePlatformPaymentSettings = (societyId, o) =>
   useApiMutation((b) => api.patch(`/platform/payment-settings/${societyId}`, b), { invalidate: [['platform', 'paymentSettings', societyId]], success: 'Payment settings saved', ...o });
 export const useRefreshRoute = (societyId) =>
-  useApiMutation(() => api.post(`/platform/payment-settings/${societyId}/route/refresh`), { invalidate: [['platform', 'paymentSettings', societyId]], success: (r) => `Linked account is ${r.route.status}` });
+  useApiMutation(() => api.post(`/platform/payment-settings/${societyId}/route/refresh`), { invalidate: [['platform', 'paymentSettings', societyId]], success: (r) => tt('Linked account is {status}', { status: r.route.status }) });

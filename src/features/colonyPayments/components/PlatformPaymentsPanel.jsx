@@ -4,10 +4,12 @@ import { dateTime, label } from '../../../lib/format';
 import { useCan } from '../../platform/useCan';
 import { MODE_LABELS, ROUTE_TONES, STATUS_BADGES } from '../lib';
 import { usePlatformPaymentSettings, useRefreshRoute, useUpdatePlatformPaymentSettings } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 // Platform console → society: which payment modes it may use, its Route linked account and commission,
 // and the force-disable switch. Editing needs payments.manage.
 export function PlatformPaymentsPanel({ societyId }) {
+  const { t } = useT();
   const { data: s, isLoading } = usePlatformPaymentSettings(societyId);
   const [route, setRoute] = useState(null);
   const [errors, setErrors] = useState({});
@@ -37,29 +39,29 @@ export function PlatformPaymentsPanel({ societyId }) {
 
   return (
     <div>
-      <p className="mb-2 font-medium text-slate-700">Online payments</p>
+      <p className="mb-2 font-medium text-slate-700">{t('Online payments')}</p>
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
-        <Badge tone={badge.tone}>{badge.text}</Badge>
-        <Badge>{MODE_LABELS[s.mode]}</Badge>
-        {s.own.keyId && <Badge>Key {s.own.keyId}{s.own.keySecretLast4 ? ` · secret ••••${s.own.keySecretLast4}` : ''}</Badge>}
-        {s.activatedAt && <Badge tone="green">Live since {dateTime(s.activatedAt)}</Badge>}
-        {s.testPayment && <Badge tone={s.testPayment.ok ? 'green' : 'amber'}>₹1 test {s.testPayment.ok ? 'passed' : 'not passed'}</Badge>}
+        <Badge tone={badge.tone}>{t(badge.text)}</Badge>
+        <Badge>{MODE_LABELS[s.mode] ? t(MODE_LABELS[s.mode]) : s.mode}</Badge>
+        {s.own.keyId && <Badge>{s.own.keySecretLast4 ? t('Key {id} · secret ••••{last4}', { id: s.own.keyId, last4: s.own.keySecretLast4 }) : t('Key {id}', { id: s.own.keyId })}</Badge>}
+        {s.activatedAt && <Badge tone="green">{t('Live since {date}', { date: dateTime(s.activatedAt) })}</Badge>}
+        {s.testPayment && <Badge tone={s.testPayment.ok ? 'green' : 'amber'}>{s.testPayment.ok ? t('₹1 test passed') : t('₹1 test not passed')}</Badge>}
       </div>
-      {s.statusReason && <p className="mb-3 text-xs text-slate-500">{s.statusReason}</p>}
+      {s.statusReason && <p className="mb-3 text-xs text-slate-500">{t(s.statusReason)}</p>}
 
       <div className="mb-3 flex flex-wrap items-center gap-4">
-        <span className="text-sm text-slate-600">Allowed modes:</span>
+        <span className="text-sm text-slate-600">{t('Allowed modes:')}</span>
         {['own', 'route'].map((m) => (
           <Checkbox key={m} label={MODE_LABELS[m]} checked={s.allowedModes.includes(m)} disabled={!canManage || update.isPending} onChange={() => toggleMode(m)} />
         ))}
       </div>
 
       <div className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-3">
-        <p className="text-sm font-medium text-slate-700 sm:col-span-3">Razorpay Route linked account {s.route.refreshedAt && <span className="font-normal text-slate-500">· checked {dateTime(s.route.refreshedAt)}</span>}</p>
+        <p className="text-sm font-medium text-slate-700 sm:col-span-3">{t('Razorpay Route linked account')} {s.route.refreshedAt && <span className="font-normal text-slate-500">· {t('checked {date}', { date: dateTime(s.route.refreshedAt) })}</span>}</p>
         <Input label="Linked account id" disabled={!canManage} placeholder="acc_…" value={r.linkedAccountId} onChange={set('linkedAccountId')} error={errors['route.linkedAccountId']} />
         <div>
-          <p className="mb-1 text-sm font-medium text-slate-700">Status</p>
-          <div className="flex items-center gap-2"><Badge tone={ROUTE_TONES[s.route.status]}>{label(s.route.status)}</Badge>{s.route.kycStatus && <span className="text-xs text-slate-500">KYC {label(s.route.kycStatus)}</span>}</div>
+          <p className="mb-1 text-sm font-medium text-slate-700">{t('Status')}</p>
+          <div className="flex items-center gap-2"><Badge tone={ROUTE_TONES[s.route.status]}>{t(label(s.route.status))}</Badge>{s.route.kycStatus && <span className="text-xs text-slate-500">{t('KYC {status}', { status: t(label(s.route.kycStatus)) })}</span>}</div>
         </div>
         <Input label="Commission (%)" type="number" min={0} max={20} step="0.1" disabled={!canManage} value={r.commissionPercent} onChange={set('commissionPercent')} hint="Kept by the platform" />
         <Input label="Account name" disabled={!canManage} value={r.accountName} onChange={set('accountName')} />
@@ -78,9 +80,9 @@ export function PlatformPaymentsPanel({ societyId }) {
           {s.forceDisabled ? (
             <Button size="sm" variant="success" loading={update.isPending} onClick={() => update.mutate({ forceDisabled: false })}>Allow online payments again</Button>
           ) : (
-            <Button size="sm" variant="danger" loading={update.isPending} onClick={() => { const reason = window.prompt('Why are online payments being switched off? (shown to the society)'); if (reason !== null) update.mutate({ forceDisabled: true, forceDisabledReason: reason || undefined }); }}>Force-disable online payments</Button>
+            <Button size="sm" variant="danger" loading={update.isPending} onClick={() => { const reason = window.prompt(t('Why are online payments being switched off? (shown to the society)')); if (reason !== null) update.mutate({ forceDisabled: true, forceDisabledReason: reason || undefined }); }}>Force-disable online payments</Button>
           )}
-          {s.forceDisabled && <span className="ml-2 text-xs text-red-600">Off by platform{s.forceDisabledReason ? `: ${s.forceDisabledReason}` : ''}</span>}
+          {s.forceDisabled && <span className="ml-2 text-xs text-red-600">{s.forceDisabledReason ? t('Off by platform: {reason}', { reason: s.forceDisabledReason }) : t('Off by platform')}</span>}
         </div>
       )}
     </div>

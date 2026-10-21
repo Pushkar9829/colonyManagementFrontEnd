@@ -3,12 +3,14 @@ import { Landmark, Link2, Sparkles, Trash2, Unlink, Upload } from 'lucide-react'
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner, StatCard, StatusBadge, Table, Tabs } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
+import { useT } from '../../../context/LanguageContext';
 import { date, dateTime, money, todayISO } from '../../../lib/format';
 import {
   useAutoMatch, useBankAccounts, useBookLine, useCandidates, useDeleteImport, useIgnoreLine, useImportStatement, useMatchLine,
   usePreviewStatement, useReconciliation, useStatementImports, useStatementLines, useUnmatchLine,
 } from '../api';
 import { AccountSelect, Amount, DrCr } from '../components/common';
+import { errorText } from '../../../lib/errorText';
 
 const FIELDS = [
   { key: 'date', label: 'Date', required: true },
@@ -21,6 +23,7 @@ const FIELDS = [
 ];
 
 function ImportModal({ code, open, onClose }) {
+  const { t } = useT();
   const [file, setFile] = useState(null);
   const [mapping, setMapping] = useState({});
   const [dateFormat, setDateFormat] = useState('DMY');
@@ -43,19 +46,19 @@ function ImportModal({ code, open, onClose }) {
 
   return (
     <Modal open={open} onClose={onClose} size="lg" title="Import bank statement" description="CSV or Excel (.xlsx) downloaded from net banking. Columns are detected automatically; correct them if needed."
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={Upload} disabled={!file || !p?.totalLines} loading={doImport.isPending} onClick={() => doImport.mutate({ file, mapping: effective })}>Import {p?.totalLines ? `${p.totalLines} lines` : ''}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={Upload} disabled={!file || !p?.totalLines} loading={doImport.isPending} onClick={() => doImport.mutate({ file, mapping: effective })}>{p?.totalLines ? t('Import {count} lines', { count: p.totalLines }) : t('Import')}</Button></>}>
       <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-[2fr_1fr]">
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-4 py-6 text-sm text-slate-600 hover:border-brand-400 hover:text-brand-700">
             <Upload className="size-4" />
-            {file ? file.name : 'Choose statement file'}
+            {file ? file.name : t('Choose statement file')}
             <input type="file" hidden accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => pick(e.target.files?.[0] || null)} />
           </label>
           <Select label="Date format" value={dateFormat} onChange={(e) => { setDateFormat(e.target.value); if (file) preview.mutate({ file, mapping: { ...mapping, dateFormat: e.target.value } }); }}
             options={[{ value: 'DMY', label: 'DD/MM/YYYY' }, { value: 'MDY', label: 'MM/DD/YYYY' }, { value: 'YMD', label: 'YYYY-MM-DD' }]} />
         </div>
         {preview.isPending && <div className="flex justify-center py-6"><Spinner /></div>}
-        {preview.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{preview.error.message}</p>}
+        {preview.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{errorText(preview.error, t)}</p>}
         {p && !preview.isPending && (
           <>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -66,7 +69,7 @@ function ImportModal({ code, open, onClose }) {
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
               <table className="min-w-full text-xs">
-                <thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2 text-left">Date</th><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-left">Ref</th><th className="px-3 py-2 text-right">Deposit</th><th className="px-3 py-2 text-right">Withdrawal</th></tr></thead>
+                <thead className="bg-slate-50 text-slate-500"><tr><th className="px-3 py-2 text-left">{t('Date')}</th><th className="px-3 py-2 text-left">{t('Description')}</th><th className="px-3 py-2 text-left">{t('Ref')}</th><th className="px-3 py-2 text-right">{t('Deposit')}</th><th className="px-3 py-2 text-right">{t('Withdrawal')}</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {p.lines.slice(0, 8).map((l) => (
                     <tr key={l.row}><td className="px-3 py-1.5">{l.date}</td><td className="max-w-[14rem] truncate px-3 py-1.5">{l.description}</td><td className="px-3 py-1.5">{l.reference}</td><td className="px-3 py-1.5 text-right"><DrCr value={l.deposit} /></td><td className="px-3 py-1.5 text-right"><DrCr value={l.withdrawal} /></td></tr>
@@ -74,7 +77,9 @@ function ImportModal({ code, open, onClose }) {
                 </tbody>
               </table>
             </div>
-            <p className="text-xs text-slate-500">{p.totalLines} transactions found{p.errors.length ? ` · ${p.errors.length} rows skipped (e.g. row ${p.errors[0].row}: ${p.errors[0].message})` : ''}. Lines already imported are skipped automatically.</p>
+            <p className="text-xs text-slate-500">{p.errors.length
+              ? t('{count} transactions found · {skipped} rows skipped (e.g. row {row}: {message}). Lines already imported are skipped automatically.', { count: p.totalLines, skipped: p.errors.length, row: p.errors[0].row, message: p.errors[0].message })
+              : t('{count} transactions found. Lines already imported are skipped automatically.', { count: p.totalLines })}</p>
           </>
         )}
       </div>
@@ -83,6 +88,7 @@ function ImportModal({ code, open, onClose }) {
 }
 
 function MatchModal({ line, onClose }) {
+  const { t } = useT();
   const { data: candidates, isLoading } = useCandidates(line?._id);
   const [picked, setPicked] = useState([]);
   const match = useMatchLine({ onSuccess: onClose });
@@ -90,7 +96,7 @@ function MatchModal({ line, onClose }) {
   const sum = (candidates || []).filter((c) => picked.includes(c.lineId)).reduce((s, c) => s + c.debit - c.credit, 0);
   return (
     <Modal open={Boolean(line)} onClose={onClose} size="lg" title="Match statement line"
-      description={line && `${date(line.date)} · ${line.description || line.reference || ''} · ${line.deposit ? `deposit ${money(line.deposit)}` : `withdrawal ${money(line.withdrawal)}`}`}
+      description={line && `${date(line.date)} · ${line.description || line.reference || ''} · ${line.deposit ? t('deposit {amount}', { amount: money(line.deposit) }) : t('withdrawal {amount}', { amount: money(line.withdrawal) })}`}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!picked.length || sum !== target} loading={match.isPending} onClick={() => match.mutate({ id: line._id, entryLines: picked })}>Match</Button></>}>
       {isLoading ? <div className="flex justify-center py-8"><Spinner /></div> : !candidates?.length ? (
         <EmptyState title="No unmatched book entries nearby" description="Book it from the line menu (bank charge, interest or another account) if it is not in the books yet." />
@@ -101,12 +107,12 @@ function MatchModal({ line, onClose }) {
               <Checkbox checked={picked.includes(c.lineId)} onChange={(e) => setPicked((p) => (e.target.checked ? [...p, c.lineId] : p.filter((x) => x !== c.lineId)))} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-slate-900">{c.narration}</p>
-                <p className="text-xs text-slate-500">{c.number} · {date(c.date)}{c.reference ? ` · ${c.reference}` : ''}{c.dateGap ? ` · ${c.dateGap} days apart` : ''}</p>
+                <p className="text-xs text-slate-500">{c.number} · {date(c.date)}{c.reference ? ` · ${c.reference}` : ''}{c.dateGap ? ` · ${t('{n} days apart', { n: c.dateGap })}` : ''}</p>
               </div>
               <span className={cn('tabular-nums font-medium', c.amount === Math.abs(target) && 'text-emerald-700')}>{money(c.amount)}</span>
             </label>
           ))}
-          <p className={cn('pt-1 text-sm', sum === target ? 'text-emerald-700' : 'text-slate-500')}>Selected {money(Math.abs(sum))} of {money(Math.abs(target))}</p>
+          <p className={cn('pt-1 text-sm', sum === target ? 'text-emerald-700' : 'text-slate-500')}>{t('Selected {amount} of {total}', { amount: money(Math.abs(sum)), total: money(Math.abs(target)) })}</p>
         </div>
       )}
     </Modal>
@@ -114,6 +120,7 @@ function MatchModal({ line, onClose }) {
 }
 
 function BookModal({ line, onClose }) {
+  const { t } = useT();
   const deposit = line?.deposit > 0;
   const [kind, setKind] = useState(deposit ? 'interest' : 'bank_charge');
   const [accountCode, setAccountCode] = useState('');
@@ -125,7 +132,7 @@ function BookModal({ line, onClose }) {
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={kind === 'other' && !accountCode} loading={book.isPending} onClick={() => book.mutate({ id: line._id, kind, accountCode: accountCode || undefined, narration: narration || undefined })}>Book & match</Button></>}>
       {line && (
         <div className="space-y-4">
-          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm">{date(line.date)} · {line.description} · <b>{money(line.deposit || line.withdrawal)}</b> {deposit ? 'in' : 'out'}</p>
+          <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm">{date(line.date)} · {line.description} · <b>{money(line.deposit || line.withdrawal)}</b> {deposit ? t('in') : t('out')}</p>
           <Select label="What is it?" value={kind} onChange={(e) => setKind(e.target.value)} options={kinds} />
           <AccountSelect label={kind === 'other' ? 'Other account' : 'Account (optional override)'} value={accountCode} onChange={setAccountCode} types={deposit ? ['income', 'liability', 'equity', 'asset'] : ['expense', 'liability', 'asset']} />
           <Input label="Narration" placeholder="Optional" value={narration} onChange={(e) => setNarration(e.target.value)} />
@@ -136,28 +143,29 @@ function BookModal({ line, onClose }) {
 }
 
 function Summary({ code }) {
+  const { t } = useT();
   const [asOf, setAsOf] = useState(todayISO());
   const { data: s } = useReconciliation(code, asOf);
   if (!s) return null;
   const reconciled = s.difference === 0;
   return (
     <Card className="mb-6">
-      <CardHeader title="Reconciliation" subtitle={`${s.account.code} ${s.account.name}`} action={<Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} />} />
+      <CardHeader title="Reconciliation" subtitle={`${s.account.code} ${s.account.name}`} action={<Input type="date" aria-label={t('As of')} value={asOf} onChange={(e) => setAsOf(e.target.value)} />} />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Balance as per books" value={<Amount value={s.bookBalance} />} />
-        <StatCard label="Balance as per statement" value={s.statementBalance === null ? '—' : <Amount value={s.statementBalance} />} sub={s.statementBalanceDate ? `on ${date(s.statementBalanceDate)}` : 'Import a statement with a balance column'} />
+        <StatCard label="Balance as per statement" value={s.statementBalance === null ? '—' : <Amount value={s.statementBalance} />} sub={s.statementBalanceDate ? t('on {date}', { date: date(s.statementBalanceDate) }) : 'Import a statement with a balance column'} />
         <StatCard label="Expected statement balance" value={<Amount value={s.expectedBankBalance} />} sub="books adjusted for open items" />
-        <StatCard tone={reconciled ? 'green' : 'amber'} label="Difference" value={s.difference === null ? '—' : <Amount value={s.difference} />} sub={reconciled ? 'Reconciled' : `${s.counts.unmatchedStatement} statement / ${s.counts.unmatchedBook} book items open`} />
+        <StatCard tone={reconciled ? 'green' : 'amber'} label="Difference" value={s.difference === null ? '—' : <Amount value={s.difference} />} sub={reconciled ? 'Reconciled' : t('{statement} statement / {book} book items open', { statement: s.counts.unmatchedStatement, book: s.counts.unmatchedBook })} />
       </div>
       <div className="grid gap-2 border-t border-slate-100 px-4 py-3 text-sm text-slate-600 sm:grid-cols-2 lg:grid-cols-4">
-        <span>Receipts not yet in bank: <b>{money(s.bookReceiptsPending)}</b></span>
-        <span>Payments not yet cleared: <b>{money(s.bookPaymentsPending)}</b></span>
-        <span>Bank credits not in books: <b>{money(s.bankCreditsUnrecorded)}</b></span>
-        <span>Bank debits not in books: <b>{money(s.bankDebitsUnrecorded)}</b></span>
+        <span>{t('Receipts not yet in bank:')} <b>{money(s.bookReceiptsPending)}</b></span>
+        <span>{t('Payments not yet cleared:')} <b>{money(s.bookPaymentsPending)}</b></span>
+        <span>{t('Bank credits not in books:')} <b>{money(s.bankCreditsUnrecorded)}</b></span>
+        <span>{t('Bank debits not in books:')} <b>{money(s.bankDebitsUnrecorded)}</b></span>
       </div>
       {s.unmatchedBook.length > 0 && (
         <details className="border-t border-slate-100 px-4 py-3 text-sm">
-          <summary className="cursor-pointer font-medium text-slate-700">Book entries not on the statement ({s.unmatchedBook.length})</summary>
+          <summary className="cursor-pointer font-medium text-slate-700">{t('Book entries not on the statement ({count})', { count: s.unmatchedBook.length })}</summary>
           <ul className="mt-2 divide-y divide-slate-100">
             {s.unmatchedBook.map((b) => (
               <li key={b.lineId} className="flex justify-between gap-3 py-1.5"><span className="truncate">{date(b.date)} · {b.number} · {b.narration}</span><span className="shrink-0 tabular-nums">{b.debit ? `+${money(b.debit)}` : `−${money(b.credit)}`}</span></li>
@@ -170,6 +178,7 @@ function Summary({ code }) {
 }
 
 function Lines({ code }) {
+  const { t } = useT();
   const [status, setStatus] = useState('unmatched');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useStatementLines(code, { status: status || undefined, page, limit: 25 });
@@ -194,7 +203,7 @@ function Lines({ code }) {
           { key: 'status', header: 'Status', render: (l) => (
             <div className="flex flex-wrap items-center gap-1">
               <StatusBadge status={l.status === 'matched' ? 'approved' : l.status === 'ignored' ? 'cancelled' : 'pending'} />
-              {l.matchType && <Badge>{l.matchType}</Badge>}
+              {l.matchType && <Badge>{t(l.matchType)}</Badge>}
               {l.entries?.map((e) => <span key={e._id} className="font-mono text-[11px] text-slate-500">{e.number}</span>)}
             </div>
           ) },
@@ -209,8 +218,8 @@ function Lines({ code }) {
               )}
               {l.status !== 'unmatched' && (
                 <Button size="sm" variant="ghost" icon={Unlink} loading={unmatch.isPending && unmatch.variables === l._id}
-                  onClick={() => (l.matchType !== 'created' || window.confirm('This line was booked from the statement. Unmatching reverses that entry. Continue?')) && unmatch.mutate(l._id)}>
-                  {l.status === 'ignored' ? 'Restore' : 'Unmatch'}
+                  onClick={() => (l.matchType !== 'created' || window.confirm(t('This line was booked from the statement. Unmatching reverses that entry. Continue?'))) && unmatch.mutate(l._id)}>
+                  {l.status === 'ignored' ? t('Restore') : t('Unmatch')}
                 </Button>
               )}
             </div>
@@ -224,6 +233,7 @@ function Lines({ code }) {
 }
 
 function Imports({ code }) {
+  const { t } = useT();
   const { data } = useStatementImports(code);
   const remove = useDeleteImport();
   if (!data?.length) return null;
@@ -233,16 +243,17 @@ function Imports({ code }) {
       <Table rows={data} columns={[
         { key: 'fileName', header: 'File', render: (i) => <span className="font-medium text-slate-900">{i.fileName}</span> },
         { key: 'period', header: 'Period', render: (i) => `${date(i.from)} – ${date(i.to)}` },
-        { key: 'imported', header: 'Lines', render: (i) => `${i.imported} new${i.duplicates ? ` · ${i.duplicates} dup` : ''}` },
+        { key: 'imported', header: 'Lines', render: (i) => (i.duplicates ? t('{count} new · {dup} dup', { count: i.imported, dup: i.duplicates }) : t('{count} new', { count: i.imported })) },
         { key: 'autoMatched', header: 'Auto-matched' },
         { key: 'createdAt', header: 'Imported', render: (i) => `${dateTime(i.createdAt)}${i.uploadedBy ? ` · ${i.uploadedBy.name}` : ''}` },
-        { key: 'actions', header: '', render: (i) => <Button size="sm" variant="ghost" icon={Trash2} loading={remove.isPending && remove.variables === i._id} onClick={() => window.confirm('Remove this statement and its unmatched lines?') && remove.mutate(i._id)}>Remove</Button> },
+        { key: 'actions', header: '', render: (i) => <Button size="sm" variant="ghost" icon={Trash2} loading={remove.isPending && remove.variables === i._id} onClick={() => window.confirm(t('Remove this statement and its unmatched lines?')) && remove.mutate(i._id)}>Remove</Button> },
       ]} />
     </Card>
   );
 }
 
 export default function BankReconciliationPage() {
+  const { t } = useT();
   const { data: accounts, isLoading } = useBankAccounts();
   const [code, setCode] = useState('');
   const [importing, setImporting] = useState(false);
@@ -263,10 +274,10 @@ export default function BankReconciliationPage() {
                 className={cn('rounded-xl border bg-white p-4 text-left shadow-sm transition', a.code === active ? 'border-brand-400 ring-2 ring-brand-500/20' : 'border-slate-200 hover:border-brand-200')}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-semibold text-slate-900">{a.code} · {a.name}</span>
-                  {a.unmatched > 0 && <Badge tone="amber">{a.unmatched} open</Badge>}
+                  {a.unmatched > 0 && <Badge tone="amber">{t('{count} open', { count: a.unmatched })}</Badge>}
                 </div>
                 <p className="mt-1 text-lg font-semibold"><Amount value={a.bookBalance} /></p>
-                <p className="text-xs text-slate-500">{a.bankDetails?.bankName ? `${a.bankDetails.bankName} · ` : ''}{a.lastStatementDate ? `statement to ${date(a.lastStatementDate)}` : 'no statement yet'}</p>
+                <p className="text-xs text-slate-500">{a.bankDetails?.bankName ? `${a.bankDetails.bankName} · ` : ''}{a.lastStatementDate ? t('statement to {date}', { date: date(a.lastStatementDate) }) : t('no statement yet')}</p>
               </button>
             ))}
           </div>

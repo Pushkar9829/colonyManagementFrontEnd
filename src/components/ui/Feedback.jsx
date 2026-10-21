@@ -1,6 +1,7 @@
 import { Inbox, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/cn';
 import { tr, useT } from '../../context/LanguageContext';
+import { errorText } from '../../lib/errorText';
 
 export function Spinner({ className }) {
   return <Loader2 className={cn('size-6 animate-spin text-brand-600', className)} />;
@@ -42,7 +43,7 @@ export function ErrorState({ error, onRetry }) {
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
       <AlertTriangle className="size-8 text-red-500" />
       <p className="mt-3 font-medium text-slate-700">{t('Could not load data')}</p>
-      <p className="mt-1 text-sm text-slate-500">{error?.message}</p>
+      <p className="mt-1 text-sm text-slate-500">{error?.message ? errorText(error, t) : null}</p>
       {onRetry && (
         <button type="button" onClick={onRetry} className="mt-3 text-sm font-medium text-brand-600 hover:underline">
           {t('Try again')}

@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Checkbox, Input, Modal, Select, Table } from '../../../components/ui';
-import { money, toPaise, toRupees } from '../../../lib/format';
+import { label, money, toPaise, toRupees } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { METER_TYPES, uomOf, useSaveTariff, useTariffs } from '../api';
 
-const slabText = (t) => {
+const slabText = (tariff, t) => {
   let from = 0;
-  return t.slabs
+  return tariff.slabs
     .map((s) => {
-      const part = s.upTo == null ? `above ${from}` : `${from}–${s.upTo}`;
+      const part = s.upTo == null ? t('above {value}', { value: from }) : `${from}–${s.upTo}`;
       from = s.upTo;
       return `${part}: ${money(s.rate)}`;
     })
@@ -39,6 +40,7 @@ function TariffModal({ tariff, onClose }) {
       { onError: (err) => setErrors(err.fieldErrors || {}) },
     );
   const uom = uomOf(form.type);
+  const { t } = useT();
   return (
     <Modal open onClose={onClose} title={tariff ? 'Edit tariff' : 'New tariff'} description="Slabs are progressive: each rate applies to the units inside its band. A new active tariff replaces the current one for that utility."
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={save.isPending} onClick={submit}>Save tariff</Button></>}>
@@ -48,15 +50,15 @@ function TariffModal({ tariff, onClose }) {
         <Input label="Fixed charge per meter (₹ / month)" type="number" min={0} value={form.fixedCharge} onChange={(e) => setForm({ ...form, fixedCharge: e.target.value })} />
         <div className="flex items-end pb-2"><Checkbox label="In force" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} /></div>
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium text-slate-700">Slabs</p>
+          <p className="text-sm font-medium text-slate-700">{t('Slabs')}</p>
           {form.slabs.map((s, i) => {
             const last = i === form.slabs.length - 1;
             return (
               // eslint-disable-next-line react/no-array-index-key
               <div key={i} className="flex items-end gap-2">
-                <Input className="flex-1" label={i === 0 ? `Up to (${uom})` : undefined} value={last ? '' : s.upTo} disabled={last} placeholder={last ? 'and above' : ''} onChange={(e) => setSlab(i, { upTo: e.target.value })} />
-                <Input className="flex-1" label={i === 0 ? `Rate (₹ / ${uom})` : undefined} type="number" step="any" min={0} value={s.rate} onChange={(e) => setSlab(i, { rate: e.target.value })} />
-                <Button variant="ghost" icon={Trash2} aria-label="Remove slab" disabled={form.slabs.length === 1} onClick={() => setForm((f) => ({ ...f, slabs: f.slabs.filter((_, j) => j !== i) }))} />
+                <Input className="flex-1" label={i === 0 ? t('Up to ({uom})', { uom }) : undefined} value={last ? '' : s.upTo} disabled={last} placeholder={last ? 'and above' : ''} onChange={(e) => setSlab(i, { upTo: e.target.value })} />
+                <Input className="flex-1" label={i === 0 ? t('Rate (₹ / {uom})', { uom }) : undefined} type="number" step="any" min={0} value={s.rate} onChange={(e) => setSlab(i, { rate: e.target.value })} />
+                <Button variant="ghost" icon={Trash2} aria-label={t('Remove slab')} disabled={form.slabs.length === 1} onClick={() => setForm((f) => ({ ...f, slabs: f.slabs.filter((_, j) => j !== i) }))} />
               </div>
             );
           })}
@@ -71,16 +73,17 @@ function TariffModal({ tariff, onClose }) {
 export function TariffsPanel({ canEdit }) {
   const { data, isLoading } = useTariffs();
   const [editing, setEditing] = useState(null);
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title="Rates" subtitle="Price per unit used. Metered charges are added to bills as lines such as “Water (12 kL)”." action={canEdit && <Button size="sm" icon={Plus} onClick={() => setEditing({})}>New rate</Button>} />
-      <Table loading={isLoading} rows={data} empty="No rates set yet" onRowClick={canEdit ? (t) => setEditing(t) : undefined}
+      <Table loading={isLoading} rows={data} empty="No rates set yet" onRowClick={canEdit ? (r) => setEditing(r) : undefined}
         columns={[
-          { key: 'type', header: 'Utility', render: (t) => METER_TYPES.find((m) => m.value === t.type)?.label },
-          { key: 'name', header: 'Name', render: (t) => <span className="font-medium text-slate-900">{t.name}</span> },
-          { key: 'slabs', header: `Rates per unit`, className: 'whitespace-normal', render: slabText },
-          { key: 'fixedCharge', header: 'Fixed / month', render: (t) => money(t.fixedCharge) },
-          { key: 'active', header: '', render: (t) => (t.active ? <Badge tone="green">In force</Badge> : <Badge>Inactive</Badge>) },
+          { key: 'type', header: 'Utility', render: (r) => t(METER_TYPES.find((m) => m.value === r.type)?.label || label(r.type)) },
+          { key: 'name', header: 'Name', render: (r) => <span className="font-medium text-slate-900">{r.name}</span> },
+          { key: 'slabs', header: 'Rates per unit', className: 'whitespace-normal', render: (r) => slabText(r, t) },
+          { key: 'fixedCharge', header: 'Fixed / month', render: (r) => money(r.fixedCharge) },
+          { key: 'active', header: '', render: (r) => (r.active ? <Badge tone="green">{t('In force')}</Badge> : <Badge>{t('Inactive')}</Badge>) },
         ]} />
       {editing && <TariffModal tariff={editing._id ? editing : null} onClose={() => setEditing(null)} />}
     </Card>

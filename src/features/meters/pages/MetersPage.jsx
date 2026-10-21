@@ -10,11 +10,13 @@ import { METER_TYPES, uomOf, useConsumption, useMeters } from '../api';
 import { AddMeterModal, MeterModal } from '../components/MeterModals';
 import { ReadingSheet } from '../components/ReadingSheet';
 import { TariffsPanel } from '../components/TariffsPanel';
+import { useT } from '../../../context/LanguageContext';
 
 function MetersList({ staff, onOpen }) {
   const [filters, setFilters] = useState({ unit: '', type: '', active: 'true', page: 1 });
   const { data, isLoading } = useMeters({ unit: filters.unit || undefined, type: filters.type || undefined, active: filters.active || undefined, page: filters.page });
   const set = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
+  const { t } = useT();
   return (
     <Card>
       {staff && (
@@ -28,10 +30,10 @@ function MetersList({ staff, onOpen }) {
         columns={[
           { key: 'serial', header: 'Serial', render: (m) => <span className="font-medium text-slate-900">{m.serial}</span> },
           ...(staff ? [{ key: 'unit', header: 'Unit', render: (m) => m.unit?.label }] : []),
-          { key: 'type', header: 'Type', render: (m) => label(m.type) },
+          { key: 'type', header: 'Type', render: (m) => t(label(m.type)) },
           { key: 'lastReading', header: 'Last reading', render: (m) => `${m.lastReading ?? m.initialReading} ${uomOf(m.type)} · ${date(m.lastReadAt)}` },
-          { key: 'billed', header: 'Billed up to', render: (m) => (m.billedAt ? `${m.billedReading} ${uomOf(m.type)} · ${date(m.billedAt)}` : <span className="text-slate-400">Not billed yet</span>) },
-          { key: 'active', header: '', render: (m) => (m.active ? <Badge tone="green">Active</Badge> : <Badge>Retired</Badge>) },
+          { key: 'billed', header: 'Billed up to', render: (m) => (m.billedAt ? `${m.billedReading} ${uomOf(m.type)} · ${date(m.billedAt)}` : <span className="text-slate-400">{t('Not billed yet')}</span>) },
+          { key: 'active', header: '', render: (m) => (m.active ? <Badge tone="green">{t('Active')}</Badge> : <Badge>{t('Retired')}</Badge>) },
         ]} />
       <Pagination meta={data?.meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
     </Card>
@@ -41,6 +43,7 @@ function MetersList({ staff, onOpen }) {
 function ConsumptionPanel({ staff }) {
   const [filters, setFilters] = useState({ period: currentPeriod(), type: '' });
   const { data, isLoading } = useConsumption({ period: filters.period, type: filters.type || undefined });
+  const { t } = useT();
   return (
     <Card>
       <div className="grid grid-cols-2 gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
@@ -50,11 +53,11 @@ function ConsumptionPanel({ staff }) {
       <Table loading={isLoading} rows={data?.map((r) => ({ ...r, _id: r.meter._id }))} empty="No consumption for this month"
         columns={[
           ...(staff ? [{ key: 'unit', header: 'Unit', render: (r) => <span className="font-medium text-slate-900">{r.unit?.label}</span> }] : []),
-          { key: 'meter', header: 'Meter', render: (r) => `${r.meter.serial} · ${label(r.meter.type)}` },
+          { key: 'meter', header: 'Meter', render: (r) => `${r.meter.serial} · ${t(label(r.meter.type))}` },
           { key: 'opening', header: 'Opening', render: (r) => `${r.opening} ${r.uom}` },
           { key: 'closing', header: 'Closing', render: (r) => (r.closing == null ? '—' : `${r.closing} ${r.uom}`) },
           { key: 'consumption', header: 'Consumption', render: (r) => <span className="font-medium">{r.consumption} {r.uom}</span> },
-          { key: 'estimatedCharge', header: 'Est. charge', render: (r) => (r.estimatedCharge == null ? 'No rate set' : money(r.estimatedCharge)) },
+          { key: 'estimatedCharge', header: 'Est. charge', render: (r) => (r.estimatedCharge == null ? t('No rate set') : money(r.estimatedCharge)) },
         ]} />
     </Card>
   );

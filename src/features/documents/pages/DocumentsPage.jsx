@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { AlertTriangle, Archive, Download, FileText, Folder, FolderPlus, History, Search, Upload } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, FileUpload, Input, Modal, PageLoader, Pagination, Select, Table, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
@@ -18,13 +19,14 @@ const VISIBILITY = [
   { value: 'roles', label: 'Specific roles' },
 ];
 const ROLE_OPTIONS = ['resident', 'guard', 'staff', 'accountant', 'facility_manager'];
-const visibilityText = (v) => (v?.type === 'roles' ? v.roles.map((r) => ROLE_LABELS[r]).join(', ') : VISIBILITY.find((x) => x.value === v?.type)?.label);
+const visibilityText = (v, t) => (v?.type === 'roles' ? v.roles.map((r) => t(ROLE_LABELS[r] || r)).join(', ') : t(VISIBILITY.find((x) => x.value === v?.type)?.label || ''));
 
 function ExpiryBadge({ d }) {
+  const { t } = useT();
   if (!d.expiryDate) return null;
-  if (d.expiryState === 'expired') return <Badge tone="red">Expired {date(d.expiryDate)}</Badge>;
-  if (d.expiryState === 'expiring') return <Badge tone="amber">Expires in {d.daysToExpiry} d</Badge>;
-  return <Badge>Valid till {date(d.expiryDate)}</Badge>;
+  if (d.expiryState === 'expired') return <Badge tone="red">{t('Expired {date}', { date: date(d.expiryDate) })}</Badge>;
+  if (d.expiryState === 'expiring') return <Badge tone="amber">{t('Expires in {n} d', { n: d.daysToExpiry })}</Badge>;
+  return <Badge>{t('Valid till {date}', { date: date(d.expiryDate) })}</Badge>;
 }
 
 function VisibilityFields({ value, onChange }) {
@@ -78,37 +80,38 @@ function DocumentModal({ id, onClose, manage }) {
   const addVersion = useAddVersion({ onSuccess: () => { setFiles([]); setNote(''); setExpiry(''); } });
   const update = useUpdateDocument();
   const archive = useArchiveDocument();
+  const { t } = useT();
   const open = (version) => openDocument(id, version).catch((err) => toast.error(err));
   return (
-    <Modal open={Boolean(id)} onClose={onClose} size="lg" title={d?.title || 'Document'} description={d && `${d.folder?.name} · version ${d.currentVersion}`}
+    <Modal open={Boolean(id)} onClose={onClose} size="lg" title={d?.title || 'Document'} description={d && t('{folder} · version {n}', { folder: d.folder?.name, n: d.currentVersion })}
       footer={d && <><Button variant="secondary" onClick={onClose}>Close</Button><Button icon={Download} onClick={() => open()}>Open latest</Button></>}>
       {isLoading || !d ? <PageLoader /> : (
         <div className="space-y-5 text-sm">
           {d.description && <p className="text-slate-700">{d.description}</p>}
           <div className="flex flex-wrap gap-2">
-            <Badge tone="blue">{visibilityText(d.visibility)}</Badge>
+            <Badge tone="blue">{visibilityText(d.visibility, t)}</Badge>
             <ExpiryBadge d={d} />
-            {d.tags.map((t) => <Badge key={t}>#{t}</Badge>)}
-            {manage && <Badge>{d.downloads} download(s)</Badge>}
-            {d.archived && <Badge tone="red">Archived</Badge>}
+            {d.tags.map((tag) => <Badge key={tag}>#{tag}</Badge>)}
+            {manage && <Badge>{t('{n} download(s)', { n: d.downloads })}</Badge>}
+            {d.archived && <Badge tone="red">{t('Archived')}</Badge>}
           </div>
           <div>
-            <p className="mb-2 flex items-center gap-1.5 font-medium text-slate-900"><History className="size-4" /> Versions</p>
+            <p className="mb-2 flex items-center gap-1.5 font-medium text-slate-900"><History className="size-4" /> {t('Versions')}</p>
             <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
               {d.versions.map((v) => (
                 <li key={v.version} className="flex items-center justify-between gap-3 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-slate-800">v{v.version} · {v.name || 'file'} {v.version === d.currentVersion && <Badge tone="green">current</Badge>}</p>
-                    <p className="text-xs text-slate-500">{dateTime(v.uploadedAt)}{v.uploadedBy?.name ? ` by ${v.uploadedBy.name}` : ''}{v.note ? ` · ${v.note}` : ''}</p>
+                    <p className="truncate font-medium text-slate-800">v{v.version} · {v.name || t('file')} {v.version === d.currentVersion && <Badge tone="green">{t('current')}</Badge>}</p>
+                    <p className="text-xs text-slate-500">{dateTime(v.uploadedAt)}{v.uploadedBy?.name ? ` ${t('by {name}', { name: v.uploadedBy.name })}` : ''}{v.note ? ` · ${v.note}` : ''}</p>
                   </div>
-                  <Button size="sm" variant="ghost" icon={Download} aria-label={`Download version ${v.version}`} onClick={() => open(v.version)} />
+                  <Button size="sm" variant="ghost" icon={Download} aria-label={t('Download version {n}', { n: v.version })} onClick={() => open(v.version)} />
                 </li>
               ))}
             </ul>
           </div>
           {manage && !d.archived && (
             <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-              <p className="font-medium text-slate-900">Upload a new version</p>
+              <p className="font-medium text-slate-900">{t('Upload a new version')}</p>
               <FileUpload folder="documents" files={files} onChange={setFiles} max={1} label="Choose file" />
               <div className="grid gap-2 sm:grid-cols-2">
                 <Input placeholder="What changed? (e.g. renewed policy)" value={note} onChange={(e) => setNote(e.target.value)} />
@@ -125,7 +128,7 @@ function DocumentModal({ id, onClose, manage }) {
           )}
           {manage && log.length > 0 && (
             <div>
-              <p className="mb-1 font-medium text-slate-900">Recent downloads</p>
+              <p className="mb-1 font-medium text-slate-900">{t('Recent downloads')}</p>
               <ul className="max-h-40 overflow-y-auto text-xs text-slate-600">{log.map((l) => <li key={l._id} className="py-0.5">{l.user?.name} · v{l.version} · {dateTime(l.at)}</li>)}</ul>
             </div>
           )}
@@ -148,6 +151,7 @@ export default function DocumentsPage() {
   const [newFolder, setNewFolder] = useState('');
   const createFolder = useCreateFolder({ onSuccess: () => setNewFolder('') });
   const set = (patch) => setFilters((f) => ({ ...f, page: 1, ...patch }));
+  const { t } = useT();
 
   if (isLoading) return <PageLoader />;
   return (
@@ -158,7 +162,7 @@ export default function DocumentsPage() {
         <aside className="lg:col-span-1">
           <Select className="lg:hidden" placeholder="All folders" options={folders.map((f) => ({ value: f._id, label: `${f.name} (${f.documents})` }))} value={filters.folder} onChange={(e) => set({ folder: e.target.value })} />
           <Card className="hidden p-2 lg:block">
-            {[{ _id: '', name: 'All documents', documents: folders.reduce((s, f) => s + f.documents, 0) }, ...folders].map((f) => (
+            {[{ _id: '', name: t('All documents'), documents: folders.reduce((s, f) => s + f.documents, 0) }, ...folders].map((f) => (
               <button key={f._id || 'all'} type="button" onClick={() => set({ folder: f._id })}
                 className={cn('flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm', filters.folder === f._id ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-700 hover:bg-slate-50')}>
                 <span className="flex items-center gap-2"><Folder className="size-4" />{f.name}</span>
@@ -168,7 +172,7 @@ export default function DocumentsPage() {
             {manage && (
               <div className="mt-2 flex gap-1 border-t border-slate-100 pt-2">
                 <Input className="flex-1" placeholder="New folder" value={newFolder} onChange={(e) => setNewFolder(e.target.value)} />
-                <Button size="sm" variant="ghost" icon={FolderPlus} aria-label="Create folder" disabled={newFolder.trim().length < 2} onClick={() => createFolder.mutate({ name: newFolder })} />
+                <Button size="sm" variant="ghost" icon={FolderPlus} aria-label={t('Create folder')} disabled={newFolder.trim().length < 2} onClick={() => createFolder.mutate({ name: newFolder })} />
               </div>
             )}
           </Card>
@@ -178,16 +182,16 @@ export default function DocumentsPage() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-3 size-4 text-slate-400" />
-                <input className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="Search title, description or tag" aria-label="Search documents" value={filters.q} onChange={(e) => set({ q: e.target.value })} />
+                <input className="h-10 w-full rounded-lg border border-slate-300 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder={t('Search title, description or tag')} aria-label={t('Search documents')} value={filters.q} onChange={(e) => set({ q: e.target.value })} />
               </div>
-              <Checkbox label={<span className="inline-flex items-center gap-1"><AlertTriangle className="size-3.5 text-amber-500" />Expiring</span>} checked={filters.expiring} onChange={(e) => set({ expiring: e.target.checked })} />
+              <Checkbox label={<span className="inline-flex items-center gap-1"><AlertTriangle className="size-3.5 text-amber-500" />{t('Expiring')}</span>} checked={filters.expiring} onChange={(e) => set({ expiring: e.target.checked })} />
               {manage && <Checkbox label="Archived" checked={filters.archived} onChange={(e) => set({ archived: e.target.checked })} />}
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {tags.slice(0, 15).map((t) => (
-                  <button key={t.tag} type="button" onClick={() => set({ tag: filters.tag === t.tag ? '' : t.tag })}
-                    className={cn('rounded-full px-2.5 py-0.5 text-xs', filters.tag === t.tag ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>#{t.tag}</button>
+                {tags.slice(0, 15).map((tg) => (
+                  <button key={tg.tag} type="button" onClick={() => set({ tag: filters.tag === tg.tag ? '' : tg.tag })}
+                    className={cn('rounded-full px-2.5 py-0.5 text-xs', filters.tag === tg.tag ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>#{tg.tag}</button>
                 ))}
               </div>
             )}
@@ -195,9 +199,9 @@ export default function DocumentsPage() {
           <Card>
             <Table loading={loadingDocs} rows={data?.data} empty="No documents" onRowClick={(d) => navigate(`/documents/${d._id}`)}
               columns={[
-                { key: 'title', header: 'Document', className: 'max-w-xs', render: (d) => <div className="flex items-center gap-2"><FileText className="size-4 shrink-0 text-slate-400" /><div className="min-w-0"><p className="truncate font-medium text-slate-900">{d.title}</p><p className="truncate text-xs text-slate-500">{d.folder?.name}{d.tags.length ? ` · ${d.tags.map((t) => `#${t}`).join(' ')}` : ''}</p></div></div> },
+                { key: 'title', header: 'Document', className: 'max-w-xs', render: (d) => <div className="flex items-center gap-2"><FileText className="size-4 shrink-0 text-slate-400" /><div className="min-w-0"><p className="truncate font-medium text-slate-900">{d.title}</p><p className="truncate text-xs text-slate-500">{d.folder?.name}{d.tags.length ? ` · ${d.tags.map((tag) => `#${tag}`).join(' ')}` : ''}</p></div></div> },
                 { key: 'currentVersion', header: 'Ver.', render: (d) => `v${d.currentVersion}` },
-                { key: 'visibility', header: 'Visible to', render: (d) => <span className="text-xs">{visibilityText(d.visibility)}</span> },
+                { key: 'visibility', header: 'Visible to', render: (d) => <span className="text-xs">{visibilityText(d.visibility, t)}</span> },
                 { key: 'expiry', header: '', render: (d) => <ExpiryBadge d={d} /> },
                 { key: 'updatedAt', header: 'Updated', render: (d) => date(d.updatedAt) },
               ]} />

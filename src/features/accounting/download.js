@@ -29,7 +29,7 @@ export async function downloadFile(path, query, filename) {
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
     const e = json.error || {};
-    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Download failed (${res.status})`, e.details);
+    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Download failed (${res.status})`, e.details, e);
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { AlertTriangle, ArrowLeft, CheckCircle2, Download, Lock, MessageSquare, XCircle } from 'lucide-react';
 import { Attachments, Badge, Button, Card, CardHeader, Checkbox, ErrorState, FileUpload, Input, Modal, PageLoader, StatusBadge, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useToast } from '../../../context/ToastContext';
 import { dateTime, date, label, money, periodLabel, timeAgo } from '../../../lib/format';
 import { downloadPdf } from '../../committee/lib';
@@ -10,8 +11,9 @@ import { useApproveRequest, useCancelRequest, useRejectRequest, useRequest, useR
 import { requestTitle, statusTone } from '../constants';
 
 function Detail({ k, v }) {
+  const { t } = useT();
   if (v === undefined || v === null || v === '') return null;
-  return <div><dt className="text-xs uppercase tracking-wide text-slate-500">{k}</dt><dd className="text-sm text-slate-800">{v}</dd></div>;
+  return <div><dt className="text-xs uppercase tracking-wide text-slate-500">{t(k)}</dt><dd className="text-sm text-slate-800">{v}</dd></div>;
 }
 
 function ApproveModal({ r, open, onClose }) {
@@ -22,15 +24,16 @@ function ApproveModal({ r, open, onClose }) {
   const [editLetter, setEditLetter] = useState(false);
   const [body, setBody] = useState('');
   const approve = useApproveRequest({ onSuccess: onClose });
+  const { t } = useT();
   const owes = r.kind === 'noc' && r.dues?.outstanding > 0;
   return (
-    <Modal open={open} onClose={onClose} title={`Approve ${r.number}`} description="A letter on the society letterhead is issued to the resident."
+    <Modal open={open} onClose={onClose} title={t('Approve {n}', { n: r.number })} description="A letter on the society letterhead is issued to the resident."
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button variant="success" loading={approve.isPending} disabled={owes && !ack}
         onClick={() => approve.mutate({ id: r._id, fees: fees || undefined, note: note || undefined, acknowledgeDues: owes ? ack : undefined, letterBody: editLetter && body.trim() ? body : undefined }, { onError: (err) => toast.error(err) })}>Approve & issue letter</Button></>}>
       <div className="space-y-4">
         {owes && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="size-4" />{money(r.dues.outstanding)} outstanding for {r.unitLabel}</p>
+            <p className="flex items-center gap-1.5 font-medium"><AlertTriangle className="size-4" />{t('{amount} outstanding for {unit}', { amount: money(r.dues.outstanding), unit: r.unitLabel })}</p>
             <Checkbox className="mt-2" label="Approve the NOC despite outstanding dues" checked={ack} onChange={(e) => setAck(e.target.checked)} />
           </div>
         )}
@@ -58,6 +61,7 @@ export default function RequestDetailPage() {
   const cancel = useCancelRequest();
   const askInfo = useRequestInfo();
   const reject = useRejectRequest();
+  const { t } = useT();
 
   if (isLoading) return <PageLoader />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
@@ -84,32 +88,32 @@ export default function RequestDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <Link to="/requests" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> All requests</Link>
+      <Link to="/requests" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> {t('All requests')}</Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-mono text-xs font-semibold text-slate-500">{r.number}</p>
-          <h1 className="text-2xl font-semibold text-slate-900">{requestTitle(r)}</h1>
-          <p className="mt-1 text-sm text-slate-600">{r.unitLabel} · {r.applicantName} ({label(r.residentType)}) · {dateTime(r.createdAt)}</p>
-          <div className="mt-2 flex gap-2"><StatusBadge status={statusTone(r.status)} />{r.fees && <Badge tone="blue">Fees: {r.fees}</Badge>}</div>
+          <h1 className="text-2xl font-semibold text-slate-900">{requestTitle(r, t)}</h1>
+          <p className="mt-1 text-sm text-slate-600">{r.unitLabel} · {r.applicantName} ({t(label(r.residentType))}) · {dateTime(r.createdAt)}</p>
+          <div className="mt-2 flex gap-2"><StatusBadge status={statusTone(r.status)} />{r.fees && <Badge tone="blue">{t('Fees: {fees}', { fees: r.fees })}</Badge>}</div>
         </div>
         <div className="flex flex-wrap gap-2">
           {r.hasLetter && <Button icon={Download} loading={busy} onClick={letter}>Download letter</Button>}
           {r.canManage && open && (
             <>
               <Button variant="success" icon={CheckCircle2} onClick={() => setApproving(true)}>Approve</Button>
-              {r.status === 'pending' && <Button variant="secondary" icon={MessageSquare} onClick={() => { const note = window.prompt('What information do you need from the resident?'); if (note?.trim()) askInfo.mutate({ id: r._id, note }); }}>Ask for info</Button>}
-              <Button variant="danger" icon={XCircle} onClick={() => { const reason = window.prompt('Reason for rejecting'); if (reason?.trim()) reject.mutate({ id: r._id, reason }); }}>Reject</Button>
+              {r.status === 'pending' && <Button variant="secondary" icon={MessageSquare} onClick={() => { const note = window.prompt(t('What information do you need from the resident?')); if (note?.trim()) askInfo.mutate({ id: r._id, note }); }}>Ask for info</Button>}
+              <Button variant="danger" icon={XCircle} onClick={() => { const reason = window.prompt(t('Reason for rejecting')); if (reason?.trim()) reject.mutate({ id: r._id, reason }); }}>Reject</Button>
             </>
           )}
-          {own && open && <Button variant="ghost" onClick={() => { if (window.confirm('Withdraw this request?')) cancel.mutate(r._id); }}>Withdraw</Button>}
+          {own && open && <Button variant="ghost" onClick={() => { if (window.confirm(t('Withdraw this request?'))) cancel.mutate(r._id); }}>Withdraw</Button>}
         </div>
       </div>
 
       {r.status === 'info_requested' && own && (
-        <Card className="mb-6 border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">The committee needs more information. Reply below and attach any documents asked for.</Card>
+        <Card className="mb-6 border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">{t('The committee needs more information. Reply below and attach any documents asked for.')}</Card>
       )}
       {r.decisionNote && ['approved', 'rejected'].includes(r.status) && (
-        <Card className="mb-6 p-4 text-sm text-slate-700">{r.status === 'approved' ? 'Approved' : 'Rejected'} by {r.decidedBy?.name || 'the committee'} on {date(r.decidedAt)}: {r.decisionNote}</Card>
+        <Card className="mb-6 p-4 text-sm text-slate-700">{t(r.status === 'approved' ? 'Approved by {name} on {date}: {note}' : 'Rejected by {name} on {date}: {note}', { name: r.decidedBy?.name || t('the committee'), date: date(r.decidedAt), note: r.decisionNote })}</Card>
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -126,11 +130,11 @@ export default function RequestDetailPage() {
               <Detail k="Work period" v={i.workFrom ? `${date(i.workFrom)} – ${i.workTo ? date(i.workTo) : '…'}` : undefined} />
               <Detail k="Contractor" v={i.contractorName ? `${i.contractorName}${i.contractorPhone ? ` · ${i.contractorPhone}` : ''}` : undefined} />
               <Detail k="Moving date" v={m.date ? `${date(m.date)}, ${m.from} – ${m.to}` : undefined} />
-              <Detail k="Lift" v={m.date ? (m.liftBooking ? 'Service lift booked' : 'Not needed') : undefined} />
+              <Detail k="Lift" v={m.date ? (m.liftBooking ? t('Service lift booked') : t('Not needed')) : undefined} />
               <Detail k="Vehicle" v={m.vehicleNumber ? `${m.vehicleNumber}${m.vehicleType ? ` (${m.vehicleType})` : ''}` : undefined} />
               <Detail k="Driver" v={m.driverName ? `${m.driverName}${m.driverPhone ? ` · ${m.driverPhone}` : ''}` : undefined} />
               <Detail k="Movers" v={m.moversCompany} />
-              <Detail k="Occupancy" v={m.tenancy && label(m.tenancy)} />
+              <Detail k="Occupancy" v={m.tenancy && t(label(m.tenancy))} />
             </dl>
             {r.description && <p className="mt-4 whitespace-pre-line text-sm text-slate-700">{r.description}</p>}
             {r.attachments?.length > 0 && <div className="mt-4"><Attachments items={r.attachments} /></div>}
@@ -141,12 +145,12 @@ export default function RequestDetailPage() {
             <ul className="divide-y divide-slate-100">
               {r.comments.map((c) => (
                 <li key={c._id} className={c.internal ? 'bg-amber-50/50 px-5 py-3' : 'px-5 py-3'}>
-                  <p className="text-xs text-slate-500">{c.by?.name} · {timeAgo(c.createdAt)} {c.internal && <span className="inline-flex items-center gap-0.5 text-amber-700"><Lock className="size-3" />internal</span>}</p>
+                  <p className="text-xs text-slate-500">{c.by?.name} · {timeAgo(c.createdAt)} {c.internal && <span className="inline-flex items-center gap-0.5 text-amber-700"><Lock className="size-3" />{t('internal')}</span>}</p>
                   <p className="mt-0.5 whitespace-pre-line text-sm text-slate-800">{c.text}</p>
                   {c.attachments?.length > 0 && <div className="mt-2"><Attachments items={c.attachments} /></div>}
                 </li>
               ))}
-              {!r.comments.length && <li className="px-5 py-4 text-sm text-slate-500">No messages yet.</li>}
+              {!r.comments.length && <li className="px-5 py-4 text-sm text-slate-500">{t('No messages yet.')}</li>}
             </ul>
             {r.status !== 'cancelled' && (
               <div className="space-y-2 border-t border-slate-100 p-4">
@@ -167,13 +171,13 @@ export default function RequestDetailPage() {
               <CardHeader title="Maintenance dues" subtitle={r.unitLabel} />
               <div className="p-5">
                 <p className={r.dues.outstanding ? 'text-2xl font-semibold text-red-600' : 'text-2xl font-semibold text-emerald-600'}>{money(r.dues.outstanding)}</p>
-                <p className="text-xs text-slate-500">{r.dues.outstanding ? 'outstanding — consider holding the NOC' : 'No dues pending'}</p>
+                <p className="text-xs text-slate-500">{r.dues.outstanding ? t('outstanding — consider holding the NOC') : t('No dues pending')}</p>
                 {r.dues.bills.length > 0 && (
                   <ul className="mt-3 space-y-1 text-sm">
                     {r.dues.bills.map((b) => <li key={b._id} className="flex justify-between"><span>{periodLabel(b.period)}</span><span>{money(b.balance)}</span></li>)}
                   </ul>
                 )}
-                {r.duesAtApproval > 0 && r.status === 'approved' && <p className="mt-3 text-xs text-amber-700">Approved with {money(r.duesAtApproval)} outstanding.</p>}
+                {r.duesAtApproval > 0 && r.status === 'approved' && <p className="mt-3 text-xs text-amber-700">{t('Approved with {amount} outstanding.', { amount: money(r.duesAtApproval) })}</p>}
               </div>
             </Card>
           )}
@@ -182,7 +186,7 @@ export default function RequestDetailPage() {
             <ul className="space-y-2 p-5 text-sm">
               {r.history.map((h, idx) => (
                 // eslint-disable-next-line react/no-array-index-key
-                <li key={idx}><span className="font-medium text-slate-800">{label(h.to)}</span>{h.note ? <span className="text-slate-600"> — {h.note}</span> : null}<span className="block text-xs text-slate-500">{h.by?.name} · {dateTime(h.createdAt)}</span></li>
+                <li key={idx}><span className="font-medium text-slate-800">{t(label(h.to))}</span>{h.note ? <span className="text-slate-600"> — {h.note}</span> : null}<span className="block text-xs text-slate-500">{h.by?.name} · {dateTime(h.createdAt)}</span></li>
               ))}
             </ul>
           </Card>

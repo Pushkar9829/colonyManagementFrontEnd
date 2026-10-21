@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, EmptyState, FileUpload, FilterBar, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, timeAgo } from '../../../lib/format';
 import { hasRole, ROLES } from '../../../lib/roles';
@@ -47,6 +48,7 @@ function EntryModal({ open, onClose, entry }) {
 }
 
 function QuickCheck() {
+  const { t } = useT();
   const toast = useToast();
   const [q, setQ] = useState('');
   const [result, setResult] = useState(null);
@@ -74,7 +76,7 @@ function QuickCheck() {
       </form>
       {result && (
         <div className={`mt-3 rounded-lg border px-4 py-3 text-sm ${tone[result.status]}`}>
-          {result.status === 'clear' ? 'Not on the list — no match found.' : result.matches.map((m) => <p key={m.entry}><strong>{m.type === 'block' ? 'BLOCKED' : 'WATCH'}</strong>{m.name ? ` · ${m.name}` : ''} — {m.reason}</p>)}
+          {result.status === 'clear' ? t('Not on the list — no match found.') : result.matches.map((m) => <p key={m.entry}><strong>{m.type === 'block' ? t('BLOCKED') : t('WATCH')}</strong>{m.name ? ` · ${m.name}` : ''} — {m.reason}</p>)}
         </div>
       )}
     </Card>
@@ -82,6 +84,7 @@ function QuickCheck() {
 }
 
 export default function WatchlistPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const manager = hasRole(user, ROLES.FACILITY_MANAGER);
   const [filters, setFilters] = useState({ type: '', search: '', active: 'true', page: 1 });
@@ -120,7 +123,7 @@ export default function WatchlistPage() {
             {rows.map((e) => (
               <li key={e._id} className={`flex gap-3 rounded-xl border p-3 ${e.type === 'block' ? 'border-red-200' : 'border-amber-200'} ${expired(e) ? 'opacity-60' : ''}`}>
                 {e.photoUrl ? (
-                  <a href={e.photoUrl} target="_blank" rel="noreferrer"><img src={e.photoUrl} alt={e.name || 'photo'} className="size-16 shrink-0 rounded-lg object-cover" /></a>
+                  <a href={e.photoUrl} target="_blank" rel="noreferrer"><img src={e.photoUrl} alt={e.name || t('photo')} className="size-16 shrink-0 rounded-lg object-cover" /></a>
                 ) : (
                   <div className={`flex size-16 shrink-0 items-center justify-center rounded-lg ${e.type === 'block' ? 'bg-red-50 text-red-500' : 'bg-amber-50 text-amber-500'}`}>
                     {e.type === 'block' ? <ShieldX className="size-7" /> : <ShieldAlert className="size-7" />}
@@ -128,21 +131,21 @@ export default function WatchlistPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge tone={e.type === 'block' ? 'red' : 'amber'}>{e.type === 'block' ? 'Blocked' : 'Watch'}</Badge>
-                    {expired(e) && <Badge>Inactive</Badge>}
+                    <Badge tone={e.type === 'block' ? 'red' : 'amber'}>{e.type === 'block' ? t('Blocked') : t('Watch')}</Badge>
+                    {expired(e) && <Badge>{t('Inactive')}</Badge>}
                   </div>
                   <p className="mt-1 truncate font-medium text-slate-900">{e.name || e.vehicleNumber || e.phone}</p>
                   <p className="truncate text-xs text-slate-500">{[e.phone, e.vehicleNumber].filter(Boolean).join(' · ')}</p>
                   <p className="mt-1 text-sm text-slate-700">{e.reason}</p>
                   <p className="mt-1 text-xs text-slate-400">
-                    {e.expiresAt ? `Until ${date(e.expiresAt)} · ` : ''}
-                    {e.hits ? `${e.hits} hit${e.hits > 1 ? 's' : ''}, last ${timeAgo(e.lastHitAt)}` : 'No hits yet'}
+                    {e.expiresAt ? `${t('Until {date}', { date: date(e.expiresAt) })} · ` : ''}
+                    {e.hits ? t(e.hits > 1 ? '{n} hits, last {when}' : '{n} hit, last {when}', { n: e.hits, when: timeAgo(e.lastHitAt) }) : t('No hits yet')}
                   </p>
                   {manager && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(e)}>Edit</Button>
                       <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: e._id, active: !e.active })}>{e.active ? 'Deactivate' : 'Activate'}</Button>
-                      <Button size="sm" variant="ghost" icon={Trash2} aria-label="Delete" onClick={() => window.confirm('Delete this entry?') && remove.mutate(e._id)} />
+                      <Button size="sm" variant="ghost" icon={Trash2} aria-label="Delete" onClick={() => window.confirm(t('Delete this entry?')) && remove.mutate(e._id)} />
                     </div>
                   )}
                 </div>

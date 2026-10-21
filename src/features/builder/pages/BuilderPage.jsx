@@ -9,6 +9,7 @@ import { date, dateTime, label, money, toPaise, timeAgo } from '../../../lib/for
 import { ROLES } from '../../../lib/roles';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { useDownload } from '../../reports/download';
+import { useT } from '../../../context/LanguageContext';
 import {
   HANDOVER_CATEGORIES,
   SNAG_CATEGORIES,
@@ -59,6 +60,7 @@ function ScheduleModal({ onClose }) {
 }
 
 function PossessionModal({ p, canManage, onClose }) {
+  const { t } = useT();
   const update = useUpdatePossession();
   const complete = useCompletePossession({ onSuccess: onClose });
   const cancel = useCancelPossession({ onSuccess: onClose });
@@ -67,10 +69,10 @@ function PossessionModal({ p, canManage, onClose }) {
     update.mutate({ id: p._id, checklist: [{ _id: item._id, done: !item.done }] }, { onSuccess: (doc) => setCurrent(doc) });
   const editable = canManage && current.status === 'scheduled';
   return (
-    <Modal open onClose={onClose} title={`Possession · ${current.unit?.label}`} description={`${current.buyerName} · ${date(current.date)} ${current.startTime}–${current.endTime}`}
+    <Modal open onClose={onClose} title={t('Possession · {unit}', { unit: current.unit?.label })} description={`${current.buyerName} · ${date(current.date)} ${current.startTime}–${current.endTime}`}
       footer={editable && (
         <>
-          <Button variant="ghost" loading={cancel.isPending} onClick={() => { const reason = window.prompt('Why is it cancelled?'); if (reason) cancel.mutate({ id: p._id, reason }); }}>Cancel appointment</Button>
+          <Button variant="ghost" loading={cancel.isPending} onClick={() => { const reason = window.prompt(t('Why is it cancelled?')); if (reason) cancel.mutate({ id: p._id, reason }); }}>Cancel appointment</Button>
           <Button variant="success" icon={CheckCircle2} loading={complete.isPending} onClick={() => complete.mutate({ id: p._id })}>Complete possession</Button>
         </>
       )}>
@@ -82,13 +84,14 @@ function PossessionModal({ p, canManage, onClose }) {
           ))}
         </ul>
         {current.notes && <p className="whitespace-pre-wrap text-slate-500">{current.notes}</p>}
-        {current.completedAt && <p className="text-emerald-700">Completed {dateTime(current.completedAt)}{current.completedBy ? ` by ${current.completedBy.name}` : ''}</p>}
+        {current.completedAt && <p className="text-emerald-700">{current.completedBy ? t('Completed {when} by {name}', { when: dateTime(current.completedAt), name: current.completedBy.name }) : t('Completed {when}', { when: dateTime(current.completedAt) })}</p>}
       </div>
     </Modal>
   );
 }
 
 function PossessionTab({ canManage }) {
+  const { t } = useT();
   const [status, setStatus] = useState('scheduled');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
@@ -103,7 +106,7 @@ function PossessionTab({ canManage }) {
           { key: 'unit', header: 'Unit', render: (p) => p.unit?.label },
           { key: 'buyerName', header: 'Buyer', render: (p) => <div><p>{p.buyerName}</p><p className="text-xs text-slate-500">{p.buyerPhone || p.buyerEmail}</p></div> },
           { key: 'checklist', header: 'Checklist', render: (p) => `${p.checklist.filter((c) => c.done).length}/${p.checklist.length}` },
-          { key: 'status', header: 'Status', render: (p) => <Badge tone={p.status === 'completed' ? 'green' : p.status === 'cancelled' ? 'slate' : 'amber'}>{label(p.status)}</Badge> },
+          { key: 'status', header: 'Status', render: (p) => <Badge tone={p.status === 'completed' ? 'green' : p.status === 'cancelled' ? 'slate' : 'amber'}>{t(label(p.status))}</Badge> },
         ]} />
       <Pagination meta={data?.meta} onPage={setPage} />
       {creating && <ScheduleModal onClose={() => setCreating(false)} />}
@@ -154,6 +157,7 @@ function NewSnagModal({ canManage, onClose }) {
 }
 
 function SnagModal({ id, canManage, onClose }) {
+  const { t } = useT();
   const { data: s, isLoading } = useSnag(id);
   const update = useUpdateSnag(id);
   const signOff = useSignOffSnag(id);
@@ -165,12 +169,12 @@ function SnagModal({ id, canManage, onClose }) {
   const markFixed = () => update.mutate({ status: 'fixed', fixPhotos: fixPhotos.length ? fixPhotos.map((p) => p._id) : undefined }, { onSuccess: () => setFixPhotos([]) });
 
   return (
-    <Modal open onClose={onClose} size="lg" title={`${s.number} · ${s.title}`} description={`${s.unit?.label} · ${label(s.category)}${s.location ? ` · ${s.location}` : ''}`}
+    <Modal open onClose={onClose} size="lg" title={`${s.number} · ${s.title}`} description={`${s.unit?.label} · ${t(label(s.category))}${s.location ? ` · ${s.location}` : ''}`}
       footer={
         <>
-          {s.status === 'fixed' && <Button variant="secondary" loading={reopen.isPending} onClick={() => { const note = window.prompt('What is still not right?'); if (note) reopen.mutate({ note }); }}>Not fixed — reopen</Button>}
+          {s.status === 'fixed' && <Button variant="secondary" loading={reopen.isPending} onClick={() => { const note = window.prompt(t('What is still not right?')); if (note) reopen.mutate({ note }); }}>Not fixed — reopen</Button>}
           {s.status === 'fixed' && <Button variant="success" loading={signOff.isPending} onClick={() => {
-            const name = canManage ? window.prompt('Buyer’s name (sign-off recorded on their behalf)') : undefined;
+            const name = canManage ? window.prompt(t('Buyer’s name (sign-off recorded on their behalf)')) : undefined;
             if (!canManage || name) signOff.mutate({ name: name || undefined });
           }}>Accept & sign off</Button>}
           {canManage && ['open', 'reopened'].includes(s.status) && <Button variant="secondary" loading={update.isPending} onClick={() => update.mutate({ status: 'in_progress' })}>Start work</Button>}
@@ -178,10 +182,10 @@ function SnagModal({ id, canManage, onClose }) {
         </>
       }>
       <div className="space-y-4 text-sm">
-        <div className="flex flex-wrap gap-2"><Badge tone={SNAG_TONES[s.status]}>{label(s.status)}</Badge>{s.targetDate && <Badge>Target {date(s.targetDate)}</Badge>}</div>
+        <div className="flex flex-wrap gap-2"><Badge tone={SNAG_TONES[s.status]}>{t(label(s.status))}</Badge>{s.targetDate && <Badge>{t('Target {date}', { date: date(s.targetDate) })}</Badge>}</div>
         {s.description && <p className="whitespace-pre-wrap text-slate-700">{s.description}</p>}
-        {s.photos.length > 0 && <div><p className="mb-1 text-xs font-medium text-slate-500">Reported</p><Attachments items={s.photos} /></div>}
-        {s.fixPhotos.length > 0 && <div><p className="mb-1 text-xs font-medium text-slate-500">After the fix</p><Attachments items={s.fixPhotos} /></div>}
+        {s.photos.length > 0 && <div><p className="mb-1 text-xs font-medium text-slate-500">{t('Reported')}</p><Attachments items={s.photos} /></div>}
+        {s.fixPhotos.length > 0 && <div><p className="mb-1 text-xs font-medium text-slate-500">{t('After the fix')}</p><Attachments items={s.fixPhotos} /></div>}
         {canManage && !['verified'].includes(s.status) && (
           <div className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-3">
             <Input label="Contractor" value={c.name} onChange={(e) => setContractor({ ...c, name: e.target.value })} />
@@ -190,10 +194,10 @@ function SnagModal({ id, canManage, onClose }) {
             {s.status !== 'fixed' && <FileUpload className="sm:col-span-3" folder="builder" files={fixPhotos} onChange={setFixPhotos} max={6} label="After photos" />}
           </div>
         )}
-        {!canManage && s.contractor?.name && <p className="text-slate-500">Contractor: {s.contractor.name}</p>}
-        {s.signOff?.at && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">Signed off by {s.signOff.name} on {dateTime(s.signOff.at)}{s.signOff.note ? ` — ${s.signOff.note}` : ''}</p>}
+        {!canManage && s.contractor?.name && <p className="text-slate-500">{t('Contractor: {name}', { name: s.contractor.name })}</p>}
+        {s.signOff?.at && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-700">{t('Signed off by {name} on {when}', { name: s.signOff.name, when: dateTime(s.signOff.at) })}{s.signOff.note ? ` — ${s.signOff.note}` : ''}</p>}
         <ul className="space-y-1 text-xs text-slate-500">
-          {s.history.map((h) => <li key={`${h.createdAt}-${h.to}`}>{dateTime(h.createdAt)} · {h.by?.name || '—'} · {h.from ? `${label(h.from)} → ` : ''}{label(h.to)}{h.note ? ` — ${h.note}` : ''}</li>)}
+          {s.history.map((h) => <li key={`${h.createdAt}-${h.to}`}>{dateTime(h.createdAt)} · {h.by?.name || '—'} · {h.from ? `${t(label(h.from))} → ` : ''}{t(label(h.to))}{h.note ? ` — ${h.note}` : ''}</li>)}
         </ul>
       </div>
     </Modal>
@@ -201,6 +205,7 @@ function SnagModal({ id, canManage, onClose }) {
 }
 
 function SnagsTab({ canManage }) {
+  const { t } = useT();
   const [f, setF] = useState({ open: 'true', status: '', category: '', page: 1 });
   const [creating, setCreating] = useState(false);
   const [openId, setOpenId] = useState(null);
@@ -214,7 +219,7 @@ function SnagsTab({ canManage }) {
           <div className="flex flex-wrap gap-2 p-4">
             {summary.slice(0, 40).map((r) => (
               <span key={r.unit._id} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs">
-                <span className="font-medium text-slate-800">{r.unit.label}</span> · {r.open} open · {r.verified}/{r.total} signed off
+                <span className="font-medium text-slate-800">{r.unit.label}</span> · {t('{open} open · {verified}/{total} signed off', { open: r.open, verified: r.verified, total: r.total })}
               </span>
             ))}
           </div>
@@ -229,10 +234,10 @@ function SnagsTab({ canManage }) {
         </div>
         <Table loading={isLoading} rows={data?.data} empty="No defects recorded" onRowClick={(s) => setOpenId(s._id)}
           columns={[
-            { key: 'title', header: 'Defect', render: (s) => <div><p className="font-medium text-slate-900">{s.title}</p><p className="text-xs text-slate-500">{s.number} · {label(s.category)}{s.location ? ` · ${s.location}` : ''}</p></div> },
+            { key: 'title', header: 'Defect', render: (s) => <div><p className="font-medium text-slate-900">{s.title}</p><p className="text-xs text-slate-500">{s.number} · {t(label(s.category))}{s.location ? ` · ${s.location}` : ''}</p></div> },
             { key: 'unit', header: 'Unit', render: (s) => s.unit?.label },
             { key: 'contractor', header: 'Contractor', mobile: false, render: (s) => s.contractor?.name || '—' },
-            { key: 'status', header: 'Status', render: (s) => <Badge tone={SNAG_TONES[s.status]}>{label(s.status)}</Badge> },
+            { key: 'status', header: 'Status', render: (s) => <Badge tone={SNAG_TONES[s.status]}>{t(label(s.status))}</Badge> },
             { key: 'createdAt', header: 'Raised', render: (s) => timeAgo(s.createdAt) },
           ]} />
         <Pagination meta={data?.meta} onPage={(page) => setF({ ...f, page })} />
@@ -245,6 +250,7 @@ function SnagsTab({ canManage }) {
 
 // ---------------- progress ----------------
 function ProgressTab({ canManage }) {
+  const { t } = useT();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useProgress({ page });
   const [photos, setPhotos] = useState([]);
@@ -279,10 +285,10 @@ function ProgressTab({ canManage }) {
                     <h3 className="font-semibold text-slate-900">{u.title}</h3>
                     <p className="text-xs text-slate-500">{[u.tower, u.milestone].filter(Boolean).join(' · ')}{u.tower || u.milestone ? ' · ' : ''}{dateTime(u.createdAt)} · {u.postedBy?.name}</p>
                   </div>
-                  {canManage && <button type="button" className="text-slate-400 hover:text-red-600" aria-label="Delete update" onClick={() => window.confirm('Delete this update?') && remove.mutate(u._id)}><Trash2 className="size-4" /></button>}
+                  {canManage && <button type="button" className="text-slate-400 hover:text-red-600" aria-label={t('Delete update')} onClick={() => window.confirm(t('Delete this update?')) && remove.mutate(u._id)}><Trash2 className="size-4" /></button>}
                 </div>
                 {u.percentComplete !== undefined && u.percentComplete !== null && (
-                  <div className="mt-3"><div className="h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand-600" style={{ width: `${u.percentComplete}%` }} /></div><p className="mt-1 text-xs text-slate-500">{u.percentComplete}% complete</p></div>
+                  <div className="mt-3"><div className="h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand-600" style={{ width: `${u.percentComplete}%` }} /></div><p className="mt-1 text-xs text-slate-500">{t('{n}% complete', { n: u.percentComplete })}</p></div>
                 )}
                 {u.body && <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700">{u.body}</p>}
                 {u.photos?.length > 0 && <div className="mt-3"><Attachments items={u.photos} /></div>}
@@ -298,6 +304,7 @@ function ProgressTab({ canManage }) {
 
 // ---------------- handover ----------------
 function HandoverTab({ isBuilder }) {
+  const { t } = useT();
   const { data: h, isLoading } = useHandover();
   const update = useUpdateHandoverItem();
   const remove = useRemoveHandoverItem();
@@ -309,32 +316,32 @@ function HandoverTab({ isBuilder }) {
   if (isLoading || !h) return <PageLoader />;
   const done = h.status === 'completed';
   const doSign = (side) => {
-    const name = window.prompt(side === 'builder' ? 'Sign for the builder as (name):' : 'Sign for the association as (name):');
+    const name = window.prompt(side === 'builder' ? t('Sign for the builder as (name):') : t('Sign for the association as (name):'));
     if (name) sign.mutate({ side, name });
   };
   const setStatus = (item, status) => {
-    const reference = status === 'transferred' && !item.reference ? window.prompt('Reference (document no., cheque / UTR) — optional') : undefined;
+    const reference = status === 'transferred' && !item.reference ? window.prompt(t('Reference (document no., cheque / UTR) — optional')) : undefined;
     update.mutate({ id: item._id, status, ...(reference ? { reference } : {}) });
   };
 
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader title="Handover to the association" subtitle={`${h.progress.transferred} of ${h.progress.total} items transferred · ${label(h.status)}`}
+        <CardHeader title="Handover to the association" subtitle={`${t('{done} of {total} items transferred', { done: h.progress.transferred, total: h.progress.total })} · ${t(label(h.status))}`}
           action={<Button variant="secondary" icon={Download} loading={busyKey === 'handover'} onClick={() => download('/builder/handover/pdf', null, 'handover.pdf', 'handover')}>PDF</Button>} />
         <div className="grid gap-4 p-5 sm:grid-cols-2">
           {[['builder', 'For the builder', h.builderSignOff], ['association', 'For the association', h.associationSignOff]].map(([side, title, s]) => (
             <div key={side} className="rounded-lg border border-slate-200 p-4 text-sm">
-              <p className="font-medium text-slate-800">{title}</p>
-              {s?.at ? <p className="mt-1 text-emerald-700">Signed by {s.name}{s.designation ? ` (${s.designation})` : ''} · {dateTime(s.at)}</p> : (
+              <p className="font-medium text-slate-800">{t(title)}</p>
+              {s?.at ? <p className="mt-1 text-emerald-700">{t('Signed by {name}', { name: `${s.name}${s.designation ? ` (${s.designation})` : ''}` })} · {dateTime(s.at)}</p> : (
                 <>
-                  <p className="mt-1 text-slate-500">Not signed</p>
+                  <p className="mt-1 text-slate-500">{t('Not signed')}</p>
                   {!done && ((side === 'builder') === isBuilder) && <Button className="mt-2" size="sm" loading={sign.isPending} onClick={() => doSign(side)}>Sign</Button>}
                 </>
               )}
             </div>
           ))}
-          <p className="text-xs text-slate-500 sm:col-span-2">Both sides sign the same list. Changing any item after a signature clears both signatures. Builder staff have the designation “Builder”; the association signs through one of its own admins.</p>
+          <p className="text-xs text-slate-500 sm:col-span-2">{t('Both sides sign the same list. Changing any item after a signature clears both signatures. Builder staff have the designation “Builder”; the association signs through one of its own admins.')}</p>
         </div>
       </Card>
       {HANDOVER_CATEGORIES.map((cat) => {
@@ -348,11 +355,11 @@ function HandoverTab({ isBuilder }) {
                 <li key={i._id} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 text-sm">
                     <p className="font-medium text-slate-800">{i.title}</p>
-                    <p className="text-xs text-slate-500">{[i.amount ? money(i.amount) : null, i.reference ? `ref ${i.reference}` : null, i.transferredAt ? `transferred ${date(i.transferredAt)}` : null, i.details].filter(Boolean).join(' · ')}</p>
+                    <p className="text-xs text-slate-500">{[i.amount ? money(i.amount) : null, i.reference ? t('ref {ref}', { ref: i.reference }) : null, i.transferredAt ? t('transferred {date}', { date: date(i.transferredAt) }) : null, i.details].filter(Boolean).join(' · ')}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Select className="w-44" disabled={done || update.isPending} value={i.status} onChange={(e) => setStatus(i, e.target.value)} options={opts(['pending', 'transferred', 'not_applicable'])} />
-                    {!done && <button type="button" className="text-slate-400 hover:text-red-600" aria-label="Remove item" onClick={() => window.confirm(`Remove “${i.title}”?`) && remove.mutate(i._id)}><Trash2 className="size-4" /></button>}
+                    {!done && <button type="button" className="text-slate-400 hover:text-red-600" aria-label={t('Remove item')} onClick={() => window.confirm(t('Remove “{title}”?', { title: i.title })) && remove.mutate(i._id)}><Trash2 className="size-4" /></button>}
                   </div>
                 </li>
               ))}
@@ -375,6 +382,7 @@ function HandoverTab({ isBuilder }) {
 
 export default function BuilderPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const canManage = user.role === ROLES.ADMIN;
   const isBuilder = canManage && /builder|developer/i.test(user.designation || '');
   const [params, setParams] = useSearchParams();
@@ -384,7 +392,7 @@ export default function BuilderPage() {
     { value: 'progress', label: 'Construction updates' },
     ...(canManage ? [{ value: 'handover', label: 'Handover' }] : []),
   ];
-  const tab = tabs.some((t) => t.value === params.get('tab')) ? params.get('tab') : user.role === ROLES.RESIDENT ? 'progress' : 'possession';
+  const tab = tabs.some((x) => x.value === params.get('tab')) ? params.get('tab') : user.role === ROLES.RESIDENT ? 'progress' : 'possession';
   // Probe once to show a clear message when the module is not enabled for this society.
   const probe = useProgress({ page: 1, limit: 1 });
 
@@ -400,7 +408,7 @@ export default function BuilderPage() {
   return (
     <div>
       <PageHeader title="Builder handover" description={canManage ? 'Possession scheduling, defect (snag) lists, construction updates and the handover to the residents’ association.' : 'Your possession appointment, defects in your home and construction updates.'} />
-      <Tabs className="mb-6 w-fit" value={tab} onChange={(v) => setParams({ tab: v })} tabs={tabs.map((t) => ({ ...t, label: t.value === 'possession' ? <span className="inline-flex items-center gap-1"><CalendarClock className="size-4" />{t.label}</span> : t.value === 'snags' ? <span className="inline-flex items-center gap-1"><ClipboardList className="size-4" />{t.label}</span> : t.label }))} />
+      <Tabs className="mb-6 w-fit" value={tab} onChange={(v) => setParams({ tab: v })} tabs={tabs.map((x) => ({ ...x, label: x.value === 'possession' ? <span className="inline-flex items-center gap-1"><CalendarClock className="size-4" />{t(x.label)}</span> : x.value === 'snags' ? <span className="inline-flex items-center gap-1"><ClipboardList className="size-4" />{t(x.label)}</span> : x.label }))} />
       {tab === 'possession' && <PossessionTab canManage={canManage} />}
       {tab === 'snags' && <SnagsTab canManage={canManage} />}
       {tab === 'progress' && <ProgressTab canManage={canManage} />}

@@ -6,6 +6,8 @@ import { AccountSelect } from '../../accounting/components/common';
 import { useCreateVendorBill, useCreateRecurring, usePurchaseRequest, usePurchaseRequests } from '../api';
 import { TDS_SECTIONS } from '../constants';
 import { VendorPicker } from './VendorPicker';
+import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 const blank = (account = '') => ({ key: Math.random().toString(36).slice(2), description: '', account, amount: '' });
 
@@ -22,16 +24,17 @@ function useBillDraft(initialAccount) {
 }
 
 function LinesEditor({ d, defaultAccount }) {
+  const { t } = useT();
   const setLine = (key, patch) => d.setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   return (
     <div className="space-y-2">
-      <p className="text-sm font-medium text-slate-700">Lines</p>
+      <p className="text-sm font-medium text-slate-700">{t('Lines')}</p>
       {d.lines.map((l) => (
         <div key={l.key} className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-[2fr_2fr_1fr_auto] sm:border-0 sm:p-0">
           <Input className="col-span-2 sm:col-span-1" placeholder="Description" aria-label="Description" value={l.description} onChange={(e) => setLine(l.key, { description: e.target.value })} />
           <AccountSelect className="col-span-2 sm:col-span-1" types={['expense', 'asset']} placeholder="Expense account" value={l.account} onChange={(account) => setLine(l.key, { account })} />
           <Input type="number" min={0} step="0.01" placeholder="Amount ₹" aria-label="Amount" value={l.amount} onChange={(e) => setLine(l.key, { amount: e.target.value })} />
-          <button type="button" aria-label="Remove line" disabled={d.lines.length === 1} onClick={() => d.setLines((ls) => ls.filter((x) => x.key !== l.key))} className="flex h-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-30 sm:w-10"><Trash2 className="size-4" /></button>
+          <button type="button" aria-label={t('Remove line')} disabled={d.lines.length === 1} onClick={() => d.setLines((ls) => ls.filter((x) => x.key !== l.key))} className="flex h-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-30 sm:w-10"><Trash2 className="size-4" /></button>
         </div>
       ))}
       <Button size="sm" variant="ghost" icon={Plus} onClick={() => d.setLines((ls) => [...ls, blank(defaultAccount)])}>Add line</Button>
@@ -41,8 +44,8 @@ function LinesEditor({ d, defaultAccount }) {
         <Checkbox className="sm:self-end sm:pb-2" label="Claim GST as input credit" checked={d.claimGst} onChange={(e) => d.setClaimGst(e.target.checked)} />
       </div>
       <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        Subtotal {money(d.subtotal)} + GST {money(d.gstAmount)} = <b>{money(d.total)}</b>
-        {d.tdsAmount > 0 && <> · TDS {money(d.tdsAmount)} · Payable to vendor <b>{money(d.payable)}</b></>}
+        {t('Subtotal')} {money(d.subtotal)} + GST {money(d.gstAmount)} = <b>{money(d.total)}</b>
+        {d.tdsAmount > 0 && <> · TDS {money(d.tdsAmount)} · {t('Payable to vendor')} <b>{money(d.payable)}</b></>}
       </div>
     </div>
   );
@@ -51,6 +54,7 @@ function LinesEditor({ d, defaultAccount }) {
 const linesPayload = (lines) => lines.filter((l) => l.description.trim() && l.account && toPaise(l.amount) > 0).map((l) => ({ description: l.description.trim(), account: l.account, amount: toPaise(l.amount) }));
 
 export function VendorBillForm({ onClose, fromPr }) {
+  const { t } = useT();
   const [vendor, setVendor] = useState(null);
   const [v, setV] = useState({ billNo: '', billDate: todayISO(), dueDate: '', tdsSection: '', purchaseRequest: fromPr || '', notes: '' });
   const [files, setFiles] = useState([]);
@@ -83,7 +87,7 @@ export function VendorBillForm({ onClose, fromPr }) {
       vendor: vendor._id, billNo: v.billNo, billDate: v.billDate, dueDate: v.dueDate || undefined, lines,
       gstAmount: d.gstAmount || undefined, claimGst: d.claimGst || undefined, tdsRate: Number(d.tdsRate || 0), tdsSection: v.tdsSection || undefined,
       purchaseRequest: v.purchaseRequest || undefined, notes: v.notes || undefined, attachments: files.length ? files.map((f) => f._id) : undefined,
-    }, { onError: (e) => setError(e.message) });
+    }, { onError: (e) => setError(errorText(e, t)) });
   };
   const prOptions = (approved?.data || []).filter((p) => !vendor || !p.vendor || p.vendor._id === vendor._id);
   return (
@@ -109,6 +113,7 @@ export function VendorBillForm({ onClose, fromPr }) {
 }
 
 export function RecurringForm({ onClose }) {
+  const { t } = useT();
   const [vendor, setVendor] = useState(null);
   const [v, setV] = useState({ name: '', dayOfMonth: '1', dueDays: '15', startDate: todayISO(), endDate: '' });
   const [error, setError] = useState('');
@@ -128,7 +133,7 @@ export function RecurringForm({ onClose }) {
         onClick={() => create.mutate({
           name: v.name, vendor: vendor._id, lines, gstAmount: d.gstAmount || undefined, claimGst: d.claimGst || undefined, tdsRate: d.tdsRate === '' ? undefined : Number(d.tdsRate),
           dayOfMonth: Number(v.dayOfMonth), dueDays: Number(v.dueDays), startDate: v.startDate, endDate: v.endDate || undefined,
-        }, { onError: (e) => setError(e.message) })}>Save</Button></>}>
+        }, { onError: (e) => setError(errorText(e, t)) })}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Name" required placeholder="e.g. Security agency monthly bill" value={v.name} onChange={(e) => setV({ ...v, name: e.target.value })} />
         <VendorPicker className="sm:col-span-2" required value={vendor?._id} onChange={pickVendor} />

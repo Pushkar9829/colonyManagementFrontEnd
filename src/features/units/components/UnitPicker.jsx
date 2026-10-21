@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Field } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { useUnits } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 // Type-ahead unit search ("A-1" -> A-101, A-102 ...). Works for societies with thousands of units.
 export function UnitPicker({ label = 'Unit', value, onChange, error, required, autoFocus, initialLabel = '' }) {
@@ -10,10 +11,11 @@ export function UnitPicker({ label = 'Unit', value, onChange, error, required, a
   const [open, setOpen] = useState(false);
   const [debounced, setDebounced] = useState('');
   const wrapRef = useRef(null);
+  const { t } = useT();
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(text.trim()), 200);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(text.trim()), 200);
+    return () => clearTimeout(timer);
   }, [text]);
 
   useEffect(() => {
@@ -42,7 +44,7 @@ export function UnitPicker({ label = 'Unit', value, onChange, error, required, a
           id={id}
           autoFocus={autoFocus}
           autoComplete="off"
-          placeholder="Search unit e.g. A-101"
+          placeholder={t('Search unit e.g. A-101')}
           value={text}
           onChange={(e) => {
             setText(e.target.value);
@@ -63,7 +65,7 @@ export function UnitPicker({ label = 'Unit', value, onChange, error, required, a
         />
         {open && (
           <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-            {!options.length && <li className="px-3 py-2 text-sm text-slate-500">{isFetching ? 'Searching…' : 'No units found'}</li>}
+            {!options.length && <li className="px-3 py-2 text-sm text-slate-500">{isFetching ? t('Searching…') : t('No units found')}</li>}
             {options.map((u) => (
               <li key={u._id}>
                 <button type="button" onClick={() => pick(u)} className={cn('w-full px-3 py-2 text-left text-sm hover:bg-slate-50', u._id === value && 'bg-brand-50 text-brand-700')}>

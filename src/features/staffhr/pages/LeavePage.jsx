@@ -4,10 +4,12 @@ import { CalendarPlus, Check, X } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Input, Pagination, Select, Spinner, Table, Tabs } from '../../../components/ui';
 import { currentPeriod, date, label, periodLabel } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useCancelLeave, useDecideLeave, useEmployees, useLeaveBalances, useLeaveCalendar, useLeaves, useSetLeaveBalance } from '../api';
 import { ApplyLeaveModal, BalanceCards, LEAVE_TONES } from '../components/LeaveModals';
 
 function RequestsTab() {
+  const { t } = useT();
   const [f, setF] = useState({ status: 'pending', page: 1 });
   const { data, isLoading } = useLeaves(Object.fromEntries(Object.entries(f).filter(([, v]) => v)));
   const decide = useDecideLeave();
@@ -20,11 +22,11 @@ function RequestsTab() {
       <Table loading={isLoading} rows={data?.data} empty="No leave requests"
         columns={[
           { key: 'who', header: 'Employee', render: (l) => <div><p className="font-medium text-slate-900">{l.employee?.user?.name}</p><p className="text-xs text-slate-500">{l.employee?.employeeCode}</p></div> },
-          { key: 'type', header: 'Type', render: (l) => label(l.type) },
+          { key: 'type', header: 'Type', render: (l) => t(label(l.type)) },
           { key: 'dates', header: 'Dates', render: (l) => `${date(l.from)}${l.to !== l.from ? ` – ${date(l.to)}` : ''}` },
           { key: 'days', header: 'Days', render: (l) => l.days },
           { key: 'reason', header: 'Reason', className: 'max-w-xs truncate', render: (l) => l.reason || '—' },
-          { key: 'status', header: 'Status', render: (l) => <Badge tone={LEAVE_TONES[l.status]}>{label(l.status)}</Badge> },
+          { key: 'status', header: 'Status', render: (l) => <Badge tone={LEAVE_TONES[l.status]}>{t(label(l.status))}</Badge> },
           { key: 'act', header: '', render: (l) => (
             <div className="flex gap-1">
               {l.status === 'pending' && <Button size="sm" variant="success" icon={Check} loading={decide.isPending} onClick={() => decide.mutate({ id: l._id, approved: true })}>Approve</Button>}
@@ -39,6 +41,7 @@ function RequestsTab() {
 }
 
 function CalendarTab() {
+  const { t } = useT();
   const [period, setPeriod] = useState(currentPeriod());
   const { data, isLoading } = useLeaveCalendar(period);
   const [y, m] = period.split('-').map(Number);
@@ -53,13 +56,13 @@ function CalendarTab() {
       <CardHeader title={periodLabel(period)} action={<Input title="Month" type="month" value={period} onChange={(e) => setPeriod(e.target.value)} />} />
       {isLoading ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <div className="grid grid-cols-7 gap-px bg-slate-100 p-px text-xs">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="bg-slate-50 px-1 py-1.5 text-center font-semibold text-slate-500">{d}</div>)}
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => <div key={d} className="bg-slate-50 px-1 py-1.5 text-center font-semibold text-slate-500">{t(d)}</div>)}
           {Array.from({ length: firstDow }, (_, i) => <div key={`b${i}`} className="bg-white" />)}
           {Array.from({ length: days }, (_, i) => i + 1).map((d) => (
             <div key={d} className="min-h-20 bg-white p-1">
               <p className="font-medium text-slate-500">{d}</p>
               {on(d).map((l) => (
-                <p key={l._id} className={`mt-0.5 truncate rounded px-1 ${l.status === 'approved' ? 'bg-sky-50 text-sky-800' : 'bg-amber-50 text-amber-800'}`} title={`${l.employee?.user?.name} · ${l.type}${l.halfDay ? ' (half)' : ''}`}>
+                <p key={l._id} className={`mt-0.5 truncate rounded px-1 ${l.status === 'approved' ? 'bg-sky-50 text-sky-800' : 'bg-amber-50 text-amber-800'}`} title={`${l.employee?.user?.name} · ${t(label(l.type))}${l.halfDay ? ` ${t('(half)')}` : ''}`}>
                   {l.employee?.user?.name?.split(' ')[0]}{l.halfDay ? ' ½' : ''}
                 </p>
               ))}
@@ -72,6 +75,7 @@ function CalendarTab() {
 }
 
 function BalancesTab() {
+  const { t } = useT();
   const year = new Date().getFullYear();
   const [emp, setEmp] = useState('');
   const [alloc, setAlloc] = useState({ casual: '', sick: '', earned: '', carriedForward: '' });
@@ -82,12 +86,12 @@ function BalancesTab() {
   return (
     <Card>
       <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
-        <Select label={`Employee · ${year}`} placeholder="Choose" options={(employees?.data || []).map((e) => ({ value: e._id, label: `${e.user?.name} · ${e.employeeCode}` }))} value={emp} onChange={(e) => setEmp(e.target.value)} />
+        <Select label={t('Employee · {year}', { year })} placeholder="Choose" options={(employees?.data || []).map((e) => ({ value: e._id, label: `${e.user?.name} · ${e.employeeCode}` }))} value={emp} onChange={(e) => setEmp(e.target.value)} />
       </div>
       {emp && (
         <div className="space-y-4 p-4">
           <BalanceCards balances={bal?.balances} />
-          <p className="text-sm font-medium text-slate-700">Override this year’s allocation</p>
+          <p className="text-sm font-medium text-slate-700">{t('Override this year’s allocation')}</p>
           <div className="grid gap-3 sm:grid-cols-5">
             {['casual', 'sick', 'earned'].map((k) => <Input key={k} label={label(k)} type="number" min="0" step="0.5" value={alloc[k]} onChange={(e) => setAlloc((a) => ({ ...a, [k]: e.target.value }))} placeholder="Default" />)}
             <Input label="EL carried forward" type="number" min="0" step="0.5" value={alloc.carriedForward} onChange={(e) => setAlloc((a) => ({ ...a, carriedForward: e.target.value }))} />

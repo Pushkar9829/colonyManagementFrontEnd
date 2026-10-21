@@ -3,8 +3,10 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, CardHeader, Checkbox, Input, Pagination, Table, Tabs } from '../../../components/ui';
 import { usePlatformAdSocieties, useSetSocietyAds } from '../api';
 import { AdsManager } from '../components/AdsManager';
+import { useT } from '../../../context/LanguageContext';
 
 function SocietyAdsTab() {
+  const { t } = useT();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(null);
@@ -14,7 +16,7 @@ function SocietyAdsTab() {
     return (
       <div className="space-y-3">
         <Button variant="secondary" size="sm" onClick={() => setOpen(null)}>← All societies</Button>
-        <p className="text-sm text-slate-600">Ads run by <span className="font-medium">{open.name}</span> (read-only).</p>
+        <p className="text-sm text-slate-600">{t('Ads run by {name} (read-only).').split('{name}').map((part, i) => (i ? <span key={i}><span className="font-medium">{open.name}</span>{part}</span> : part))}</p>
         <AdsManager scope="platform" society={open._id} readOnly />
       </div>
     );

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button, Checkbox, FileUpload, Input, Modal, Select, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { useCreateDraw, useUpdateDraw } from '../api';
 import { fromLocalInput, toLocalInput } from '../lib';
 
@@ -15,6 +16,7 @@ const blankPrize = () => ({ key: Math.random().toString(36).slice(2), title: '',
 // Create a draft draw, or edit one. After publishing only the wording and cover can change:
 // prizes, dates and rules are what members signed up for.
 export function DrawFormModal({ draw, onClose, onSaved }) {
+  const { t } = useT();
   const editing = Boolean(draw);
   const live = editing && draw.status !== 'draft';
   const [now] = useState(() => Date.now());
@@ -68,7 +70,7 @@ export function DrawFormModal({ draw, onClose, onSaved }) {
       open
       onClose={onClose}
       size="lg"
-      title={editing ? `Edit ${draw.number}` : 'New lucky draw'}
+      title={editing ? t('Edit {name}', { name: draw.number }) : 'New lucky draw'}
       description={live ? 'This draw is live: prizes, dates and rules are locked.' : 'Saved as a draft. Members see it only after you publish.'}
       footer={
         <>
@@ -83,16 +85,16 @@ export function DrawFormModal({ draw, onClose, onSaved }) {
 
         <fieldset disabled={live} className="space-y-2">
           <legend className="mb-1 text-sm font-medium text-slate-700">
-            Prizes <span className="font-normal text-slate-500">(given in this order)</span>
+            {t('Prizes')} <span className="font-normal text-slate-500">{t('(given in this order)')}</span>
           </legend>
           {prizes.map((p, i) => (
             <div key={p.key} className="grid grid-cols-[1fr_5.5rem] gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[1fr_5.5rem_10rem_auto] sm:items-end">
-              <Input label={`Prize ${i + 1}`} required value={p.title} onChange={(e) => setPrize(p.key, 'title', e.target.value)} error={err[`prizes.${i}.title`]} placeholder="Smart TV" />
+              <Input label={t('Prize {n}', { n: i + 1 })} required value={p.title} onChange={(e) => setPrize(p.key, 'title', e.target.value)} error={err[`prizes.${i}.title`]} placeholder="Smart TV" />
               <Input label="How many" type="number" min={1} max={100} required value={p.quantity} onChange={(e) => setPrize(p.key, 'quantity', e.target.value)} error={err[`prizes.${i}.quantity`]} />
               <Input label="Value (optional)" value={p.value} onChange={(e) => setPrize(p.key, 'value', e.target.value)} placeholder="Worth ₹28,000" className="col-span-2 sm:col-span-1" />
               {prizes.length > 1 && !live && (
-                <Button variant="ghost" size="sm" icon={Trash2} aria-label={`Remove prize ${i + 1}`} className="col-span-2 justify-self-end sm:col-span-1 sm:mb-0.5" onClick={() => setPrizes((ps) => ps.filter((x) => x.key !== p.key))}>
-                  <span className="sm:hidden">Remove</span>
+                <Button variant="ghost" size="sm" icon={Trash2} aria-label={t('Remove prize {n}', { n: i + 1 })} className="col-span-2 justify-self-end sm:col-span-1 sm:mb-0.5" onClick={() => setPrizes((ps) => ps.filter((x) => x.key !== p.key))}>
+                  <span className="sm:hidden">{t('Remove')}</span>
                 </Button>
               )}
             </div>
@@ -102,7 +104,7 @@ export function DrawFormModal({ draw, onClose, onSaved }) {
         </fieldset>
 
         <fieldset disabled={live} className="space-y-3">
-          <legend className="mb-1 text-sm font-medium text-slate-700">Who can join</legend>
+          <legend className="mb-1 text-sm font-medium text-slate-700">{t('Who can join')}</legend>
           <Select label="Audience" value={v.audience} onChange={set('audience')} options={AUDIENCES} />
           <div className="flex flex-col gap-2">
             <Checkbox label="One entry per flat (instead of one per member)" checked={v.perFlat} onChange={set('perFlat')} />
@@ -120,7 +122,7 @@ export function DrawFormModal({ draw, onClose, onSaved }) {
         <Textarea label="Terms" rows={4} value={v.terms} onChange={set('terms')} error={err.terms} hint="Shown to members. Entry must stay free: a paid draw would be a regulated lottery." />
 
         <div className="space-y-1.5">
-          <p className="text-sm font-medium text-slate-700">Cover image (optional)</p>
+          <p className="text-sm font-medium text-slate-700">{t('Cover image (optional)')}</p>
           {draw?.coverImage?.url && !cover.length && !removeCover && (
             <div className="flex items-center gap-3">
               <img src={draw.coverImage.url} alt="" className="h-16 w-28 rounded-lg object-cover" />

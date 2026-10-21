@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 import { Attachments, Badge, Button, Card, CardHeader, EmptyState, FileUpload, Input, Select, Spinner, StatusBadge } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { date as fmtDate, label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { CATEGORY_LABELS, KYC_TYPE_OPTIONS, OWNERSHIP_DOCS, useDeleteKyc, useMyKyc, useSubmitKyc } from '../api';
 
 const STATUS_TONE = { verified: 'green', pending: 'amber', rejected: 'red', missing: 'slate' };
@@ -12,7 +13,8 @@ export function KycPanel() {
   const { user } = useAuth();
   const { data, isLoading } = useMyKyc();
   const isOwner = user.residentType === 'owner';
-  const types = KYC_TYPE_OPTIONS.filter((t) => isOwner || !OWNERSHIP_DOCS.includes(t.value));
+  const { t } = useT();
+  const types = KYC_TYPE_OPTIONS.filter((o) => isOwner || !OWNERSHIP_DOCS.includes(o.value));
   const [type, setType] = useState('aadhaar');
   const [number, setNumber] = useState('');
   const [nameOnDocument, setNameOnDocument] = useState('');
@@ -36,11 +38,11 @@ export function KycPanel() {
       {completion && (
         <Card className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium text-slate-900">KYC status</p>
-            {completion.complete ? <Badge tone="green">Complete</Badge> : <Badge tone="amber">{completion.done} of {completion.required} verified</Badge>}
+            <p className="font-medium text-slate-900">{t('KYC status')}</p>
+            {completion.complete ? <Badge tone="green">{t('Complete')}</Badge> : <Badge tone="amber">{t('{done} of {required} verified', { done: completion.done, required: completion.required })}</Badge>}
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
-            {completion.items.map((i) => <Badge key={i.category} tone={STATUS_TONE[i.status]}>{CATEGORY_LABELS[i.category]}: {label(i.status)}</Badge>)}
+            {completion.items.map((i) => <Badge key={i.category} tone={STATUS_TONE[i.status]}>{t(CATEGORY_LABELS[i.category])}: {t(label(i.status))}</Badge>)}
           </div>
         </Card>
       )}
@@ -68,14 +70,14 @@ export function KycPanel() {
               <li key={d._id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-slate-900">{KYC_TYPE_OPTIONS.find((t) => t.value === d.type)?.label}</p>
+                    <p className="font-medium text-slate-900">{t(KYC_TYPE_OPTIONS.find((o) => o.value === d.type)?.label || label(d.type))}</p>
                     <StatusBadge status={d.status} />
                     {d.last4 && <span className="font-mono text-xs text-slate-500">•••• {d.last4}</span>}
                   </div>
-                  <p className="text-xs text-slate-500">Submitted {fmtDate(d.updatedAt)}{d.status === 'rejected' && d.rejectionReason ? ` · Rejected: ${d.rejectionReason}` : ''}</p>
+                  <p className="text-xs text-slate-500">{t('Submitted {date}', { date: fmtDate(d.updatedAt) })}{d.status === 'rejected' && d.rejectionReason ? ` · ${t('Rejected: {reason}', { reason: d.rejectionReason })}` : ''}</p>
                   <div className="mt-2"><Attachments items={d.files} /></div>
                 </div>
-                {d.status !== 'verified' && <Button size="sm" variant="ghost" onClick={() => window.confirm('Delete this document?') && remove.mutate(d._id)}>Delete</Button>}
+                {d.status !== 'verified' && <Button size="sm" variant="ghost" onClick={() => window.confirm(t('Delete this document?')) && remove.mutate(d._id)}>Delete</Button>}
               </li>
             ))}
           </ul>

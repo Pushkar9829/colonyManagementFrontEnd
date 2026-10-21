@@ -52,7 +52,7 @@ export async function downloadFile(path, query, fallbackName = 'download') {
   }
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`);
+    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`, undefined, json.error);
   }
   const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '')?.[1] || fallbackName;
   const href = URL.createObjectURL(await res.blob());
@@ -75,7 +75,7 @@ export async function openPdf(path) {
   }
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || 'Could not open the file');
+    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || 'Could not open the file', undefined, json.error);
   }
   const href = URL.createObjectURL(await res.blob());
   window.open(href, '_blank', 'noopener');

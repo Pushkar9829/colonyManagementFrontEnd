@@ -62,7 +62,7 @@ function HandoverForm({ onClose }) {
             // eslint-disable-next-line react/no-array-index-key
             <div key={i} className="grid grid-cols-[1fr_auto] gap-2 rounded-lg border border-slate-200 p-2 sm:grid-cols-[1.2fr_1fr_1fr_auto]">
               <Input aria-label="Key name" placeholder="Key name" value={k.name} onChange={(e) => editKey(i, 'name', e.target.value)} />
-              <Button variant="ghost" icon={X} className="text-red-600 sm:order-last" onClick={() => setKeys((list) => list.filter((_, j) => j !== i))} aria-label="Remove key" />
+              <Button variant="ghost" icon={X} className="text-red-600 sm:order-last" onClick={() => setKeys((list) => list.filter((_, j) => j !== i))} aria-label={t('Remove key')} />
               <Select aria-label="Key status" options={KEY_STATUSES.map((s) => ({ value: s, label: label(s) }))} value={k.status} onChange={(e) => editKey(i, 'status', e.target.value)} />
               <Input aria-label="Holder" placeholder={k.status === 'issued' ? 'Issued to' : 'Holder (optional)'} value={k.holder} onChange={(e) => editKey(i, 'holder', e.target.value)} />
             </div>
@@ -78,7 +78,7 @@ function HandoverForm({ onClose }) {
             // eslint-disable-next-line react/no-array-index-key
             <div key={i} className="flex gap-2">
               <Input className="flex-1" aria-label="Pending item" placeholder="e.g. Courier for B-402 at the gate" value={p.text} onChange={(e) => setPending((list) => list.map((x, j) => (j === i ? { text: e.target.value } : x)))} />
-              <Button variant="ghost" icon={X} className="text-red-600" onClick={() => setPending((list) => list.filter((_, j) => j !== i))} aria-label="Remove item" />
+              <Button variant="ghost" icon={X} className="text-red-600" onClick={() => setPending((list) => list.filter((_, j) => j !== i))} aria-label={t('Remove item')} />
             </div>
           ))}
         </div>

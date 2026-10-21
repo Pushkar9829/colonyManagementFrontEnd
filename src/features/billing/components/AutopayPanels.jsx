@@ -48,11 +48,11 @@ export function AutopayCard() {
             <Input className="w-full sm:w-52" label={signingUp ? 'Maximum amount per bill (₹)' : 'New maximum per bill (₹)'} type="number" min={1} value={max} onChange={(e) => setMax(e.target.value)} />
             {signingUp && <Select className="w-full sm:w-60" label="Method" value={method} onChange={(e) => setMethod(e.target.value)} options={[{ value: 'upi', label: 'UPI AutoPay' }, { value: 'enach', label: 'Bank auto-debit (e-NACH)' }]} />}
             {signingUp ? (
-              <Button disabled={!Number(max)} loading={setup.isPending} onClick={() => setup.mutate({ maxAmount: toPaise(max), method })}>{m ? 'Authorise new mandate' : 'Set up autopay'}</Button>
+              <Button disabled={!Number(max)} loading={setup.isPending} onClick={() => setup.mutate({ maxAmount: toPaise(max), method })}>{m ? t('Authorise new mandate') : t('Set up autopay')}</Button>
             ) : (
               <Button disabled={!Number(max)} loading={optIn.isPending} onClick={() => optIn.mutate({ maxAmount: toPaise(max) })}>Update</Button>
             )}
-            {m && <Button variant="ghost" onClick={() => setRenew((v) => !v)}>{renew ? 'Keep current mandate' : 'Raise limit / change bank'}</Button>}
+            {m && <Button variant="ghost" onClick={() => setRenew((v) => !v)}>{renew ? t('Keep current mandate') : t('Raise limit / change bank')}</Button>}
             {m && <Button variant="ghost" loading={cancel.isPending} onClick={() => window.confirm(t('Turn off autopay?')) && cancel.mutate()}>Turn off</Button>}
           </div>
           {signingUp && <p className="px-5 pb-4 text-xs text-slate-500">{t('UPI AutoPay debits ₹1 to authorise; it is added to your advance balance. Bank auto-debit (e-NACH) needs no debit.')}</p>}
@@ -64,6 +64,7 @@ export function AutopayCard() {
 
 // Accountant: every mandate in the society.
 export function MandatesPanel() {
+  const { t } = useT();
   const [status, setStatus] = useState('active');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useMandates({ status: status || undefined, page });
@@ -71,7 +72,7 @@ export function MandatesPanel() {
   return (
     <Card>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-        <p className="text-sm text-slate-500">Autopay mandates set up by residents. Bills above a mandate's limit are left for manual payment.</p>
+        <p className="text-sm text-slate-500">{t("Autopay mandates set up by residents. Bills above a mandate's limit are left for manual payment.")}</p>
         <Select className="w-40" placeholder="All" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} options={[{ value: 'active', label: 'Active' }, { value: 'pending', label: 'Waiting for bank' }, { value: 'cancelled', label: 'Cancelled' }, { value: 'failed', label: 'Not set up' }]} />
       </div>
       <Table loading={isLoading} rows={data?.data} empty="No mandates"
@@ -80,10 +81,10 @@ export function MandatesPanel() {
           { key: 'user', header: 'Resident', render: (m) => m.user?.name },
           { key: 'method', header: 'Method', render: (m) => (m.method === 'enach' ? 'e-NACH' : 'UPI AutoPay') },
           { key: 'maxAmount', header: 'Limit', render: (m) => money(m.maxAmount) },
-          { key: 'last', header: 'Last charge', render: (m) => (m.lastResult ? `${label(m.lastResult)} · ${date(m.lastChargedAt)}` : '—') },
+          { key: 'last', header: 'Last charge', render: (m) => (m.lastResult ? `${t(label(m.lastResult))} · ${date(m.lastChargedAt)}` : '—') },
           { key: 'failures', header: 'Failures', render: (m) => m.failures || 0 },
           { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
-          { key: 'act', header: '', render: (m) => m.status === 'active' && <Button size="sm" variant="ghost" loading={cancel.isPending && cancel.variables === m._id} onClick={() => window.confirm('Cancel this mandate?') && cancel.mutate(m._id)}>Cancel</Button> },
+          { key: 'act', header: '', render: (m) => m.status === 'active' && <Button size="sm" variant="ghost" loading={cancel.isPending && cancel.variables === m._id} onClick={() => window.confirm(t('Cancel this mandate?')) && cancel.mutate(m._id)}>Cancel</Button> },
         ]} />
       <Pagination meta={data?.meta} onPage={setPage} />
     </Card>

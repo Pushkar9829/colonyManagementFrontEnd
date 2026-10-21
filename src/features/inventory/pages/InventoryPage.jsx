@@ -10,6 +10,7 @@ import { date, dateTime, label, money, toPaise, todayISO } from '../../../lib/fo
 import { isManager } from '../../../lib/roles';
 import { clean, downloadFile, opts, usePeople } from '../../assets/shared';
 import { useAdjustStock, useCreateItem, useItems, useMovements, useStockIn, useStockOut, useUpdateItem, useValuation } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const CATEGORIES = opts(['electrical', 'plumbing', 'cleaning', 'chemical', 'spare_part', 'consumable', 'stationery', 'safety', 'garden', 'other']);
 // Units are stored lower-case; litres are written "L" so "60 l" never reads as "60 1".
@@ -20,6 +21,7 @@ const TYPE_TONES = { in: 'green', out: 'amber', adjust: 'blue' };
 const qty = (n) => Number(n).toLocaleString('en-IN', { maximumFractionDigits: 3 });
 
 function ItemModal({ open, onClose, item }) {
+  const { t } = useT();
   const blank = { name: '', category: 'consumable', unit: 'pcs', location: '', description: '', reorderLevel: '0', reorderQty: '0', openingStock: '', openingCost: '' };
   const { values, bind, setValues, applyServerErrors } = useForm(blank);
   useEffect(() => {
@@ -33,7 +35,7 @@ function ItemModal({ open, onClose, item }) {
     else create.mutate({ ...body, ...(values.openingStock && { openingStock: Number(values.openingStock), openingCost: toPaise(values.openingCost || 0) }) }, { onError: applyServerErrors });
   };
   return (
-    <Modal open={open} onClose={onClose} title={item ? `Edit ${item.name}` : 'New store item'}
+    <Modal open={open} onClose={onClose} title={item ? t('Edit {name}', { name: item.name }) : 'New store item'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Name" required {...bind('name')} />
@@ -51,6 +53,7 @@ function ItemModal({ open, onClose, item }) {
 }
 
 function MoveModal({ item, mode, onClose }) {
+  const { t } = useT();
   const { values, bind, applyServerErrors } = useForm({ qty: '', unitCost: item?.lastPurchaseCost ? String(item.lastPurchaseCost / 100) : '', vendorName: '', invoiceNumber: '', issuedTo: '', location: '', reason: '', countedQty: item ? String(item.stock) : '', date: todayISO() });
   const { data: people } = usePeople(['staff', 'facility_manager', 'guard'], mode === 'out');
   const done = { onSuccess: onClose };
@@ -65,11 +68,11 @@ function MoveModal({ item, mode, onClose }) {
   };
   const titles = { in: 'Receive stock', out: 'Issue stock', adjust: 'Stock count correction' };
   return (
-    <Modal open onClose={onClose} title={`${titles[mode]} · ${item.name}`} description={`In stock: ${qty(item.stock)} ${unitText(item.unit)}`}
+    <Modal open onClose={onClose} title={`${t(titles[mode])} · ${item.name}`} description={t('In stock: {qty} {unit}', { qty: qty(item.stock), unit: unitText(item.unit) })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={stockIn.isPending || stockOut.isPending || adjust.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        {mode !== 'adjust' && <Input label={`Quantity (${unitText(item.unit)})`} type="number" min="0" step="any" required {...bind('qty')} />}
-        {mode === 'adjust' && <Input label={`Counted quantity (${unitText(item.unit)})`} type="number" min="0" step="any" required {...bind('countedQty')} />}
+        {mode !== 'adjust' && <Input label={t('Quantity ({unit})', { unit: unitText(item.unit) })} type="number" min="0" step="any" required {...bind('qty')} />}
+        {mode === 'adjust' && <Input label={t('Counted quantity ({unit})', { unit: unitText(item.unit) })} type="number" min="0" step="any" required {...bind('countedQty')} />}
         <Input label="Date" type="date" {...bind('date')} />
         {mode === 'in' && (
           <>
@@ -91,6 +94,7 @@ function MoveModal({ item, mode, onClose }) {
 }
 
 function ItemsTab({ manager, lowOnly }) {
+  const { t } = useT();
   const [f, setF] = useState({ search: '', category: '', low: lowOnly ? 'true' : '', page: 1 });
   const { data, isLoading } = useItems(Object.fromEntries(Object.entries(f).filter(([, v]) => v)));
   const [edit, setEdit] = useState(null);
@@ -105,8 +109,8 @@ function ItemsTab({ manager, lowOnly }) {
       </FilterBar>
       <Table loading={isLoading} rows={data?.data} empty="No items"
         columns={[
-          { key: 'name', header: 'Item', render: (i) => <div><p className="font-medium text-slate-900">{i.name}</p><p className="text-xs text-slate-500">{i.code} · {label(i.category)}{i.location ? ` · ${i.location}` : ''}</p></div> },
-          { key: 'stock', header: 'In stock', render: (i) => <span className="flex items-center gap-2 font-medium">{qty(i.stock)} {unitText(i.unit)}{i.low && <Badge tone="red">Reorder</Badge>}</span> },
+          { key: 'name', header: 'Item', render: (i) => <div><p className="font-medium text-slate-900">{i.name}</p><p className="text-xs text-slate-500">{i.code} · {t(label(i.category))}{i.location ? ` · ${i.location}` : ''}</p></div> },
+          { key: 'stock', header: 'In stock', render: (i) => <span className="flex items-center gap-2 font-medium">{qty(i.stock)} {unitText(i.unit)}{i.low && <Badge tone="red">{t('Reorder')}</Badge>}</span> },
           { key: 'reorderLevel', header: 'Reorder at', render: (i) => (i.reorderLevel ? `${qty(i.reorderLevel)} ${unitText(i.unit)}` : '—') },
           { key: 'avgCost', header: 'Avg cost', mobile: false, render: (i) => money(i.avgCost) },
           { key: 'value', header: 'Value', render: (i) => money(i.value) },
@@ -127,6 +131,7 @@ function ItemsTab({ manager, lowOnly }) {
 }
 
 function LedgerTab() {
+  const { t } = useT();
   const toast = useToast();
   const [f, setF] = useState({ type: '', from: '', to: '', page: 1 });
   const { data, isLoading } = useMovements(Object.fromEntries(Object.entries(f).filter(([, v]) => v)));
@@ -143,7 +148,7 @@ function LedgerTab() {
         columns={[
           { key: 'date', header: 'Date', render: (m) => <div><p>{date(m.date)}</p><p className="text-xs text-slate-400">{dateTime(m.createdAt)}</p></div> },
           { key: 'item', header: 'Item', render: (m) => m.item?.name },
-          { key: 'type', header: 'Type', render: (m) => <Badge tone={TYPE_TONES[m.type]}>{m.type === 'out' ? 'Issued' : label(m.type)}</Badge> },
+          { key: 'type', header: 'Type', render: (m) => <Badge tone={TYPE_TONES[m.type]}>{m.type === 'out' ? t('Issued') : t(label(m.type))}</Badge> },
           { key: 'qty', header: 'Qty', render: (m) => <span className={m.qty < 0 ? 'text-amber-700' : 'text-emerald-700'}>{m.qty > 0 ? '+' : ''}{qty(m.qty)} {unitText(m.item?.unit)}</span> },
           { key: 'balanceAfter', header: 'Balance', render: (m) => qty(m.balanceAfter) },
           { key: 'value', header: 'Value', render: (m) => money(Math.abs(m.value)) },
@@ -156,6 +161,7 @@ function LedgerTab() {
 }
 
 function ValuationTab() {
+  const { t } = useT();
   const toast = useToast();
   const { data, isLoading } = useValuation();
   return (
@@ -173,7 +179,7 @@ function ValuationTab() {
         </div>
         <Table loading={isLoading} rows={data?.categories} rowKey="category" empty="No stock"
           columns={[
-            { key: 'category', header: 'Category', render: (c) => label(c.category) },
+            { key: 'category', header: 'Category', render: (c) => t(label(c.category)) },
             { key: 'items', header: 'Items' },
             { key: 'low', header: 'Low stock', render: (c) => (c.low ? <Badge tone="red">{c.low}</Badge> : 0) },
             { key: 'value', header: 'Value', render: (c) => money(c.value) },
@@ -192,7 +198,7 @@ export default function InventoryPage() {
   return (
     <div>
       <PageHeader title="Inventory" description="Store items, purchases and issues, with reorder alerts and a stock ledger." actions={manager && <Button icon={Plus} onClick={() => setCreating(true)}>New item</Button>} />
-      {manager && <Tabs className="mb-4" value={tab} onChange={(t) => setParams({ tab: t })} tabs={[{ value: 'items', label: 'Items' }, { value: 'ledger', label: 'Stock ledger' }, { value: 'valuation', label: 'Valuation' }]} />}
+      {manager && <Tabs className="mb-4" value={tab} onChange={(v) => setParams({ tab: v })} tabs={[{ value: 'items', label: 'Items' }, { value: 'ledger', label: 'Stock ledger' }, { value: 'valuation', label: 'Valuation' }]} />}
       {tab === 'items' && <ItemsTab manager={manager} lowOnly={params.get('low') === 'true'} />}
       {manager && tab === 'ledger' && <LedgerTab />}
       {manager && tab === 'valuation' && <ValuationTab />}

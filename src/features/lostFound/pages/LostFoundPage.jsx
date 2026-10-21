@@ -4,6 +4,7 @@ import { CalendarDays, Check, MapPin, MessageCircle, PackageSearch, Plus, Rotate
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Attachments, Badge, Button, Card, EmptyState, FileUpload, FilterBar, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, label, timeAgo, todayISO } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
@@ -35,6 +36,7 @@ function PostModal({ open, onClose }) {
 }
 
 function ItemModal({ id, onClose }) {
+  const { t } = useT();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: item, isLoading } = useLostFoundItem(id);
@@ -51,9 +53,9 @@ function ItemModal({ id, onClose }) {
       {isLoading || !item ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={item.kind === 'lost' ? 'red' : 'blue'}>{item.kind === 'lost' ? 'Lost' : 'Found'}</Badge>
-            <Badge tone={STATUS_TONE[item.status]}>{label(item.status)}</Badge>
-            <Badge>{label(item.category)}</Badge>
+            <Badge tone={item.kind === 'lost' ? 'red' : 'blue'}>{item.kind === 'lost' ? t('Lost') : t('Found')}</Badge>
+            <Badge tone={STATUS_TONE[item.status]}>{t(label(item.status))}</Badge>
+            <Badge>{t(label(item.category))}</Badge>
           </div>
           <Attachments items={item.photos} />
           <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
@@ -61,25 +63,25 @@ function ItemModal({ id, onClose }) {
             {item.date && <p className="flex items-center gap-2"><CalendarDays className="size-4 text-slate-400" />{date(item.date)}</p>}
           </div>
           {item.description && <p className="whitespace-pre-wrap text-sm text-slate-700">{item.description}</p>}
-          <p className="text-xs text-slate-400">Posted by {personLine(item.postedBy)} · {timeAgo(item.createdAt)}{item.status === 'open' ? ` · expires ${date(item.expiresAt)}` : ''}</p>
+          <p className="text-xs text-slate-400">{t('Posted by {name}', { name: personLine(item.postedBy) })} · {timeAgo(item.createdAt)}{item.status === 'open' ? ` · ${t('expires {date}', { date: date(item.expiresAt) })}` : ''}</p>
 
           {item.isMine ? (
             <div className="space-y-3 border-t border-slate-100 pt-4">
-              <h3 className="text-sm font-semibold text-slate-800">{item.kind === 'found' ? 'People who say it is theirs' : 'People who may have found it'}</h3>
-              {!item.claims.length ? <p className="text-sm text-slate-400">No responses yet.</p> : (
+              <h3 className="text-sm font-semibold text-slate-800">{item.kind === 'found' ? t('People who say it is theirs') : t('People who may have found it')}</h3>
+              {!item.claims.length ? <p className="text-sm text-slate-400">{t('No responses yet.')}</p> : (
                 <ul className="space-y-2">
                   {item.claims.map((c) => (
                     <li key={c._id} className="rounded-lg border border-slate-200 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-medium text-slate-800">{personLine(c.by)}</p>
-                        <Badge tone={{ pending: 'amber', accepted: 'green', rejected: 'slate', withdrawn: 'slate' }[c.status]}>{label(c.status)}</Badge>
+                        <Badge tone={{ pending: 'amber', accepted: 'green', rejected: 'slate', withdrawn: 'slate' }[c.status]}>{t(label(c.status))}</Badge>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{c.message}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => chat.mutate(c.by._id)}>Message</Button>
                         {c.status === 'pending' && item.status === 'open' && (
                           <>
-                            <Button size="sm" variant="success" icon={Check} onClick={() => window.confirm(`Confirm ${c.by.name}? The post will be marked as returned.`) && decide.mutate({ id: item._id, claimId: c._id, accept: true })}>Confirm & resolve</Button>
+                            <Button size="sm" variant="success" icon={Check} onClick={() => window.confirm(t('Confirm {name}? The post will be marked as returned.', { name: c.by.name })) && decide.mutate({ id: item._id, claimId: c._id, accept: true })}>Confirm & resolve</Button>
                             <Button size="sm" variant="secondary" icon={X} onClick={() => decide.mutate({ id: item._id, claimId: c._id, accept: false })}>Decline</Button>
                           </>
                         )}
@@ -92,18 +94,18 @@ function ItemModal({ id, onClose }) {
                 {item.status === 'open' && <Button size="sm" variant="secondary" onClick={() => status.mutate({ id: item._id, status: 'resolved' })}>Mark resolved</Button>}
                 {item.status === 'open' && <Button size="sm" variant="ghost" onClick={() => status.mutate({ id: item._id, status: 'closed' })}>Close post</Button>}
                 {['expired', 'closed'].includes(item.status) && <Button size="sm" variant="secondary" icon={RotateCcw} onClick={() => status.mutate({ id: item._id, status: 'open' })}>Reopen for 30 days</Button>}
-                <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm('Delete this post?') && remove.mutate(item._id)}>Delete</Button>
+                <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm(t('Delete this post?')) && remove.mutate(item._id)}>Delete</Button>
               </div>
             </div>
           ) : (
             <div className="space-y-3 border-t border-slate-100 pt-4">
               {item.myClaim ? (
                 <div className="rounded-lg bg-slate-50 p-3 text-sm">
-                  <p className="font-medium text-slate-800">Your message · <span className="font-normal">{label(item.myClaim.status)}</span></p>
+                  <p className="font-medium text-slate-800">{t('Your message')} · <span className="font-normal">{t(label(item.myClaim.status))}</span></p>
                   <p className="mt-1 text-slate-600">{item.myClaim.message}</p>
-                  {item.myClaim.status === 'accepted' && <p className="mt-2 text-emerald-700">Confirmed! Message {item.postedBy.name} to arrange the handover.</p>}
+                  {item.myClaim.status === 'accepted' && <p className="mt-2 text-emerald-700">{t('Confirmed! Message {name} to arrange the handover.', { name: item.postedBy.name })}</p>}
                   <div className="mt-2 flex gap-2">
-                    <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => chat.mutate(item.postedBy._id)}>Message {item.postedBy.name.split(' ')[0]}</Button>
+                    <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => chat.mutate(item.postedBy._id)}>{t('Message {name}', { name: item.postedBy.name.split(' ')[0] })}</Button>
                     {item.myClaim.status === 'pending' && <Button size="sm" variant="ghost" onClick={() => withdraw.mutate(item._id)}>Withdraw</Button>}
                   </div>
                 </div>
@@ -112,8 +114,8 @@ function ItemModal({ id, onClose }) {
                   <Textarea label={item.kind === 'found' ? 'This is mine — describe it so the finder can confirm' : 'I found it — say where and when'} rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
                   <Button loading={claim.isPending} disabled={message.trim().length < 5} onClick={() => claim.mutate({ id: item._id, message: message.trim() })}>{item.kind === 'found' ? "It's mine" : 'I found it'}</Button>
                 </>
-              ) : <p className="text-sm text-slate-500">This post is {item.status}.</p>}
-              {isManager(user) && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm('Remove this post for everyone?') && remove.mutate(item._id)}>Remove post</Button>}
+              ) : <p className="text-sm text-slate-500">{item.status === 'expired' ? t('This post has expired.') : item.status === 'resolved' ? t('This post is resolved.') : t('This post is closed.')}</p>}
+              {isManager(user) && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm(t('Remove this post for everyone?')) && remove.mutate(item._id)}>Remove post</Button>}
             </div>
           )}
         </div>
@@ -123,6 +125,7 @@ function ItemModal({ id, onClose }) {
 }
 
 export default function LostFoundPage() {
+  const { t } = useT();
   const [params, setParams] = useSearchParams();
   const [kind, setKind] = useState('');
   const [category, setCategory] = useState('');
@@ -145,7 +148,7 @@ export default function LostFoundPage() {
         <FilterBar cols={2} active={category ? 1 : 0} className="border-b-0" search={(
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder="Search items or places" aria-label="Search items or places" className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} placeholder={t('Search items or places')} aria-label={t('Search items or places')} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
         </div>
         )}>
           <Select label="Category" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }} placeholder="All categories" options={CATEGORIES.map((c) => ({ value: c, label: label(c) }))} />
@@ -161,9 +164,9 @@ export default function LostFoundPage() {
                 {i.photos[0] ? <img src={i.photos[0].url} alt="" className="h-40 w-full object-cover" /> : <div className="flex h-24 items-center justify-center bg-slate-50"><PackageSearch className="size-8 text-slate-300" /></div>}
                 <div className="p-3">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Badge tone={i.kind === 'lost' ? 'red' : 'blue'}>{i.kind === 'lost' ? 'Lost' : 'Found'}</Badge>
-                    {i.status !== 'open' && <Badge tone={STATUS_TONE[i.status]}>{label(i.status)}</Badge>}
-                    {i.isMine && i.claimCount > 0 && <Badge tone="amber">{i.claimCount} response{i.claimCount > 1 ? 's' : ''}</Badge>}
+                    <Badge tone={i.kind === 'lost' ? 'red' : 'blue'}>{i.kind === 'lost' ? t('Lost') : t('Found')}</Badge>
+                    {i.status !== 'open' && <Badge tone={STATUS_TONE[i.status]}>{t(label(i.status))}</Badge>}
+                    {i.isMine && i.claimCount > 0 && <Badge tone="amber">{t(i.claimCount > 1 ? '{n} responses' : '{n} response', { n: i.claimCount })}</Badge>}
                   </div>
                   <p className="mt-1.5 truncate font-semibold text-slate-900">{i.title}</p>
                   <p className="truncate text-xs text-slate-500">{[i.location, i.date && date(i.date)].filter(Boolean).join(' · ')}</p>

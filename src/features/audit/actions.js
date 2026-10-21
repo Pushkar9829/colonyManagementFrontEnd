@@ -66,9 +66,11 @@ const VERBS = {
 const words = (s) => String(s).replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase();
 const sentence = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-export function actionLabel(code) {
+// Pass the `t` from useT() to translate the hand-written phrases (built ones stay English).
+const same = (s) => s;
+export function actionLabel(code, t = same) {
   if (!code) return '';
-  if (PHRASES[code]) return PHRASES[code];
+  if (PHRASES[code]) return t(PHRASES[code]);
   const [thing, what = ''] = code.split('.');
   if (VERBS[what]) return `${VERBS[what]} ${words(thing)}`;
   // "fire.extinguisher_added" → "Fire: extinguisher added"
@@ -77,17 +79,17 @@ export function actionLabel(code) {
 
 const MONEY_KEYS = /^(amount|total|tds|fee|deposit|price|balance|due|paid)$|Paise$|Amount$|Total$/;
 
-const valueText = (key, v) => {
+const valueText = (key, v, t = same) => {
   if (v === null || v === undefined || v === '') return '—';
-  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (typeof v === 'boolean') return v ? t('Yes') : t('No');
   if (typeof v === 'number' && MONEY_KEYS.test(key)) return money(v);
   if (Array.isArray(v)) return v.map((x) => (typeof x === 'object' ? JSON.stringify(x) : String(x))).join(', ');
-  if (typeof v === 'object') return Object.entries(v).map(([k, x]) => `${words(k)} ${valueText(k, x)}`).join(', ');
+  if (typeof v === 'object') return Object.entries(v).map(([k, x]) => `${words(k)} ${valueText(k, x, t)}`).join(', ');
   return String(v);
 };
 
 // meta → [["Vendor", "Sharma Electricals"], ["Total", "₹1,200.00"]]
-export function detailLines(meta) {
+export function detailLines(meta, t = same) {
   if (!meta || typeof meta !== 'object') return [];
-  return Object.entries(meta).map(([k, v]) => [sentence(words(k)), valueText(k, v)]);
+  return Object.entries(meta).map(([k, v]) => [sentence(words(k)), valueText(k, v, t)]);
 }

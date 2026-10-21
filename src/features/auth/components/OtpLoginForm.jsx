@@ -3,6 +3,7 @@ import { api } from '../../../api/client';
 import { Button, Input } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Two steps: phone -> 6-digit code sent by SMS -> logged in (or on to the two-step verification code).
 export function OtpLoginForm({ onDone, onMfa }) {
@@ -31,9 +32,9 @@ export function OtpLoginForm({ onDone, onMfa }) {
       setSent(true);
       setCooldown(30);
       // devCode only exists in development with the console SMS provider
-      setInfo(r.devCode ? `${r.message} (Dev code: ${r.devCode})` : r.message);
+      setInfo(r.devCode ? `${t(r.message)} (Dev code: ${r.devCode})` : t(r.message));
     } catch (err) {
-      setError(err.fieldErrors?.phone || err.message);
+      setError(err.fieldErrors?.phone || errorText(err, t));
     } finally {
       setLoading(false);
     }
@@ -48,7 +49,7 @@ export function OtpLoginForm({ onDone, onMfa }) {
       if (pending?.mfaRequired) onMfa(pending.mfaToken);
       else onDone();
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
     } finally {
       setLoading(false);
     }

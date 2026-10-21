@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ListChecks, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, Input, Modal, Pagination, Select, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, dateTime } from '../../../lib/format';
 import { useGovernance, useMemberOptions } from '../../committee/api';
@@ -29,6 +30,7 @@ function NewMeetingModal({ open, onClose, isAdmin }) {
     title: '', type: 'agm', scheduledAt: '', mode: 'in_person', venue: '', onlineLink: '', description: '', audienceType: 'owners', quorumType: 'percent', quorumValue: '33',
   });
   const [agenda, setAgenda] = useState(['']);
+  const { t } = useT();
   const [members, setMembers] = useState([]);
   const create = useCreateMeeting({ onSuccess: (m) => { onClose(); navigate(`/meetings/${m._id}`); } });
   const submit = () => create.mutate({
@@ -62,13 +64,13 @@ function NewMeetingModal({ open, onClose, isAdmin }) {
         {values.audienceType === 'custom' && <div className="sm:col-span-2"><MemberPicker value={members} onChange={setMembers} /></div>}
         <Textarea className="sm:col-span-2" label="Notes for members" rows={2} {...bind('description')} />
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium text-slate-700">Agenda</p>
+          <p className="text-sm font-medium text-slate-700">{t('Agenda')}</p>
           {agenda.map((a, i) => (
             // eslint-disable-next-line react/no-array-index-key
             <div key={i} className="flex gap-2">
               <span className="mt-2.5 w-5 text-sm text-slate-400">{i + 1}.</span>
               <Input className="flex-1" value={a} placeholder="Agenda item" onChange={(e) => setAgenda(agenda.map((x, j) => (j === i ? e.target.value : x)))} />
-              <Button variant="ghost" icon={Trash2} aria-label="Remove item" onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} disabled={agenda.length === 1} />
+              <Button variant="ghost" icon={Trash2} aria-label={t('Remove item')} onClick={() => setAgenda(agenda.filter((_, j) => j !== i))} disabled={agenda.length === 1} />
             </div>
           ))}
           <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAgenda([...agenda, ''])}>Add item</Button>
@@ -84,6 +86,7 @@ function ActionItems({ manage }) {
   const { data = [], isLoading } = useActionItems({ status: status || undefined, mine: mine || undefined });
   const update = useUpdateActionItem();
   const navigate = useNavigate();
+  const { t } = useT();
   return (
     <Card>
       <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-4">
@@ -100,7 +103,7 @@ function ActionItems({ manage }) {
           { key: 'dueDate', header: 'Due', render: (a) => <span className={a.isOverdue ? 'font-medium text-red-600' : ''}>{a.dueDate ? date(a.dueDate) : '—'}</span> },
           { key: 'status', header: 'Status', render: (a) => (
             <select className="rounded-md border border-slate-300 px-2 py-1 text-xs" value={a.status} onChange={(e) => update.mutate({ id: a.meeting._id, actionId: a._id, status: e.target.value })}>
-              {ACTION_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              {ACTION_STATUS.map((s) => <option key={s.value} value={s.value}>{t(s.label)}</option>)}
             </select>
           ) },
         ]}
@@ -116,6 +119,7 @@ export default function MeetingsPage() {
   const [tab, setTab] = useState('upcoming');
   const [page, setPage] = useState(1);
   const [creating, setCreating] = useState(false);
+  const { t } = useT();
   const { data, isLoading } = useMeetings({ when: tab === 'actions' ? undefined : tab, page });
 
   return (
@@ -125,7 +129,7 @@ export default function MeetingsPage() {
         description={manage ? 'Schedule meetings, circulate notices, take attendance and approve minutes.' : 'Meetings you are invited to, and their approved minutes.'}
         actions={manage && <Button icon={Plus} onClick={() => setCreating(true)}>New meeting</Button>}
       />
-      <Tabs className="mb-4 w-fit" value={tab} onChange={(t) => { setTab(t); setPage(1); }} tabs={[{ value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past' }, { value: 'actions', label: 'Action items' }]} />
+      <Tabs className="mb-4 w-fit" value={tab} onChange={(v) => { setTab(v); setPage(1); }} tabs={[{ value: 'upcoming', label: 'Upcoming' }, { value: 'past', label: 'Past' }, { value: 'actions', label: 'Action items' }]} />
       {tab === 'actions' ? <ActionItems manage={manage} /> : (
         <Card>
           <Table
@@ -135,11 +139,11 @@ export default function MeetingsPage() {
             onRowClick={(m) => navigate(`/meetings/${m._id}`)}
             columns={[
               { key: 'number', header: 'No.', render: (m) => <span className="font-mono text-xs font-semibold text-slate-600">{m.number}</span> },
-              { key: 'title', header: 'Meeting', className: 'max-w-xs', render: (m) => <div className="truncate"><p className="truncate font-medium text-slate-900">{m.title}</p><p className="text-xs text-slate-500">{TYPE_SHORT[m.type]}{m.venue ? ` · ${m.venue}` : ''}</p></div> },
+              { key: 'title', header: 'Meeting', className: 'max-w-xs', render: (m) => <div className="truncate"><p className="truncate font-medium text-slate-900">{m.title}</p><p className="text-xs text-slate-500">{t(TYPE_SHORT[m.type] || '')}{m.venue ? ` · ${m.venue}` : ''}</p></div> },
               { key: 'scheduledAt', header: 'When', render: (m) => dateTime(m.scheduledAt) },
-              { key: 'status', header: 'Status', render: (m) => <div className="flex gap-1.5"><StatusBadge status={m.status === 'scheduled' ? 'confirmed' : m.status === 'draft' ? 'pending' : m.status} />{m.minutes?.status === 'approved' && <Badge tone="green">Minutes</Badge>}</div> },
-              { key: 'agendaCount', header: 'Agenda', render: (m) => `${m.agendaCount} item(s)` },
-              ...(manage ? [{ key: 'openActionItems', header: '', render: (m) => (m.openActionItems ? <span className="inline-flex items-center gap-1 text-xs text-amber-700"><ListChecks className="size-3.5" />{m.openActionItems} open</span> : null) }] : []),
+              { key: 'status', header: 'Status', render: (m) => <div className="flex gap-1.5"><StatusBadge status={m.status === 'scheduled' ? 'confirmed' : m.status === 'draft' ? 'pending' : m.status} />{m.minutes?.status === 'approved' && <Badge tone="green">{t('Minutes')}</Badge>}</div> },
+              { key: 'agendaCount', header: 'Agenda', render: (m) => t('{n} item(s)', { n: m.agendaCount }) },
+              ...(manage ? [{ key: 'openActionItems', header: '', render: (m) => (m.openActionItems ? <span className="inline-flex items-center gap-1 text-xs text-amber-700"><ListChecks className="size-3.5" />{t('{n} open', { n: m.openActionItems })}</span> : null) }] : []),
             ]}
           />
           <Pagination meta={data?.meta} onPage={setPage} />

@@ -10,6 +10,7 @@ import {
   useCreatePurchaseRequest, useDecidePurchaseRequest, useDeletePurchaseRequest, useExpenseSettings, usePurchaseRequest, usePurchaseRequests, useSubmitPurchaseRequest,
 } from '../api';
 import { VendorPicker } from '../components/VendorPicker';
+import { useT } from '../../../context/LanguageContext';
 
 const blank = () => ({ key: Math.random().toString(36).slice(2), description: '', quantity: '1', rate: '' });
 
@@ -20,6 +21,7 @@ function NewRequestModal({ onClose }) {
   const [errors, setErrors] = useState({});
   const { data: settings } = useExpenseSettings();
   const create = useCreatePurchaseRequest({ onSuccess: onClose });
+  const { t } = useT();
   const filled = items.filter((i) => i.description.trim() && Number(i.rate) > 0);
   const itemsTotal = filled.reduce((s, i) => s + Math.round(Number(i.quantity || 0) * toPaise(i.rate)), 0);
   const total = filled.length ? itemsTotal : toPaise(v.amount);
@@ -49,18 +51,18 @@ function NewRequestModal({ onClose }) {
         <VendorPicker className="sm:col-span-2" label="Preferred vendor" placeholder="Not decided yet" value={v.vendor} onChange={(id) => setV({ ...v, vendor: id })} />
       </div>
       <div className="mt-4 space-y-2">
-        <p className="text-sm font-medium text-slate-700">Items</p>
+        <p className="text-sm font-medium text-slate-700">{t('Items')}</p>
         {items.map((i) => (
           <div key={i.key} className="grid grid-cols-[1fr_4.5rem_6.5rem_auto] gap-2">
             <Input placeholder="Description" aria-label="Item" value={i.description} onChange={(e) => setItem(i.key, { description: e.target.value })} />
             <Input type="number" min={0} aria-label="Quantity" value={i.quantity} onChange={(e) => setItem(i.key, { quantity: e.target.value })} />
             <Input type="number" min={0} step="0.01" placeholder="Rate ₹" aria-label="Rate" value={i.rate} onChange={(e) => setItem(i.key, { rate: e.target.value })} />
-            <button type="button" aria-label="Remove item" disabled={items.length === 1} onClick={() => setItems((xs) => xs.filter((x) => x.key !== i.key))} className="flex size-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-30"><Trash2 className="size-4" /></button>
+            <button type="button" aria-label={t('Remove item')} disabled={items.length === 1} onClick={() => setItems((xs) => xs.filter((x) => x.key !== i.key))} className="flex size-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-30"><Trash2 className="size-4" /></button>
           </div>
         ))}
         <Button size="sm" variant="ghost" icon={Plus} onClick={() => setItems((xs) => [...xs, blank()])}>Add item</Button>
         {!filled.length && <Input label="Or an estimated total (₹)" type="number" min={0} value={v.amount} onChange={(e) => setV({ ...v, amount: e.target.value })} error={errors.amount} />}
-        <p className="text-sm text-slate-600">Estimated total <b>{money(total)}</b>{settings?.autoApproveLimit ? ` · requests up to ${money(settings.autoApproveLimit)} are approved automatically` : ''}</p>
+        <p className="text-sm text-slate-600">{t('Estimated total')} <b>{money(total)}</b>{settings?.autoApproveLimit ? ` · ${t('requests up to {amount} are approved automatically', { amount: money(settings.autoApproveLimit) })}` : ''}</p>
       </div>
       <div className="mt-4 space-y-4">
         <Textarea label="Justification" rows={3} placeholder="Why is this needed? Quotes compared?" value={v.justification} onChange={(e) => setV({ ...v, justification: e.target.value })} />
@@ -80,11 +82,12 @@ function RequestDetail({ id, onClose }) {
   const remove = useDeletePurchaseRequest({ onSuccess: onClose });
   const mine = pr && String(pr.requestedBy?._id) === String(user._id);
   const canDecide = pr && user.role === ROLES.ADMIN && pr.status === 'pending' && !mine;
+  const { t } = useT();
   return (
-    <Modal open onClose={onClose} size="lg" title={pr ? `${pr.number} · ${pr.title}` : 'Purchase request'} description={pr && `Raised by ${pr.requestedBy?.name} on ${date(pr.createdAt)}`}
+    <Modal open onClose={onClose} size="lg" title={pr ? `${pr.number} · ${pr.title}` : 'Purchase request'} description={pr && t('Raised by {name} on {date}', { name: pr.requestedBy?.name, date: date(pr.createdAt) })}
       footer={pr && (
         <>
-          {mine && pr.status === 'draft' && <Button variant="ghost" icon={Trash2} loading={remove.isPending} onClick={() => window.confirm('Delete this draft?') && remove.mutate(pr._id)}>Delete</Button>}
+          {mine && pr.status === 'draft' && <Button variant="ghost" icon={Trash2} loading={remove.isPending} onClick={() => window.confirm(t('Delete this draft?')) && remove.mutate(pr._id)}>Delete</Button>}
           {mine && pr.status === 'draft' && <Button icon={Send} loading={submit.isPending} onClick={() => submit.mutate(pr._id)}>Submit</Button>}
           {canDecide && (
             <>
@@ -99,26 +102,26 @@ function RequestDetail({ id, onClose }) {
         <div className="space-y-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={pr.status} />
-            {pr.autoApproved && <Badge tone="blue">Auto-approved</Badge>}
-            {pr.vendor && <span className="text-slate-600">Vendor: <b>{pr.vendor.name}</b></span>}
-            {pr.vendorBill && <span className="text-slate-600">Billed as <b>{pr.vendorBill.number}</b></span>}
+            {pr.autoApproved && <Badge tone="blue">{t('Auto-approved')}</Badge>}
+            {pr.vendor && <span className="text-slate-600">{t('Vendor:')} <b>{pr.vendor.name}</b></span>}
+            {pr.vendorBill && <span className="text-slate-600">{t('Billed as')} <b>{pr.vendorBill.number}</b></span>}
           </div>
           {pr.items.length > 0 && (
             <table className="min-w-full overflow-hidden rounded-lg border border-slate-200">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">Item</th><th className="px-3 py-2 text-right">Qty</th><th className="px-3 py-2 text-right">Rate</th><th className="px-3 py-2 text-right">Amount</th></tr></thead>
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">{t('Item')}</th><th className="px-3 py-2 text-right">{t('Qty')}</th><th className="px-3 py-2 text-right">{t('Rate')}</th><th className="px-3 py-2 text-right">{t('Amount')}</th></tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {pr.items.map((i, n) => <tr key={n}><td className="px-3 py-2">{i.description}</td><td className="px-3 py-2 text-right">{i.quantity}</td><td className="px-3 py-2 text-right tabular-nums">{money(i.rate)}</td><td className="px-3 py-2 text-right tabular-nums">{money(i.amount)}</td></tr>)}
               </tbody>
             </table>
           )}
-          <p className="text-base font-semibold text-slate-900">Total {money(pr.amount)}</p>
+          <p className="text-base font-semibold text-slate-900">{t('Total {amount}', { amount: money(pr.amount) })}</p>
           {pr.justification && <p className="whitespace-pre-line text-slate-700">{pr.justification}</p>}
           <Attachments items={pr.attachments} />
-          {pr.decisionNote && <p className="rounded-lg bg-slate-50 px-3 py-2">Decision note: {pr.decisionNote}{pr.decidedBy ? ` — ${pr.decidedBy.name}` : ''}</p>}
+          {pr.decisionNote && <p className="rounded-lg bg-slate-50 px-3 py-2">{t('Decision note: {note}', { note: pr.decisionNote })}{pr.decidedBy ? ` — ${pr.decidedBy.name}` : ''}</p>}
           {canDecide && <Textarea label="Note (required to reject)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />}
-          {user.role === ROLES.ADMIN && pr.status === 'pending' && mine && <p className="text-xs text-amber-700">You raised this request, so another admin has to approve it.</p>}
+          {user.role === ROLES.ADMIN && pr.status === 'pending' && mine && <p className="text-xs text-amber-700">{t('You raised this request, so another admin has to approve it.')}</p>}
           <ol className="space-y-1 border-l border-slate-200 pl-4 text-xs text-slate-500">
-            {pr.history.map((h, n) => <li key={n}>{dateTime(h.createdAt)} · {label(h.to)}{h.by?.name ? ` by ${h.by.name}` : ''}{h.note ? ` — ${h.note}` : ''}</li>)}
+            {pr.history.map((h, n) => <li key={n}>{dateTime(h.createdAt)} · {t(label(h.to))}{h.by?.name ? ` ${t('by {name}', { name: h.by.name })}` : ''}{h.note ? ` — ${h.note}` : ''}</li>)}
           </ol>
         </div>
       )}
@@ -135,6 +138,7 @@ export default function PurchaseRequestsPage() {
   const query = { page, ...(tab === 'awaiting' ? { awaitingMe: true } : tab ? { status: tab } : {}) };
   const { data, isLoading } = usePurchaseRequests(query);
   const openId = params.get('open');
+  const { t } = useT();
   const setOpen = (id) => setParams((p) => { if (id) p.set('open', id); else p.delete('open'); return p; }, { replace: true });
   const tabs = [
     ...(user.role === ROLES.ADMIN ? [{ value: 'awaiting', label: 'Awaiting my approval' }] : []),
@@ -145,21 +149,21 @@ export default function PurchaseRequestsPage() {
     <div>
       <PageHeader title="Purchase requests" description={isFinance(user) ? 'Requests to spend society money, approved by an admin other than the requester.' : 'Ask the committee before buying anything for the society.'}
         actions={<Button icon={Plus} onClick={() => setCreating(true)}>New request</Button>} />
-      <Tabs className="mb-4" value={tab} onChange={(t) => { setTab(t); setPage(1); }} tabs={tabs} />
+      <Tabs className="mb-4" value={tab} onChange={(v) => { setTab(v); setPage(1); }} tabs={tabs} />
       <Card>
         <Table loading={isLoading} rows={data?.data} empty={tab === 'awaiting' ? 'Nothing waiting for you' : 'No purchase requests'} onRowClick={(p) => setOpen(p._id)}
           columns={[
             { key: 'number', header: 'Request', render: (p) => <span className="font-mono text-xs font-semibold">{p.number}</span> },
-            { key: 'title', header: 'Title', className: 'max-w-xs', render: (p) => <div className="truncate"><p className="truncate font-medium text-slate-900">{p.title}</p><p className="text-xs text-slate-500">{p.vendor?.name || 'No vendor yet'}</p></div> },
+            { key: 'title', header: 'Title', className: 'max-w-xs', render: (p) => <div className="truncate"><p className="truncate font-medium text-slate-900">{p.title}</p><p className="text-xs text-slate-500">{p.vendor?.name || t('No vendor yet')}</p></div> },
             { key: 'amount', header: 'Amount', className: 'text-right', render: (p) => <span className="tabular-nums">{money(p.amount)}</span> },
             { key: 'requestedBy', header: 'Raised by', render: (p) => p.requestedBy?.name },
             { key: 'createdAt', header: 'Date', render: (p) => date(p.createdAt) },
-            { key: 'status', header: 'Status', render: (p) => <div className="flex items-center gap-1"><StatusBadge status={p.status} />{p.autoApproved && <Badge tone="blue">Auto</Badge>}</div> },
+            { key: 'status', header: 'Status', render: (p) => <div className="flex items-center gap-1"><StatusBadge status={p.status} />{p.autoApproved && <Badge tone="blue">{t('Auto')}</Badge>}</div> },
           ]} />
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>
       {!isLoading && !data?.data?.length && tab === '' && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="size-4" />Raise a request for repairs, supplies or services; it is tracked until the vendor bill is paid.</p>
+        <p className="mt-4 flex items-center gap-2 text-sm text-slate-500"><ClipboardList className="size-4" />{t('Raise a request for repairs, supplies or services; it is tracked until the vendor bill is paid.')}</p>
       )}
       {creating && <NewRequestModal onClose={() => setCreating(false)} />}
       {openId && <RequestDetail id={openId} onClose={() => setOpen(null)} />}

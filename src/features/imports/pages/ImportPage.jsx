@@ -6,6 +6,8 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Table, Tabs } from '../../../components/ui';
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/cn';
+import { label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 
 const KINDS = {
   units: { label: 'Units', help: 'Columns: Block, Unit number, Floor, Type (flat/villa/plot/shop/other), Area sqft. Missing blocks are created.' },
@@ -26,6 +28,7 @@ async function downloadTemplate(kind) {
 
 export default function ImportPage() {
   const toast = useToast();
+  const { t } = useT();
   const qc = useQueryClient();
   const input = useRef(null);
   const [kind, setKind] = useState('units');
@@ -65,7 +68,7 @@ export default function ImportPage() {
       const r = await send('commit');
       setResult(r);
       setPreview(null);
-      toast.success(`${r.created} created, ${r.skipped} skipped${r.failed ? `, ${r.failed} failed` : ''}`);
+      toast.success(t(r.failed ? '{created} created, {skipped} skipped, {failed} failed' : '{created} created, {skipped} skipped', { created: r.created, skipped: r.skipped, failed: r.failed }));
       qc.invalidateQueries({ queryKey: ['units'] });
       qc.invalidateQueries({ queryKey: ['users'] });
       qc.invalidateQueries({ queryKey: ['blocks'] });
@@ -98,7 +101,7 @@ export default function ImportPage() {
           return (
             <li key={s} className={cn('flex items-center gap-2 rounded-lg border px-3 py-2 text-sm', n === current ? 'border-brand-300 bg-brand-50 text-brand-800' : done ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-600')}>
               <span className={cn('flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold', done ? 'bg-emerald-600 text-white' : n === current ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-600')}>{done ? '✓' : n}</span>
-              {s}
+              {t(s)}
             </li>
           );
         })}
@@ -106,9 +109,9 @@ export default function ImportPage() {
       <Card className="mb-6">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
           <FileSpreadsheet className="size-10 shrink-0 text-emerald-600" />
-          <p className="flex-1 text-sm text-slate-600">{KINDS[kind].help}</p>
+          <p className="flex-1 text-sm text-slate-600">{t(KINDS[kind].help)}</p>
           <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" icon={Download} onClick={() => downloadTemplate(kind).catch((e) => toast.error(e.message))}>1. Download template</Button>
+            <Button variant="secondary" icon={Download} onClick={() => downloadTemplate(kind).catch((e) => toast.error(e))}>1. Download template</Button>
             <Button icon={Upload} loading={busy === 'preview'} onClick={() => input.current?.click()}>{file ? 'Choose another file' : '3. Upload to check'}</Button>
           </div>
           <input ref={input} type="file" hidden accept=".xlsx,.csv" onChange={pick} />
@@ -118,27 +121,27 @@ export default function ImportPage() {
       {preview && (
         <Card>
           <CardHeader
-            title={`Check: ${file?.name}`}
-            subtitle={`${preview.valid} of ${preview.total} rows ready${preview.invalid ? ` · ${preview.invalid} with problems (they will be skipped)` : ''}`}
-            action={<Button disabled={!preview.valid} loading={busy === 'commit'} onClick={commit}>4. Import {preview.valid} {preview.valid === 1 ? 'row' : 'rows'}</Button>}
+            title={t('Check: {file}', { file: file?.name })}
+            subtitle={t(preview.invalid ? '{valid} of {total} rows ready · {invalid} with problems (they will be skipped)' : '{valid} of {total} rows ready', { valid: preview.valid, total: preview.total, invalid: preview.invalid })}
+            action={<Button disabled={!preview.valid} loading={busy === 'commit'} onClick={commit}>{t(preview.valid === 1 ? '4. Import {n} row' : '4. Import {n} rows', { n: preview.valid })}</Button>}
           />
           <Table rows={preview.rows} rowKey="row"
             columns={[
               { key: 'row', header: 'Row' },
               { key: 'label', header: 'Record', render: (r) => <span className="font-medium text-slate-800">{r.label}</span> },
-              { key: 'errors', header: 'Check', className: 'whitespace-normal', render: (r) => (r.errors.length ? <span className="text-red-600">{r.errors.join('; ')}</span> : <Badge tone="green">OK</Badge>) },
+              { key: 'errors', header: 'Check', className: 'whitespace-normal', render: (r) => (r.errors.length ? <span className="text-red-600">{r.errors.join('; ')}</span> : <Badge tone="green">{t('OK')}</Badge>) },
             ]} />
         </Card>
       )}
 
       {result && (
         <Card>
-          <CardHeader title="Import finished" subtitle={`${result.created} created · ${result.skipped} skipped · ${result.failed} failed · ${result.invalid} invalid`} />
+          <CardHeader title="Import finished" subtitle={t('{created} created · {skipped} skipped · {failed} failed · {invalid} invalid', { created: result.created, skipped: result.skipped, failed: result.failed, invalid: result.invalid })} />
           <Table rows={result.results} rowKey="row"
             columns={[
               { key: 'row', header: 'Row' },
               { key: 'label', header: 'Record' },
-              { key: 'status', header: 'Result', render: (r) => <Badge tone={TONE[r.status]}>{r.status}</Badge> },
+              { key: 'status', header: 'Result', render: (r) => <Badge tone={TONE[r.status]}>{t(label(r.status))}</Badge> },
               { key: 'message', header: 'Note', className: 'whitespace-normal text-xs text-slate-500' },
             ]} />
         </Card>

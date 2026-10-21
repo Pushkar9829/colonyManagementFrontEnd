@@ -1,13 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { fillVars } from './lib';
 
 // Platform team: permission catalogue, roles, members and the activity log.
 export const usePermissionCatalogue = () => useQuery({ queryKey: ['platform', 'permissions'], queryFn: () => api.get('/platform/permissions'), staleTime: Infinity });
 export const usePlatformRoles = (enabled = true) => useQuery({ queryKey: ['platform', 'roles'], queryFn: () => api.get('/platform/roles'), enabled });
 
 const TEAM = [['platform', 'roles'], ['platform', 'team'], ['platform', 'activity']];
-export const useCreateRole = (o) => useApiMutation((b) => api.post('/platform/roles', b), { invalidate: TEAM, success: (r) => `Role “${r.name}” created`, ...o });
+export const useCreateRole = (o) => useApiMutation((b) => api.post('/platform/roles', b), { invalidate: TEAM, success: (r, _v, t = fillVars) => t('Role “{name}” created', { name: r.name }), ...o });
 export const useUpdateRole = (o) => useApiMutation(({ id, ...b }) => api.patch(`/platform/roles/${id}`, b), { invalidate: TEAM, success: 'Role saved', ...o });
 export const useDeleteRole = (o) => useApiMutation((id) => api.del(`/platform/roles/${id}`), { invalidate: TEAM, success: 'Role deleted', ...o });
 

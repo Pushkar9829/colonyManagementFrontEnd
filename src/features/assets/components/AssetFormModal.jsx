@@ -5,12 +5,14 @@ import { toPaise, toRupees } from '../../../lib/format';
 import { useCreateAsset, useUpdateAsset } from '../api';
 import { CATEGORIES } from '../constants';
 import { clean } from '../shared';
+import { useT } from '../../../context/LanguageContext';
 
 const EMPTY = { category: 'lift', name: '', tag: '', location: '', make: '', model: '', serialNumber: '', capacity: '', purchaseDate: '', purchaseCost: '', warrantyExpiry: '', notes: '' };
 const EDITABLE = Object.keys(EMPTY);
 
 // Create a new asset, or edit an existing one (pass `asset`).
 export function AssetFormModal({ open, onClose, asset, onSaved }) {
+  const { t } = useT();
   const { values, bind, setValues, applyServerErrors } = useForm(EMPTY);
   const [photos, setPhotos] = useState([]);
   useEffect(() => {
@@ -42,8 +44,8 @@ export function AssetFormModal({ open, onClose, asset, onSaved }) {
   };
 
   return (
-    <Modal open={open} onClose={onClose} title={asset ? `Edit ${asset.code}` : 'Register asset'} size="lg"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>{asset ? 'Save' : 'Register'}</Button></>}>
+    <Modal open={open} onClose={onClose} title={asset ? t('Edit {code}', { code: asset.code }) : 'Register asset'} size="lg"
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>{asset ? t('Save') : t('Register')}</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Select label="Category" options={CATEGORIES} {...bind('category')} />
         <Input label="Name" required placeholder="e.g. Lift A1" {...bind('name')} />

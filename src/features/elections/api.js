@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['elections', 'notices'] };
 const on = (id, path = '') => `/elections/${id}${path}`;
@@ -19,7 +20,7 @@ export const useResolveTie = (o) => useApiMutation(({ id, ...b }) => api.post(on
 export const useNominate = (o) => useApiMutation(({ id, ...b }) => api.post(on(id, '/nominations'), b), { ...inv, success: (n) => (n.status === 'accepted' ? 'Nomination filed' : 'Nomination sent to the candidate for acceptance'), ...o });
 export const useRespondNomination = () => useApiMutation(({ id, nid, accept }) => api.post(on(id, `/nominations/${nid}/respond`), { accept }), { ...inv, success: 'Response recorded' });
 export const useWithdrawNomination = () => useApiMutation(({ id, nid }) => api.post(on(id, `/nominations/${nid}/withdraw`)), { ...inv, success: 'Nomination withdrawn' });
-export const useScrutiny = () => useApiMutation(({ id, nid, ...b }) => api.post(on(id, `/nominations/${nid}/scrutiny`), b), { ...inv, success: (n) => `Nomination ${n.status}` });
+export const useScrutiny = () => useApiMutation(({ id, nid, ...b }) => api.post(on(id, `/nominations/${nid}/scrutiny`), b), { ...inv, success: (n) => (n.status === 'approved' ? 'Nomination approved' : n.status === 'rejected' ? 'Nomination rejected' : tt('Nomination {status}', { status: n.status })) });
 export const useVoteCode = () => useApiMutation((id) => api.post(on(id, '/vote-code')), { success: false });
 export const useCastVote = (o) => useApiMutation(({ id, ...b }) => api.post(on(id, '/vote'), b), { ...inv, success: 'Your vote has been cast', ...o });
 export const verifyTracker = (id, tracker) => api.get(on(id, '/verify'), { tracker });

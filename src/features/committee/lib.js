@@ -17,7 +17,7 @@ export async function downloadPdf(path, filename) {
   }
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`);
+    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`, undefined, json.error);
   }
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);

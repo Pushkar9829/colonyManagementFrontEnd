@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, CardHeader, Checkbox, ErrorState, Input, PageLoader } from '../../../components/ui';
 import { toPaise, toRupees } from '../../../lib/format';
 import { useFinanceSettings, useSaveFinanceSettings } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const fromServer = (s) => ({
   gstin: s.gstin || '',
@@ -37,15 +38,16 @@ const toServer = (f) => ({
 
 // Editable list of { head, <field> } rows.
 function HeadRows({ rows, field, fieldLabel, placeholder, onChange }) {
+  const { t } = useT();
   const update = (i, patch) => onChange(rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   return (
     <div className="space-y-2">
       {rows.map((r, i) => (
         // eslint-disable-next-line react/no-array-index-key
         <div key={i} className="flex items-end gap-2">
-          <Input className="min-w-0 flex-1" label={i === 0 ? 'Charge name' : undefined} aria-label="Charge name" placeholder="e.g. Sinking fund" value={r.head} onChange={(e) => update(i, { head: e.target.value })} />
-          <Input className="w-32" label={i === 0 ? fieldLabel : undefined} aria-label={`${fieldLabel} for ${r.head || 'this charge'}`} placeholder={placeholder} value={r[field]} onChange={(e) => update(i, { [field]: e.target.value })} />
-          <Button variant="ghost" icon={Trash2} aria-label={`Remove ${r.head || 'charge'}`} onClick={() => onChange(rows.filter((_, j) => j !== i))} />
+          <Input className="min-w-0 flex-1" label={i === 0 ? 'Charge name' : undefined} aria-label={t('Charge name')} placeholder="e.g. Sinking fund" value={r.head} onChange={(e) => update(i, { head: e.target.value })} />
+          <Input className="w-32" label={i === 0 ? fieldLabel : undefined} aria-label={r.head ? t('{field} for {head}', { field: t(fieldLabel), head: r.head }) : t('{field} for this charge', { field: t(fieldLabel) })} placeholder={placeholder} value={r[field]} onChange={(e) => update(i, { [field]: e.target.value })} />
+          <Button variant="ghost" icon={Trash2} aria-label={r.head ? t('Remove {name}', { name: r.head }) : t('Remove charge')} onClick={() => onChange(rows.filter((_, j) => j !== i))} />
         </div>
       ))}
       <Button size="sm" variant="secondary" icon={Plus} onClick={() => onChange([...rows, { head: '', [field]: '' }])}>Add charge</Button>
@@ -54,6 +56,7 @@ function HeadRows({ rows, field, fieldLabel, placeholder, onChange }) {
 }
 
 export default function FinanceSettingsPage() {
+  const { t } = useT();
   const { data, isLoading, error, refetch } = useFinanceSettings();
   const save = useSaveFinanceSettings();
   const [form, setForm] = useState(null);
@@ -80,7 +83,7 @@ export default function FinanceSettingsPage() {
           <Input label="Default GST rate (%)" type="number" min={0} max={28} {...f('gstDefaultRate')} />
           <Input label="Exempt up to (₹ / month)" type="number" min={0} hint="Members billed at or below this pay no GST (0 = always charge)" {...f('gstExemptUpTo')} />
           <div className="sm:col-span-3">
-            <p className="mb-2 text-sm font-medium text-slate-700">GST rate per charge (e.g. sinking fund at 0%)</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">{t('GST rate per charge (e.g. sinking fund at 0%)')}</p>
             <HeadRows rows={form.headGst} field="rate" fieldLabel="Rate %" placeholder="18" onChange={(headGst) => setForm({ ...form, headGst })} />
           </div>
         </div>
@@ -90,7 +93,7 @@ export default function FinanceSettingsPage() {
         <CardHeader title="Fund & account mapping" subtitle="Which account each charge is credited to. Charges not listed go to 4000 (maintenance income)." />
         <div className="p-5">
           <HeadRows rows={form.headAccounts} field="account" fieldLabel="Account code" placeholder="3100" onChange={(headAccounts) => setForm({ ...form, headAccounts })} />
-          <p className="mt-3 text-xs text-slate-500">Common codes: 3100 Sinking fund · 3200 Repair fund · 4000 Maintenance income. Metered utilities use the heads Water, Electricity and Gas.</p>
+          <p className="mt-3 text-xs text-slate-500">{t('Common codes: 3100 Sinking fund · 3200 Repair fund · 4000 Maintenance income. Metered utilities use the heads Water, Electricity and Gas.')}</p>
         </div>
       </Card>
 
@@ -117,7 +120,7 @@ export default function FinanceSettingsPage() {
 
       {/* the form is long — keep Save in view (above the phone shortcut bar) */}
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/95 px-5 py-3 shadow-sm backdrop-blur lg:bottom-0">
-        <p className="min-w-0 flex-1 text-xs text-slate-500">Save after changing anything above.</p>
+        <p className="min-w-0 flex-1 text-xs text-slate-500">{t('Save after changing anything above.')}</p>
         <Button loading={save.isPending} onClick={submit}>Save settings</Button>
       </div>
     </div>

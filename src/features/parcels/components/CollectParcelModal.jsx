@@ -3,6 +3,7 @@ import { Button, Field, Input, Modal } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
 import { COLLECTOR_TYPES, useCollectParcel } from '../api';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 function CollectBody({ parcel, onClose, onDone }) {
   const [otp, setOtp] = useState('');
@@ -18,7 +19,7 @@ function CollectBody({ parcel, onClose, onDone }) {
     setErrors({});
     collect.mutate(
       { id: parcel._id, otp, collectedByType: type, collectedByName: type === 'resident' ? undefined : name.trim() || undefined },
-      { onError: (err) => setErrors(Object.keys(err.fieldErrors || {}).length ? err.fieldErrors : { otp: err.message }) },
+      { onError: (err) => setErrors(Object.keys(err.fieldErrors || {}).length ? err.fieldErrors : { otp: errorText(err, tx) }) },
     );
   };
 

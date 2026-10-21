@@ -5,6 +5,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, FilterBar, Input, Pagination, Select, Table, Tabs } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { date, label, money, toPaise, toRupees } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
 import { useCreateShift, useEmployees, useHrSettings, useShifts, useUpdateHrSettings, useUpdateShift } from '../api';
@@ -14,6 +15,7 @@ const PV_TONES = { verified: 'green', submitted: 'amber', failed: 'red', not_sta
 const grossOf = (s = {}) => (s.basic || 0) + (s.hra || 0) + (s.allowances || []).reduce((t, a) => t + a.amount, 0);
 
 function EmployeesTab({ manager, creating, setCreating }) {
+  const { t } = useT();
   const [f, setF] = useState({ search: '', department: '', status: 'active', page: 1 });
   const { data, isLoading } = useEmployees(Object.fromEntries(Object.entries(f).filter(([, v]) => v)));
   const [edit, setEdit] = useState(null);
@@ -28,14 +30,14 @@ function EmployeesTab({ manager, creating, setCreating }) {
       <Table loading={isLoading} rows={data?.data} empty="No employees yet" onRowClick={manager ? setEdit : undefined}
         emptyAction={manager && <Button icon={Plus} onClick={() => setCreating(true)}>Add employee</Button>}
         columns={[
-          { key: 'name', header: 'Name', render: (e) => <div><p className="font-medium text-slate-900">{e.user?.name}</p><p className="text-xs text-slate-500">{e.designation || label(e.membership?.role)} · {label(e.department)}</p></div> },
+          { key: 'name', header: 'Name', render: (e) => <div><p className="font-medium text-slate-900">{e.user?.name}</p><p className="text-xs text-slate-500">{e.designation || t(label(e.membership?.role))} · {t(label(e.department))}</p></div> },
           { key: 'employeeCode', header: 'Code', render: (e) => <span className="font-mono text-xs font-semibold">{e.employeeCode}</span> },
           { key: 'doj', header: 'Joined', mobile: false, render: (e) => (e.dateOfJoining ? date(e.dateOfJoining) : '—') },
           { key: 'shift', header: 'Shift', mobile: false, render: (e) => (e.defaultShift ? `${e.defaultShift.name} ${e.defaultShift.start}–${e.defaultShift.end}` : '—') },
           { key: 'gross', header: 'Gross / month', render: (e) => money(grossOf(e.salary)) },
-          { key: 'bank', header: 'Bank', render: (e) => (e.bank?.accountLast4 ? `•••• ${e.bank.accountLast4}` : <span className="text-amber-600">Missing</span>) },
-          { key: 'pv', header: 'Police verification', render: (e) => <Badge tone={PV_TONES[e.policeVerification?.status || 'not_started']}>{label(e.policeVerification?.status || 'not_started')}</Badge> },
-          { key: 'status', header: '', render: (e) => (e.status === 'inactive' ? <Badge>Left</Badge> : null) },
+          { key: 'bank', header: 'Bank', render: (e) => (e.bank?.accountLast4 ? `•••• ${e.bank.accountLast4}` : <span className="text-amber-600">{t('Missing')}</span>) },
+          { key: 'pv', header: 'Police verification', render: (e) => <Badge tone={PV_TONES[e.policeVerification?.status || 'not_started']}>{t(label(e.policeVerification?.status || 'not_started'))}</Badge> },
+          { key: 'status', header: '', render: (e) => (e.status === 'inactive' ? <Badge>{t('Left')}</Badge> : null) },
         ]} />
       <Pagination meta={data?.meta} onPage={(page) => setF((x) => ({ ...x, page }))} />
       <EmployeeModal open={creating || Boolean(edit)} employee={edit} onClose={() => { setCreating(false); setEdit(null); }} />
@@ -44,6 +46,7 @@ function EmployeesTab({ manager, creating, setCreating }) {
 }
 
 function ShiftsTab() {
+  const { t } = useT();
   const { data, isLoading } = useShifts();
   const [form, setForm] = useState({ name: '', start: '08:00', end: '20:00' });
   const create = useCreateShift({ onSuccess: () => setForm({ name: '', start: '08:00', end: '20:00' }) });
@@ -60,7 +63,7 @@ function ShiftsTab() {
       <Table loading={isLoading} rows={data} empty="No shifts yet"
         columns={[
           { key: 'name', header: 'Shift', render: (s) => <span className="font-medium">{s.name}</span> },
-          { key: 'time', header: 'Hours', render: (s) => `${s.start} – ${s.end}${s.end <= s.start ? ' (next day)' : ''}` },
+          { key: 'time', header: 'Hours', render: (s) => `${s.start} – ${s.end}${s.end <= s.start ? ` ${t('(next day)')}` : ''}` },
           { key: 'active', header: '', render: (s) => <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: s._id, active: !s.active })}>{s.active ? 'Disable' : 'Enable'}</Button> },
         ]} />
     </Card>
@@ -69,6 +72,7 @@ function ShiftsTab() {
 
 function SettingsTab() {
   const toast = useToast();
+  const { t } = useT();
   const { data } = useHrSettings();
   const save = useUpdateHrSettings();
   const [v, setV] = useState(null);
@@ -87,7 +91,7 @@ function SettingsTab() {
   const useHere = () =>
     navigator.geolocation?.getCurrentPosition(
       (p) => setV((x) => ({ ...x, lat: p.coords.latitude.toFixed(6), lng: p.coords.longitude.toFixed(6) })),
-      () => toast.error('Could not read your location'),
+      () => toast.error(t('Could not read your location')),
       { enableHighAccuracy: true, timeout: 10000 },
     );
   const submit = () =>

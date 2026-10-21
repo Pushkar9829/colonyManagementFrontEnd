@@ -6,10 +6,12 @@ import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { useCreateGate, useGates, useRemoveGate, useReorderGates, useUpdateGate } from '../api';
 import { describeGate, KINDS } from '../gateRules';
+import { useT } from '../../../context/LanguageContext';
 
 const BLANK = { name: '', code: '', allowVisitors: true, allowVehicles: true, allowStaff: true, allowDeliveries: true, isPedestrianOnly: false, notes: '' };
 
 function GateModal({ gate, onClose }) {
+  const { t } = useT();
   const { values, set, bind, errors, applyServerErrors } = useForm(gate ? { ...BLANK, ...gate, notes: gate.notes || '' } : BLANK);
   const create = useCreateGate({ onSuccess: onClose });
   const update = useUpdateGate({ onSuccess: onClose });
@@ -30,7 +32,7 @@ function GateModal({ gate, onClose }) {
     <Modal
       open
       onClose={onClose}
-      title={gate ? `Edit ${gate.name}` : 'Add a gate'}
+      title={gate ? t('Edit {name}', { name: gate.name }) : 'Add a gate'}
       description="Guards choose their gate in the gate console; what the gate takes decides what can be logged there."
       footer={
         <>
@@ -45,15 +47,15 @@ function GateModal({ gate, onClose }) {
           <Input label="Code" placeholder="SVC" maxLength={8} hint="Short label" {...bind('code')} onChange={(e) => set('code', e.target.value.toUpperCase())} />
         </div>
         <fieldset className="space-y-2">
-          <legend className="mb-1 text-sm font-medium text-slate-700">This gate takes</legend>
+          <legend className="mb-1 text-sm font-medium text-slate-700">{t('This gate takes')}</legend>
           {KINDS.map((k) => (
             <Checkbox key={k.flag} className="flex" label={k.label} checked={values[k.flag]} onChange={(e) => set(k.flag, e.target.checked)} />
           ))}
           <Checkbox className="flex" label="People on foot only (no vehicles)" checked={values.isPedestrianOnly} onChange={(e) => set('isPedestrianOnly', e.target.checked)} />
-          {(none || errors.allowVisitors) && <p className="text-xs text-red-600">{errors.allowVisitors || 'Tick at least one'}</p>}
+          {(none || errors.allowVisitors) && <p className="text-xs text-red-600">{errors.allowVisitors || t('Tick at least one')}</p>}
         </fieldset>
         <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          <span className="font-medium">{values.name.trim() || 'This gate'}</span> — {describeGate(values).replace(/^./, (c) => c.toLowerCase())}
+          <span className="font-medium">{values.name.trim() || t('This gate')}</span> — {describeGate(values, t).replace(/^./, (c) => c.toLowerCase())}
         </p>
         <Textarea label="Notes" rows={2} placeholder="Opening hours, location…" {...bind('notes')} />
       </form>
@@ -63,6 +65,7 @@ function GateModal({ gate, onClose }) {
 
 // One tap to switch what a gate takes, right in the list.
 function KindToggles({ gate, onToggle, busy }) {
+  const { t } = useT();
   return (
     <div className="flex flex-wrap gap-1.5">
       {KINDS.map((k) => {
@@ -73,20 +76,21 @@ function KindToggles({ gate, onToggle, busy }) {
             type="button"
             disabled={busy || !gate.active}
             aria-pressed={on}
-            title={`${on ? 'Stop' : 'Start'} taking ${k.word} at ${gate.name}`}
+            title={on ? t('Stop taking {kind} at {gate}', { kind: t(k.word), gate: gate.name }) : t('Start taking {kind} at {gate}', { kind: t(k.word), gate: gate.name })}
             onClick={() => onToggle(gate, k.flag)}
             className={cn('rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset transition disabled:opacity-60', on ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' : 'bg-slate-50 text-slate-400 line-through ring-slate-300')}
           >
-            {k.label}
+            {t(k.label)}
           </button>
         );
       })}
-      {gate.isPedestrianOnly && <Badge tone="blue"><Footprints className="mr-1 size-3" />On foot</Badge>}
+      {gate.isPedestrianOnly && <Badge tone="blue"><Footprints className="mr-1 size-3" />{t('On foot')}</Badge>}
     </div>
   );
 }
 
 export default function GatesPage() {
+  const { t } = useT();
   const [showClosed, setShowClosed] = useState(false);
   const [editing, setEditing] = useState(null); // null | 'new' | gate
   const { data = [], isLoading } = useGates({ includeInactive: true });
@@ -110,7 +114,7 @@ export default function GatesPage() {
     update.mutate({ id: gate._id, [flag]: next[flag] });
   };
   const close = (gate) => {
-    if (window.confirm(`Close ${gate.name}? Guards can no longer pick it. A gate with history is kept (closed) so old records still show it.`)) remove.mutate(gate._id);
+    if (window.confirm(t('Close {name}? Guards can no longer pick it. A gate with history is kept (closed) so old records still show it.', { name: gate.name }))) remove.mutate(gate._id);
   };
 
   return (
@@ -141,14 +145,14 @@ export default function GatesPage() {
                     <p className="font-medium text-slate-900">
                       {g.name} <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs font-normal text-slate-600">{g.code}</span>
                     </p>
-                    <p className="text-xs text-slate-500">{describeGate(g)}</p>
+                    <p className="text-xs text-slate-500">{describeGate(g, t)}</p>
                     {g.notes && <p className="text-xs text-slate-400">{g.notes}</p>}
                   </div>
                 </div>
               ),
             },
             { key: 'kinds', header: 'Takes', render: (g) => <KindToggles gate={g} onToggle={toggle} busy={update.isPending} /> },
-            { key: 'active', header: 'Status', render: (g) => (g.active ? <Badge tone="green">Open</Badge> : <Badge>Closed</Badge>) },
+            { key: 'active', header: 'Status', render: (g) => (g.active ? <Badge tone="green">{t('Open')}</Badge> : <Badge>{t('Closed')}</Badge>) },
             {
               key: 'actions',
               header: '',
@@ -157,11 +161,11 @@ export default function GatesPage() {
                 const i = data.findIndex((x) => x._id === g._id);
                 return (
                   <div className="flex flex-wrap justify-end gap-1">
-                    <Button size="sm" variant="ghost" icon={ArrowUp} aria-label={`Move ${g.name} up`} disabled={i === 0 || reorder.isPending} onClick={() => move(g, -1)} />
-                    <Button size="sm" variant="ghost" icon={ArrowDown} aria-label={`Move ${g.name} down`} disabled={i === data.length - 1 || reorder.isPending} onClick={() => move(g, 1)} />
+                    <Button size="sm" variant="ghost" icon={ArrowUp} aria-label={t('Move {name} up', { name: g.name })} disabled={i === 0 || reorder.isPending} onClick={() => move(g, -1)} />
+                    <Button size="sm" variant="ghost" icon={ArrowDown} aria-label={t('Move {name} down', { name: g.name })} disabled={i === data.length - 1 || reorder.isPending} onClick={() => move(g, 1)} />
                     <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(g)}>Edit</Button>
                     {g.active ? (
-                      <Button size="sm" variant="ghost" icon={Trash2} disabled={openCount <= 1} title={openCount <= 1 ? 'The society needs at least one open gate' : undefined} onClick={() => close(g)}>
+                      <Button size="sm" variant="ghost" icon={Trash2} disabled={openCount <= 1} title={openCount <= 1 ? t('The society needs at least one open gate') : undefined} onClick={() => close(g)}>
                         Close
                       </Button>
                     ) : (

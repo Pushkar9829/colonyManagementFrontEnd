@@ -5,6 +5,7 @@ import { Badge, Button, Card, CardHeader, ErrorState, Input, PageLoader } from '
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/cn';
+import { tr, useT } from '../../../context/LanguageContext';
 import { dateTime, label } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
 import { MODE_LABELS, ROUTE_TONES, STATUS_BADGES } from '../lib';
@@ -16,13 +17,14 @@ const MODE_INFO = {
 };
 
 function Step({ done, n, title, children }) {
+  const { t } = useT();
   return (
     <li className="flex gap-3">
       <span className={cn('mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold', done ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600')}>
         {done ? <CheckCircle2 className="size-4" aria-hidden="true" /> : n}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-slate-800">{title}</p>
+        <p className="font-medium text-slate-800">{tr(t, title)}</p>
         <div className="mt-1 text-sm text-slate-600">{children}</div>
       </div>
     </li>
@@ -30,6 +32,7 @@ function Step({ done, n, title, children }) {
 }
 
 function OwnKeysForm({ settings, canEdit }) {
+  const { t } = useT();
   const [form, setForm] = useState({ keyId: settings.own.keyId || '', keySecret: '', webhookSecret: '' });
   const [errors, setErrors] = useState({});
   const save = useSaveOwnKeys({ onSuccess: () => setForm((f) => ({ ...f, keySecret: '', webhookSecret: '' })) });
@@ -41,14 +44,15 @@ function OwnKeysForm({ settings, canEdit }) {
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <Input label="Key id" disabled={!canEdit} placeholder="rzp_live_…" value={form.keyId} onChange={set('keyId')} error={errors.keyId} />
-      <Input label="Key secret" type="password" autoComplete="off" disabled={!canEdit} placeholder={settings.own.keySecretLast4 ? `saved ••••${settings.own.keySecretLast4}` : 'from Razorpay → API keys'} value={form.keySecret} onChange={set('keySecret')} error={errors.keySecret} hint="Stored encrypted, never shown again" />
-      <Input label="Webhook secret" type="password" autoComplete="off" disabled={!canEdit} placeholder={settings.own.webhookSecretLast4 ? `saved ••••${settings.own.webhookSecretLast4}` : 'any long secret'} value={form.webhookSecret} onChange={set('webhookSecret')} error={errors.webhookSecret} />
+      <Input label="Key secret" type="password" autoComplete="off" disabled={!canEdit} placeholder={settings.own.keySecretLast4 ? t('saved ••••{last4}', { last4: settings.own.keySecretLast4 }) : 'from Razorpay → API keys'} value={form.keySecret} onChange={set('keySecret')} error={errors.keySecret} hint="Stored encrypted, never shown again" />
+      <Input label="Webhook secret" type="password" autoComplete="off" disabled={!canEdit} placeholder={settings.own.webhookSecretLast4 ? t('saved ••••{last4}', { last4: settings.own.webhookSecretLast4 }) : 'any long secret'} value={form.webhookSecret} onChange={set('webhookSecret')} error={errors.webhookSecret} />
       {canEdit && <div className="sm:col-span-3"><Button size="sm" loading={save.isPending} disabled={!form.keyId && !form.keySecret && !form.webhookSecret} onClick={submit}>Save keys</Button></div>}
     </div>
   );
 }
 
 export default function OnlinePaymentsPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const toast = useToast();
   const { data: s, isLoading, error, refetch } = usePaymentSettings();
@@ -69,9 +73,9 @@ export default function OnlinePaymentsPage() {
   const copy = async (text) => {
     try {
       await navigator.clipboard.writeText(text);
-      toast.success('Copied');
+      toast.success(t('Copied'));
     } catch {
-      toast.error('Could not copy');
+      toast.error(t('Could not copy'));
     }
   };
 
@@ -83,21 +87,21 @@ export default function OnlinePaymentsPage() {
           <div className="flex items-center gap-3">
             <Wallet className="size-8 text-brand-600" aria-hidden="true" />
             <div>
-              <p className="font-semibold text-slate-900">{MODE_LABELS[s.mode]}</p>
-              <p className="text-sm text-slate-500">{s.status === 'active' ? `Residents can pay online${s.activatedAt ? ` · live since ${dateTime(s.activatedAt)}` : ''}` : s.statusReason}</p>
+              <p className="font-semibold text-slate-900">{t(MODE_LABELS[s.mode])}</p>
+              <p className="text-sm text-slate-500">{s.status === 'active' ? (s.activatedAt ? t('Residents can pay online · live since {date}', { date: dateTime(s.activatedAt) }) : t('Residents can pay online')) : s.statusReason}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={badge.tone}>{badge.text}</Badge>
-            {s.provider === 'mock' && <Badge tone="sky">Test mode</Badge>}
-            {canEdit && s.status === 'active' && <Button size="sm" variant="secondary" icon={Power} loading={disable.isPending} onClick={() => window.confirm('Residents will not be able to pay online until you switch it on again. Continue?') && disable.mutate()}>Switch off</Button>}
+            <Badge tone={badge.tone}>{t(badge.text)}</Badge>
+            {s.provider === 'mock' && <Badge tone="sky">{t('Test mode')}</Badge>}
+            {canEdit && s.status === 'active' && <Button size="sm" variant="secondary" icon={Power} loading={disable.isPending} onClick={() => window.confirm(t('Residents will not be able to pay online until you switch it on again. Continue?')) && disable.mutate()}>Switch off</Button>}
           </div>
         </div>
         {s.forceDisabled && (
-          <p className="flex items-start gap-2 border-t border-red-100 bg-red-50 px-5 py-3 text-sm text-red-700"><CircleAlert className="mt-0.5 size-4 shrink-0" />ColonyHub has switched online payments off for your society{s.forceDisabledReason ? `: ${s.forceDisabledReason}` : ''}. Contact support.</p>
+          <p className="flex items-start gap-2 border-t border-red-100 bg-red-50 px-5 py-3 text-sm text-red-700"><CircleAlert className="mt-0.5 size-4 shrink-0" />{s.forceDisabledReason ? t('ColonyHub has switched online payments off for your society: {reason}. Contact support.', { reason: s.forceDisabledReason }) : t('ColonyHub has switched online payments off for your society. Contact support.')}</p>
         )}
         {s.legacy && (
-          <p className="border-t border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800">Payments currently go to the ColonyHub account (the original setup). Choose one of the options below so money reaches your society directly.</p>
+          <p className="border-t border-amber-100 bg-amber-50 px-5 py-3 text-sm text-amber-800">{t('Payments currently go to the ColonyHub account (the original setup). Choose one of the options below so money reaches your society directly.')}</p>
         )}
       </Card>
 
@@ -110,10 +114,10 @@ export default function OnlinePaymentsPage() {
             <button key={mode} type="button" disabled={!canEdit || !allowed || selected || choose.isPending || s.forceDisabled} onClick={() => choose.mutate(mode)}
               className={cn('rounded-xl border p-4 text-left transition disabled:cursor-default', selected ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500' : 'border-slate-200 bg-white hover:border-slate-300', !allowed && 'opacity-50')}>
               <div className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 font-medium text-slate-900"><Icon className="size-5 text-brand-600" aria-hidden="true" />{MODE_LABELS[mode]}</span>
-                {selected ? <Badge tone="brand">Selected</Badge> : !allowed ? <Badge>Not available</Badge> : null}
+                <span className="flex items-center gap-2 font-medium text-slate-900"><Icon className="size-5 text-brand-600" aria-hidden="true" />{t(MODE_LABELS[mode])}</span>
+                {selected ? <Badge tone="brand">{t('Selected')}</Badge> : !allowed ? <Badge>{t('Not available')}</Badge> : null}
               </div>
-              <p className="mt-2 text-sm text-slate-600">{MODE_INFO[mode].text}</p>
+              <p className="mt-2 text-sm text-slate-600">{t(MODE_INFO[mode].text)}</p>
             </button>
           );
         })}
@@ -129,11 +133,11 @@ export default function OnlinePaymentsPage() {
             <Step n={2} done={connected} title="Test the connection">
               <div className="flex flex-wrap items-center gap-2">
                 {canEdit && <Button size="sm" variant="secondary" icon={PlugZap} loading={testConn.isPending} disabled={!s.own.keySecretLast4} onClick={() => testConn.mutate()}>Test connection</Button>}
-                {s.own.connection && <span className={s.own.connection.ok ? 'text-emerald-700' : 'text-red-600'}>{s.own.connection.ok ? 'Connected' : s.own.connection.error} · {dateTime(s.own.connection.at)}</span>}
+                {s.own.connection && <span className={s.own.connection.ok ? 'text-emerald-700' : 'text-red-600'}>{s.own.connection.ok ? t('Connected') : s.own.connection.error} · {dateTime(s.own.connection.at)}</span>}
               </div>
             </Step>
             <Step n={3} done={Boolean(s.own.webhookSecretLast4)} title="Add the webhook in Razorpay (recommended)">
-              <p>Dashboard → Webhooks → Add: this URL, your webhook secret, events payment.captured, payment.failed, order.paid and token.*.</p>
+              <p>{t('Dashboard → Webhooks → Add: this URL, your webhook secret, events payment.captured, payment.failed, order.paid and token.*.')}</p>
               {s.webhookUrl && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg bg-slate-50 p-2">
                   <code className="min-w-0 flex-1 break-all text-xs">{s.webhookUrl}</code>
@@ -149,13 +153,13 @@ export default function OnlinePaymentsPage() {
         <Card className="mb-6">
           <CardHeader title="Razorpay Route onboarding" subtitle="ColonyHub registers your society’s bank account with Razorpay as a linked account" />
           <dl className="grid gap-3 p-5 text-sm sm:grid-cols-2">
-            <div className="flex justify-between gap-2"><dt className="text-slate-500">Linked account</dt><dd className="font-mono">{s.route.linkedAccountId || 'Being set up'}</dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-slate-500">Status</dt><dd><Badge tone={ROUTE_TONES[s.route.status]}>{label(s.route.status)}</Badge></dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-slate-500">KYC</dt><dd>{s.route.kycStatus ? label(s.route.kycStatus) : '—'}</dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-slate-500">Bank account</dt><dd>{s.route.bank?.accountLast4 ? `${s.route.bank.bankName || ''} ••••${s.route.bank.accountLast4}` : '—'}</dd></div>
-            <div className="flex justify-between gap-2"><dt className="text-slate-500">Platform commission</dt><dd>{s.route.commissionPercent}%</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-slate-500">{t('Linked account')}</dt><dd className="font-mono">{s.route.linkedAccountId || t('Being set up')}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-slate-500">{t('Status')}</dt><dd><Badge tone={ROUTE_TONES[s.route.status]}>{t(label(s.route.status))}</Badge></dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-slate-500">KYC</dt><dd>{s.route.kycStatus ? t(label(s.route.kycStatus)) : '—'}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-slate-500">{t('Bank account')}</dt><dd>{s.route.bank?.accountLast4 ? `${s.route.bank.bankName || ''} ••••${s.route.bank.accountLast4}` : '—'}</dd></div>
+            <div className="flex justify-between gap-2"><dt className="text-slate-500">{t('Platform commission')}</dt><dd>{s.route.commissionPercent}%</dd></div>
           </dl>
-          {s.route.status !== 'active' && <p className="px-5 pb-5 text-sm text-slate-500">Send your bank details and KYC documents to ColonyHub support. Online payments can be switched on once Razorpay activates the account.</p>}
+          {s.route.status !== 'active' && <p className="px-5 pb-5 text-sm text-slate-500">{t('Send your bank details and KYC documents to ColonyHub support. Online payments can be switched on once Razorpay activates the account.')}</p>}
         </Card>
       )}
 
@@ -164,7 +168,7 @@ export default function OnlinePaymentsPage() {
           <CardHeader title="Go live" />
           <div className="flex flex-wrap items-center gap-3 p-5">
             {canEdit && <Button variant="secondary" loading={testPay.isPending} disabled={s.forceDisabled || (own && !connected) || (route && s.route.status !== 'active')} onClick={() => testPay.mutate()}>Test ₹1 payment</Button>}
-            {s.testPayment && <span className={testOk ? 'text-sm text-emerald-700' : 'text-sm text-slate-500'}>{testOk ? `₹1 test payment succeeded · ${dateTime(s.testPayment.at)}` : s.testPayment.error || 'Not tested with this mode'}</span>}
+            {s.testPayment && <span className={testOk ? 'text-sm text-emerald-700' : 'text-sm text-slate-500'}>{testOk ? t('₹1 test payment succeeded · {date}', { date: dateTime(s.testPayment.at) }) : s.testPayment.error || t('Not tested with this mode')}</span>}
             <div className="flex-1" />
             {canEdit && s.status !== 'active' && <Button icon={Power} loading={enable.isPending} disabled={s.forceDisabled} onClick={() => enable.mutate()}>Switch on online payments</Button>}
           </div>

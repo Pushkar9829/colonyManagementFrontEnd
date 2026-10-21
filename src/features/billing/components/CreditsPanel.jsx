@@ -3,6 +3,7 @@ import { Button, Card, CardHeader, Input, Modal, Pagination, Select, StatusBadge
 import { useForm } from '../../../hooks/useForm';
 import { date, label, money, toPaise, todayISO } from '../../../lib/format';
 import { UnitPicker } from '../../units/components/UnitPicker';
+import { useT } from '../../../context/LanguageContext';
 import { useAdjustments, useCreditHolders, useIssueCredit, useRecordAdvance, useRefund } from '../api';
 
 const METHODS = ['upi', 'cash', 'cheque', 'bank'].map((m) => ({ value: m, label: label(m) }));
@@ -29,10 +30,11 @@ export function AdvanceModal({ onClose }) {
 }
 
 function RefundModal({ holder, onClose }) {
+  const { t } = useT();
   const { values, bind, applyServerErrors } = useForm({ amount: String(holder.balance / 100), method: 'bank', reference: '', reason: '' });
   const refund = useRefund({ onSuccess: onClose });
   return (
-    <Modal open onClose={onClose} title={`Refund advance · ${holder.unit.label}`} description={`Advance balance ${money(holder.balance)}`}
+    <Modal open onClose={onClose} title={t('Refund advance · {unit}', { unit: holder.unit.label })} description={t('Advance balance {amount}', { amount: money(holder.balance) })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={refund.isPending} onClick={() => refund.mutate({ unit: holder.unit._id, amount: toPaise(values.amount), method: values.method, reference: values.reference || undefined, reason: values.reason || undefined }, { onError: applyServerErrors })}>Record refund</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Amount (₹)" type="number" min={1} required {...bind('amount')} />
@@ -63,6 +65,7 @@ function CreditNoteModal({ onClose }) {
 const TYPES = ['advance', 'credit', 'credit_applied', 'refund', 'waiver', 'bounce_charge', 'opening_balance'];
 
 export function CreditsPanel() {
+  const { t } = useT();
   const { data: holders, isLoading } = useCreditHolders();
   const [type, setType] = useState('');
   const [page, setPage] = useState(1);
@@ -82,18 +85,18 @@ export function CreditsPanel() {
       </Card>
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-          <p className="font-semibold text-slate-900">Adjustments</p>
-          <Select className="w-52" placeholder="All types" value={type} onChange={(e) => { setType(e.target.value); setPage(1); }} options={TYPES.map((t) => ({ value: t, label: label(t) }))} />
+          <p className="font-semibold text-slate-900">{t('Adjustments')}</p>
+          <Select className="w-52" placeholder="All types" value={type} onChange={(e) => { setType(e.target.value); setPage(1); }} options={TYPES.map((v) => ({ value: v, label: label(v) }))} />
         </div>
         <Table loading={adjLoading} rows={adj?.data} empty="No adjustments"
           columns={[
             { key: 'number', header: 'Ref', render: (a) => <span className="font-medium text-slate-900">{a.number}</span> },
             { key: 'createdAt', header: 'Date', render: (a) => date(a.createdAt) },
             { key: 'unit', header: 'Unit', render: (a) => a.unit?.label },
-            { key: 'type', header: 'Type', render: (a) => label(a.type) },
+            { key: 'type', header: 'Type', render: (a) => t(label(a.type)) },
             { key: 'amount', header: 'Amount', render: (a) => money(a.amount) },
             { key: 'bill', header: 'Bill / receipt', render: (a) => a.bill?.billNumber || a.payment?.receiptNumber || '—' },
-            { key: 'reason', header: 'Details', className: 'max-w-xs truncate', render: (a) => [a.reason, a.method && `${label(a.method)} ${a.reference || ''}`].filter(Boolean).join(' · ') },
+            { key: 'reason', header: 'Details', className: 'max-w-xs truncate', render: (a) => [a.reason, a.method && `${t(label(a.method))} ${a.reference || ''}`].filter(Boolean).join(' · ') },
             { key: 'status', header: 'Status', render: (a) => <StatusBadge status={a.status} /> },
           ]} />
         <Pagination meta={adj?.meta} onPage={setPage} />

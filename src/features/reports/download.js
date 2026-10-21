@@ -21,7 +21,7 @@ export async function downloadFile(path, query, fallbackName = 'download') {
   }
   if (!res.ok) {
     const json = await res.json().catch(() => ({}));
-    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`);
+    throw new ApiError(res.status, json.error?.code || 'HTTP_ERROR', json.error?.message || `Download failed (${res.status})`, undefined, json.error);
   }
   const blob = await res.blob();
   const match = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') || '');

@@ -37,7 +37,7 @@ function Row({ p, onEdit }) {
       <div className="min-w-0 flex-1">
         <p className="font-medium text-slate-900">{p.name} <span className="text-xs font-normal text-slate-500">{p.memberId ? t(label(p.relation)) : t(label(p.residentType))}</span></p>
         <p className="text-xs text-slate-500">{lines.join(' · ') || t('No dates added')}</p>
-        {p.occupation && <p className="text-xs text-slate-600">{occupationSummary(p.occupation)}</p>}
+        {p.occupation && <p className="text-xs text-slate-600">{occupationSummary(p.occupation, t)}</p>}
       </div>
       <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={t('Edit details of {name}', { name: p.name })} onClick={() => onEdit(p)}><Pencil className="size-4" /></button>
     </li>

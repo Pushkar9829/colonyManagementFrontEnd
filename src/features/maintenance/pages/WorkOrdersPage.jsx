@@ -9,8 +9,10 @@ import { isManager } from '../../../lib/roles';
 import { useWorkOrderStats, useWorkOrders } from '../api';
 import { CreateWorkOrderModal, WorkOrderDetailModal } from '../components/WorkOrderModals';
 import { WO_STATUSES, WO_TONES } from '../constants';
+import { useT } from '../../../context/LanguageContext';
 
 export default function WorkOrdersPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const manager = isManager(user);
   const [params, setParams] = useSearchParams();
@@ -39,11 +41,11 @@ export default function WorkOrdersPage() {
         <Table loading={isLoading} rows={data?.data} empty="No work orders" onRowClick={(w) => setOpen(w._id)}
           columns={[
             { key: 'number', header: 'No.', render: (w) => <span className="font-mono text-xs font-semibold">{w.number}</span> },
-            { key: 'title', header: 'Work', className: 'max-w-xs', render: (w) => <div className="truncate"><p className="truncate font-medium text-slate-900">{w.title}</p><p className="text-xs text-slate-500">{label(w.source)}{w.asset ? ` · ${w.asset.name}` : w.location ? ` · ${w.location}` : ''}</p></div> },
+            { key: 'title', header: 'Work', className: 'max-w-xs', render: (w) => <div className="truncate"><p className="truncate font-medium text-slate-900">{w.title}</p><p className="text-xs text-slate-500">{t(label(w.source))}{w.asset ? ` · ${w.asset.name}` : w.location ? ` · ${w.location}` : ''}</p></div> },
             { key: 'who', header: 'Vendor / technician', render: (w) => w.vendorName || w.technician?.name || '—' },
             { key: 'estimate', header: 'Estimate', render: (w) => money(w.estimate) },
             { key: 'dueDate', header: 'Due', render: (w) => (w.dueDate ? date(w.dueDate) : '—') },
-            { key: 'status', header: 'Status', render: (w) => <Badge tone={WO_TONES[w.status]}>{label(w.status)}</Badge> },
+            { key: 'status', header: 'Status', render: (w) => <Badge tone={WO_TONES[w.status]}>{t(label(w.status))}</Badge> },
           ]} />
         <Pagination meta={data?.meta} onPage={(page) => setF((x) => ({ ...x, page }))} />
       </Card>

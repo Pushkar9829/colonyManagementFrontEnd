@@ -7,6 +7,7 @@ import { dateTime, time } from '../../../lib/format';
 import { getPosition, useCurrentPatrol, useScanCheckpoint } from '../api';
 import { RoundStatus, windowLabel } from './shared';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 function RouteCard({ item }) {
   const { t } = useT();
@@ -136,7 +137,7 @@ function ScanPanel() {
           navigator.vibrate?.(120);
         },
         onError: (err) => {
-          setResult({ error: err.message });
+          setResult({ error: errorText(err, t) });
           navigator.vibrate?.([80, 60, 80]);
         },
         onSettled: () => {

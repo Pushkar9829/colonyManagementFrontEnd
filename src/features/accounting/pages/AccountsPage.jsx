@@ -4,6 +4,7 @@ import { BookOpen, Landmark, Plus, RefreshCw, Scale, Wallet } from 'lucide-react
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner, StatCard, Table, Tabs } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
+import { useT } from '../../../context/LanguageContext';
 import { date, money, timeAgo, toPaise, todayISO } from '../../../lib/format';
 import { useAccounts, useCreateAccount, useJournals, useOpeningBalances, usePostOpeningBalances, useReport, useSync, useSyncStatus, useUpdateAccount } from '../api';
 import { ACCOUNT_TYPES, SOURCE_LABELS, TYPE_LABEL, defaultRange, fyOf, fyStartDate, sourceLabel } from '../lib';
@@ -11,6 +12,7 @@ import { AccountSelect, Amount, DateRange, DownloadButtons, DrCr } from '../comp
 import { JournalDetailModal, JournalEntryModal } from '../components/JournalModals';
 
 function AccountModal({ open, onClose, account }) {
+  const { t } = useT();
   const editing = Boolean(account);
   const [v, setV] = useState(() => ({
     code: account?.code || '', name: account?.name || '', parent: account?.parent || '', description: account?.description || '',
@@ -37,7 +39,7 @@ function AccountModal({ open, onClose, account }) {
   };
   const locked = editing && account.system;
   return (
-    <Modal open={open} onClose={onClose} title={editing ? `Edit ${account.code} ${account.name}` : 'Add account'}
+    <Modal open={open} onClose={onClose} title={editing ? t('Edit {code} {name}', { code: account.code, name: account.name }) : 'Add account'}
       description={editing ? (locked ? 'Standard accounts are locked; only bank details can change.' : undefined) : 'Codes are 4 digits: 1xxx assets, 2xxx liabilities, 3xxx funds, 4xxx income, 5xxx expenses.'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -63,6 +65,7 @@ function AccountModal({ open, onClose, account }) {
 }
 
 function ChartTab({ onLedger }) {
+  const { t } = useT();
   const [type, setType] = useState('');
   const [modal, setModal] = useState(null);
   const { data: accounts, isLoading } = useAccounts({ withBalances: true });
@@ -81,18 +84,18 @@ function ChartTab({ onLedger }) {
           { key: 'name', header: 'Account', render: (a) => (
             <div className="flex flex-wrap items-center gap-1.5">
               <button type="button" className="font-medium text-slate-900 hover:text-brand-700 hover:underline" onClick={() => onLedger(a.code)}>{a.name}</button>
-              {a.isBank && <Badge tone="blue">Bank</Badge>}
-              {a.isCash && <Badge tone="blue">Cash</Badge>}
-              {a.system && <Badge>Standard</Badge>}
-              {!a.active && <Badge tone="red">Inactive</Badge>}
+              {a.isBank && <Badge tone="blue">{t('Bank')}</Badge>}
+              {a.isCash && <Badge tone="blue">{t('Cash')}</Badge>}
+              {a.system && <Badge>{t('Standard')}</Badge>}
+              {!a.active && <Badge tone="red">{t('Inactive')}</Badge>}
             </div>
           ) },
-          { key: 'type', header: 'Type', render: (a) => TYPE_LABEL[a.type] },
+          { key: 'type', header: 'Type', render: (a) => t(TYPE_LABEL[a.type]) },
           { key: 'balance', header: 'Balance', className: 'text-right', render: (a) => <Amount value={a.balance} /> },
           { key: 'actions', header: '', className: 'text-right', render: (a) => (
             <div className="flex justify-end gap-1">
               {(!a.system || a.isBank) && <Button size="sm" variant="ghost" onClick={() => setModal(a)}>Edit</Button>}
-              {!a.system && <Button size="sm" variant="ghost" loading={update.isPending && update.variables?.id === a._id} onClick={() => update.mutate({ id: a._id, active: !a.active })}>{a.active ? 'Deactivate' : 'Activate'}</Button>}
+              {!a.system && <Button size="sm" variant="ghost" loading={update.isPending && update.variables?.id === a._id} onClick={() => update.mutate({ id: a._id, active: !a.active })}>{a.active ? t('Deactivate') : t('Activate')}</Button>}
             </div>
           ) },
         ]} />
@@ -102,6 +105,7 @@ function ChartTab({ onLedger }) {
 }
 
 function JournalTab({ onOpen }) {
+  const { t } = useT();
   const [range, setRange] = useState(defaultRange());
   const [filters, setFilters] = useState({ sourceType: '', code: '', search: '', page: 1 });
   const params = { from: range.from, to: range.to, ...Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '')) };
@@ -128,9 +132,9 @@ function JournalTab({ onOpen }) {
               <p className="truncate text-xs text-slate-500">{e.lines.map((l) => `${l.code} ${l.debit ? 'Dr' : 'Cr'}`).join(' · ')}</p>
             </div>
           ) },
-          { key: 'source', header: 'Source', render: (e) => <span className="text-xs">{sourceLabel(e)}</span> },
+          { key: 'source', header: 'Source', render: (e) => <span className="text-xs">{t(sourceLabel(e))}</span> },
           { key: 'total', header: 'Amount', className: 'text-right', render: (e) => <span className="tabular-nums">{money(e.total)}</span> },
-          { key: 'status', header: '', render: (e) => (e.reversedBy ? <Badge tone="red">Reversed</Badge> : e.reversalOf ? <Badge tone="amber">Reversal</Badge> : null) },
+          { key: 'status', header: '', render: (e) => (e.reversedBy ? <Badge tone="red">{t('Reversed')}</Badge> : e.reversalOf ? <Badge tone="amber">{t('Reversal')}</Badge> : null) },
         ]} />
       <Pagination meta={data?.meta} onPage={(page) => setFilters((f) => ({ ...f, page }))} />
     </Card>
@@ -138,6 +142,7 @@ function JournalTab({ onOpen }) {
 }
 
 function LedgerTab({ code, setCode, onOpen }) {
+  const { t } = useT();
   const [range, setRange] = useState(defaultRange());
   const { data, isLoading, isFetching } = useReport('ledger', { code, ...range }, { enabled: Boolean(code) });
   return (
@@ -151,12 +156,12 @@ function LedgerTab({ code, setCode, onOpen }) {
           <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div className="text-sm text-slate-600">
               <span className="font-semibold text-slate-900">{data.account.code} {data.account.name}</span>
-              {' · '}Opening <Amount value={data.opening} /> · Closing <Amount value={data.closing} strong />
+              {' · '}{t('Opening')} <Amount value={data.opening} /> · {t('Closing')} <Amount value={data.closing} strong />
               {isFetching && <Spinner className="ml-2 inline size-4" />}
             </div>
             <DownloadButtons path="/accounting/reports/ledger" query={{ code, ...range }} filename={`ledger-${code}-${range.to}`} />
           </div>
-          <Table rows={[{ _id: 'opening', narration: 'Opening balance', balance: data.opening, opening: true }, ...data.rows.map((r) => ({ ...r, _id: r.lineId }))]} empty="No entries"
+          <Table rows={[{ _id: 'opening', narration: t('Opening balance'), balance: data.opening, opening: true }, ...data.rows.map((r) => ({ ...r, _id: r.lineId }))]} empty="No entries"
             onRowClick={(r) => r.entryId && onOpen(r.entryId)}
             columns={[
               { key: 'date', header: 'Date', render: (r) => (r.date ? date(r.date) : '') },
@@ -166,7 +171,7 @@ function LedgerTab({ code, setCode, onOpen }) {
               { key: 'credit', header: 'Credit', className: 'text-right', render: (r) => <DrCr value={r.credit} /> },
               { key: 'balance', header: 'Balance', className: 'text-right', render: (r) => <Amount value={r.balance} /> },
             ]} />
-          {data.truncated && <p className="px-4 py-3 text-xs text-amber-700">Showing the first 5,000 lines. Narrow the date range to see the rest.</p>}
+          {data.truncated && <p className="px-4 py-3 text-xs text-amber-700">{t('Showing the first 5,000 lines. Narrow the date range to see the rest.')}</p>}
         </>
       )}
     </Card>
@@ -174,6 +179,7 @@ function LedgerTab({ code, setCode, onOpen }) {
 }
 
 function OpeningTab() {
+  const { t } = useT();
   const { data: opening, isLoading } = useOpeningBalances();
   const { data: accounts = [] } = useAccounts();
   const [when, setWhen] = useState(fyStartDate(fyOf(todayISO())));
@@ -188,7 +194,7 @@ function OpeningTab() {
   if (opening) {
     return (
       <Card>
-        <CardHeader title="Opening balances" subtitle={`Posted as ${opening.number} on ${date(opening.date)}. To change them, open the entry from the Journal tab and reverse it, then post again.`} />
+        <CardHeader title="Opening balances" subtitle={t('Posted as {number} on {date}. To change them, open the entry from the Journal tab and reverse it, then post again.', { number: opening.number, date: date(opening.date) })} />
         <Table rows={opening.lines} columns={[
           { key: 'code', header: 'Code', render: (l) => <span className="font-mono text-xs">{l.code}</span> },
           { key: 'accountName', header: 'Account' },
@@ -206,15 +212,15 @@ function OpeningTab() {
       <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
         <Input label="As of" type="date" value={when} onChange={(e) => setWhen(e.target.value)} />
         <div className="text-sm text-slate-600 sm:col-span-2 sm:self-end">
-          Debits <b>{money(dr)}</b> · Credits <b>{money(cr)}</b> · to 3900: <b>{money(Math.abs(dr - cr))} {dr > cr ? 'Cr' : dr < cr ? 'Dr' : ''}</b>
+          {t('Debits')} <b>{money(dr)}</b> · {t('Credits')} <b>{money(cr)}</b> · {t('to 3900:')} <b>{money(Math.abs(dr - cr))} {dr > cr ? 'Cr' : dr < cr ? 'Dr' : ''}</b>
         </div>
       </div>
       <div className="divide-y divide-slate-100">
         {balanceSheet.map((a) => (
           <div key={a.code} className="grid grid-cols-2 items-center gap-2 px-4 py-2 sm:grid-cols-[2fr_1fr_1fr]">
             <p className="col-span-2 text-sm sm:col-span-1"><span className="font-mono text-xs text-slate-500">{a.code}</span> {a.name}</p>
-            <Input type="number" min={0} step="0.01" placeholder="Debit ₹" aria-label={`${a.name} debit`} value={amounts[a.code]?.debit || ''} onChange={(e) => set(a.code, 'debit', e.target.value)} />
-            <Input type="number" min={0} step="0.01" placeholder="Credit ₹" aria-label={`${a.name} credit`} value={amounts[a.code]?.credit || ''} onChange={(e) => set(a.code, 'credit', e.target.value)} />
+            <Input type="number" min={0} step="0.01" placeholder="Debit ₹" aria-label={t('{name} debit', { name: a.name })} value={amounts[a.code]?.debit || ''} onChange={(e) => set(a.code, 'debit', e.target.value)} />
+            <Input type="number" min={0} step="0.01" placeholder="Credit ₹" aria-label={t('{name} credit', { name: a.name })} value={amounts[a.code]?.credit || ''} onChange={(e) => set(a.code, 'credit', e.target.value)} />
           </div>
         ))}
       </div>
@@ -241,6 +247,7 @@ function Summary() {
 }
 
 export default function AccountsPage() {
+  const { t } = useT();
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || 'chart';
   const [code, setCode] = useState(params.get('code') || '');
@@ -249,14 +256,14 @@ export default function AccountsPage() {
   const sync = useSync();
   const { data: syncState } = useSyncStatus();
   const lastSync = useMemo(() => (syncState || []).reduce((m, s) => (s.lastRunAt && (!m || s.lastRunAt > m) ? s.lastRunAt : m), null), [syncState]);
-  const setTab = (t) => setParams((p) => { p.set('tab', t); return p; }, { replace: true });
+  const setTab = (v) => setParams((p) => { p.set('tab', v); return p; }, { replace: true });
 
   return (
     <div>
       <PageHeader title="Accounts" description="The society's account books. Bills, receipts and vendor bills are added automatically."
         actions={(
           <>
-            <Button variant="secondary" icon={RefreshCw} loading={sync.isPending} onClick={() => sync.mutate({})} title={lastSync ? `Last synced ${timeAgo(lastSync)}` : undefined}>
+            <Button variant="secondary" icon={RefreshCw} loading={sync.isPending} onClick={() => sync.mutate({})} title={lastSync ? t('Last synced {when}', { when: timeAgo(lastSync) }) : undefined}>
               Sync now
             </Button>
             <Button icon={Plus} onClick={() => setCreating(true)}>New entry</Button>
@@ -269,7 +276,7 @@ export default function AccountsPage() {
       {tab === 'journal' && <JournalTab onOpen={setEntryId} />}
       {tab === 'ledger' && <LedgerTab code={code} setCode={setCode} onOpen={setEntryId} />}
       {tab === 'opening' && <OpeningTab />}
-      {lastSync && <p className="mt-3 text-xs text-slate-400">Automatic posting last ran {timeAgo(lastSync)}; it runs every 15 minutes.</p>}
+      {lastSync && <p className="mt-3 text-xs text-slate-400">{t('Automatic posting last ran {when}; it runs every 15 minutes.', { when: timeAgo(lastSync) })}</p>}
       <JournalEntryModal open={creating} onClose={() => setCreating(false)} />
       <JournalDetailModal id={entryId} onClose={() => setEntryId(null)} />
     </div>

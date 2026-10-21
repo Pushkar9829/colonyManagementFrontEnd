@@ -4,6 +4,7 @@ import { Badge, Button, Input, Modal, Pagination, Select, Table } from '../../..
 import { useForm } from '../../../hooks/useForm';
 import { dateTime, label } from '../../../lib/format';
 import { UnitPicker } from '../../units/components/UnitPicker';
+import { useT } from '../../../context/LanguageContext';
 import { METER_TYPES, uomOf, useAddReading, useCreateMeter, useDeleteReading, useMeterReadings, useReplaceMeter, useUpdateMeter } from '../api';
 
 const localNow = () => {
@@ -57,21 +58,22 @@ export function MeterModal({ meter, canEdit, onClose }) {
   const del = useDeleteReading();
   const update = useUpdateMeter({ onSuccess: onClose });
   const uom = uomOf(meter.type);
+  const { t } = useT();
 
   return (
-    <Modal open onClose={onClose} size="lg" title={`${label(meter.type)} meter ${meter.serial}`} description={`${meter.unit?.label || ''} · multiplier ${meter.multiplier} · ${uom}`}
+    <Modal open onClose={onClose} size="lg" title={t('{type} meter {serial}', { type: t(label(meter.type)), serial: meter.serial })} description={`${meter.unit?.label || ''} · ${t('multiplier {value}', { value: meter.multiplier })} · ${uom}`}
       footer={canEdit && meter.active && (
         <>
           <Button variant="ghost" onClick={() => setReplacing((v) => !v)}>Replace meter</Button>
-          <Button variant="ghost" loading={update.isPending} onClick={() => window.confirm('Retire this meter? It will stop being billed.') && update.mutate({ id: meter._id, active: false })}>Retire</Button>
+          <Button variant="ghost" loading={update.isPending} onClick={() => window.confirm(t('Retire this meter? It will stop being billed.')) && update.mutate({ id: meter._id, active: false })}>Retire</Button>
         </>
       )}>
       <div className="space-y-4 text-sm">
-        {!meter.active && <Badge tone="slate">Inactive{meter.replacedAt ? ` · replaced ${dateTime(meter.replacedAt)}` : ''}</Badge>}
+        {!meter.active && <Badge tone="slate">{t('Inactive')}{meter.replacedAt ? ` · ${t('replaced {date}', { date: dateTime(meter.replacedAt) })}` : ''}</Badge>}
         {replacing && <ReplaceForm meter={meter} onDone={onClose} />}
         {canEdit && meter.active && (
           <div className="grid gap-3 sm:grid-cols-3">
-            <Input label={`Reading (${uom})`} type="number" step="any" min={0} {...bind('reading')} />
+            <Input label={t('Reading ({uom})', { uom })} type="number" step="any" min={0} {...bind('reading')} />
             <Input label="Read at" type="datetime-local" {...bind('readAt')} />
             <div className="flex items-end">
               <Button className="w-full" disabled={values.reading === ''} loading={add.isPending} onClick={() => add.mutate({ id: meter._id, reading: Number(values.reading), readAt: iso(values.readAt) }, { onError: applyServerErrors })}>Save reading</Button>
@@ -82,9 +84,9 @@ export function MeterModal({ meter, canEdit, onClose }) {
           columns={[
             { key: 'readAt', header: 'Read at', render: (r) => dateTime(r.readAt) },
             { key: 'reading', header: 'Reading', render: (r) => <span className="font-medium text-slate-900">{r.reading}</span> },
-            { key: 'source', header: 'Source', render: (r) => label(r.source) },
-            { key: 'by', header: 'By', render: (r) => r.recordedBy?.name || (r.source === 'device' ? 'Device' : '—') },
-            ...(canEdit ? [{ key: 'del', header: '', render: (r) => <Button size="sm" variant="ghost" icon={Trash2} aria-label="Delete reading" onClick={() => window.confirm('Delete this reading?') && del.mutate(r._id)} /> }] : []),
+            { key: 'source', header: 'Source', render: (r) => t(label(r.source)) },
+            { key: 'by', header: 'By', render: (r) => r.recordedBy?.name || (r.source === 'device' ? t('Device') : '—') },
+            ...(canEdit ? [{ key: 'del', header: '', render: (r) => <Button size="sm" variant="ghost" icon={Trash2} aria-label={t('Delete reading')} onClick={() => window.confirm(t('Delete this reading?')) && del.mutate(r._id)} /> }] : []),
           ]} />
         <Pagination meta={data?.meta} onPage={setPage} />
       </div>

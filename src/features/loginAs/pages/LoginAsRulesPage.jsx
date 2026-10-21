@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Card, CardHeader, Pagination, Spinner, Table } from '../../../components/ui';
 import { dateTime } from '../../../lib/format';
 import { ROLE_LABELS } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { useLoginAsRules, useSocietyLoginAsSessions } from '../api';
 import { durationText, LEVEL_LABELS } from '../lib';
 
@@ -11,6 +12,7 @@ const STATUS_TONE = { active: 'amber', exit: 'slate', expired: 'slate', replaced
 
 // Society admins: what the platform allows here (read-only) and every "Log in as" session in the society.
 export default function LoginAsRulesPage() {
+  const { t } = useT();
   const { data: rules, isLoading } = useLoginAsRules();
   const [page, setPage] = useState(1);
   const sessions = useSocietyLoginAsSessions({ page });
@@ -23,12 +25,12 @@ export default function LoginAsRulesPage() {
           <ul className="divide-y divide-slate-100 text-sm">
             {['platform', 'admin', 'subadmin'].map((k) => (
               <li key={k} className="flex items-center justify-between gap-3 px-5 py-3">
-                <span>{LEVEL_LABELS[k]}</span>
-                {rules.policy[k] ? <Badge tone="green"><Check className="mr-1 inline size-3" />Allowed</Badge> : <Badge><X className="mr-1 inline size-3" />Off</Badge>}
+                <span>{t(LEVEL_LABELS[k])}</span>
+                {rules.policy[k] ? <Badge tone="green"><Check className="mr-1 inline size-3" />{t('Allowed')}</Badge> : <Badge><X className="mr-1 inline size-3" />{t('Off')}</Badge>}
               </li>
             ))}
             <li className="px-5 py-3 text-slate-600">
-              {rules.allowed ? `You can log in as: ${rules.canTarget.map((r) => ROLE_LABELS[r] || r).join(', ')}. Sessions last up to ${rules.maxMinutes / 60} hours.` : 'You cannot log in as other members.'}
+              {rules.allowed ? t('You can log in as: {roles}. Sessions last up to {hours} hours.', { roles: rules.canTarget.map((r) => t(ROLE_LABELS[r] || r)).join(', '), hours: rules.maxMinutes / 60 }) : t('You cannot log in as other members.')}
             </li>
           </ul>
         )}
@@ -37,12 +39,12 @@ export default function LoginAsRulesPage() {
         <CardHeader title="Sessions in this society" />
         <Table loading={sessions.isLoading} rows={sessions.data?.data} empty="Nobody has used “Log in as” here yet"
           columns={[
-            { key: 'by', header: 'By', render: (s) => <div><p className="font-medium text-slate-900">{s.byName}</p><p className="text-xs text-slate-500">{LEVEL_LABELS[s.byLevel]}</p></div> },
+            { key: 'by', header: 'By', render: (s) => <div><p className="font-medium text-slate-900">{s.byName}</p><p className="text-xs text-slate-500">{t(LEVEL_LABELS[s.byLevel])}</p></div> },
             { key: 'target', header: 'Viewed', render: (s) => `${s.targetName}${s.targetUnitLabel ? ` (${s.targetUnitLabel})` : ''}` },
             { key: 'reason', header: 'Reason', render: (s) => s.reason },
             { key: 'when', header: 'When', render: (s) => dateTime(s.startedAt) },
-            { key: 'dur', header: 'Length', mobile: false, render: (s) => durationText(s.durationSeconds) },
-            { key: 'status', header: 'Status', render: (s) => <Badge tone={STATUS_TONE[s.status]}>{s.status === 'active' ? 'Open' : s.status === 'exit' ? 'Exited' : s.status === 'expired' ? 'Timed out' : 'Replaced'}</Badge> },
+            { key: 'dur', header: 'Length', mobile: false, render: (s) => durationText(s.durationSeconds, t) },
+            { key: 'status', header: 'Status', render: (s) => <Badge tone={STATUS_TONE[s.status]}>{t(s.status === 'active' ? 'Open' : s.status === 'exit' ? 'Exited' : s.status === 'expired' ? 'Timed out' : 'Replaced')}</Badge> },
           ]} />
         <Pagination meta={sessions.data?.meta} onPage={setPage} />
       </Card>

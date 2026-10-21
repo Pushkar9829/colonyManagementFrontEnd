@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { LANGUAGES, LANGUAGE_CODES, loadDictionary } from '../lib/i18n';
+import { setFormatLanguage } from '../lib/format';
 
 const KEY = 'cms.language';
 const fill = (text, vars) => (vars ? text.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`)) : text);
@@ -24,6 +25,8 @@ const loaded = {};
 export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(initialLanguage);
   const [dict, setDict] = useState(() => loaded[lang] || null);
+  // Dates and short durations (lib/format) switch together with the words, during this render.
+  setFormatLanguage(dict ? lang : 'en', dict);
 
   // Fetch the chosen language's chunk; English text shows until it arrives (a moment on first load).
   useEffect(() => {

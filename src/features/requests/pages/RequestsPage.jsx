@@ -4,6 +4,7 @@ import { Plus, Truck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, Checkbox, EmptyState, FileUpload, FilterBar, Input, Modal, PageLoader, Pagination, Select, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { date, dateTime, todayISO, toPaise } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
@@ -94,11 +95,12 @@ function NewRequestModal({ open, onClose, residentType }) {
 function MovesBoard() {
   const [day, setDay] = useState(todayISO());
   const { data, isLoading } = useMoves(day);
+  const { t } = useT();
   return (
     <Card>
       <div className="flex flex-wrap items-end gap-3 border-b border-slate-100 p-4">
         <Input label="Date" type="date" value={day} onChange={(e) => setDay(e.target.value)} className="w-44" />
-        <span className="text-sm text-slate-500">Approved move-ins and move-outs — allow these movers at the gate.</span>
+        <span className="text-sm text-slate-500">{t('Approved move-ins and move-outs — allow these movers at the gate.')}</span>
       </div>
       {isLoading ? <PageLoader /> : data?.items?.length ? (
         <ul className="divide-y divide-slate-100">
@@ -107,16 +109,16 @@ function MovesBoard() {
               <div>
                 <p className="font-semibold text-slate-900">{r.unitLabel} · {r.applicantName}</p>
                 <p className="text-sm text-slate-600">{r.move.from} – {r.move.to}{r.move.moversCompany ? ` · ${r.move.moversCompany}` : ''}</p>
-                <p className="text-sm text-slate-600">{r.move.vehicleNumber ? `Vehicle ${r.move.vehicleNumber}${r.move.vehicleType ? ` (${r.move.vehicleType})` : ''}` : 'No vehicle given'}{r.move.driverName ? ` · Driver ${r.move.driverName}${r.move.driverPhone ? ` ${r.move.driverPhone}` : ''}` : ''}</p>
+                <p className="text-sm text-slate-600">{r.move.vehicleNumber ? `${t('Vehicle {number}', { number: r.move.vehicleNumber })}${r.move.vehicleType ? ` (${r.move.vehicleType})` : ''}` : t('No vehicle given')}{r.move.driverName ? ` · ${t('Driver {name}', { name: r.move.driverName })}${r.move.driverPhone ? ` ${r.move.driverPhone}` : ''}` : ''}</p>
               </div>
               <div className="flex gap-1.5">
-                <Badge tone={r.kind === 'move_in' ? 'green' : 'amber'}>{r.kind === 'move_in' ? 'Move-in' : 'Move-out'}</Badge>
-                {r.move.liftBooking && <Badge tone="blue">Lift booked</Badge>}
+                <Badge tone={r.kind === 'move_in' ? 'green' : 'amber'}>{r.kind === 'move_in' ? t('Move-in') : t('Move-out')}</Badge>
+                {r.move.liftBooking && <Badge tone="blue">{t('Lift booked')}</Badge>}
               </div>
             </li>
           ))}
         </ul>
-      ) : <EmptyState icon={Truck} title={`No approved moves on ${date(day)}`} />}
+      ) : <EmptyState icon={Truck} title={t('No approved moves on {date}', { date: date(day) })} />}
     </Card>
   );
 }
@@ -125,6 +127,7 @@ function RequestTable({ params, manage }) {
   const navigate = useNavigate();
   const [filters, setFilters] = useState({ kind: '', status: '', page: 1 });
   const { data, isLoading } = useRequests(clean({ ...params, ...filters }));
+  const { t } = useT();
   return (
     <Card>
       {manage && (
@@ -138,7 +141,7 @@ function RequestTable({ params, manage }) {
         onRowClick={(r) => navigate(`/requests/${r._id}`)}
         columns={[
           { key: 'number', header: 'No.', render: (r) => <span className="font-mono text-xs font-semibold text-slate-600">{r.number}</span> },
-          { key: 'title', header: 'Request', className: 'max-w-xs', render: (r) => <div className="truncate"><p className="truncate font-medium text-slate-900">{requestTitle(r)}</p>{manage && <p className="text-xs text-slate-500">{r.unitLabel} · {r.applicantName}</p>}</div> },
+          { key: 'title', header: 'Request', className: 'max-w-xs', render: (r) => <div className="truncate"><p className="truncate font-medium text-slate-900">{requestTitle(r, t)}</p>{manage && <p className="text-xs text-slate-500">{r.unitLabel} · {r.applicantName}</p>}</div> },
           { key: 'status', header: 'Status', render: (r) => <StatusBadge status={statusTone(r.status)} /> },
           { key: 'createdAt', header: 'Raised', render: (r) => dateTime(r.createdAt) },
         ]} />

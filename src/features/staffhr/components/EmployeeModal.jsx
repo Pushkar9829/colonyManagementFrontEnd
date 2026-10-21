@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Attachments, Button, FileUpload, Input, Modal, Select, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { label, toPaise, toRupees } from '../../../lib/format';
 import { clean, opts } from '../../assets/shared';
 import { useCandidates, useCreateEmployee, useShifts, useUpdateEmployee } from '../api';
@@ -14,6 +15,7 @@ const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frida
 const r = (paise) => (paise ? String(toRupees(paise)) : '');
 
 export function EmployeeModal({ open, onClose, employee }) {
+  const { t } = useT();
   const blank = {
     membership: '', employeeCode: '', designation: '', department: 'other', employmentType: 'permanent', dateOfJoining: '', status: 'active', dateOfExit: '',
     basic: '', hra: '', pfPercent: '12', esiPercent: '0.75', professionalTax: '200',
@@ -85,7 +87,7 @@ export function EmployeeModal({ open, onClose, employee }) {
     else create.mutate({ ...body, membership: v.membership, defaultShift: v.defaultShift || undefined }, { onError: applyServerErrors });
   };
 
-  const section = (title) => <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:col-span-2">{title}</p>;
+  const section = (title) => <p className="pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500 sm:col-span-2">{t(title)}</p>;
 
   return (
     <Modal open={open} onClose={onClose} title={employee ? `${employee.user?.name} · ${employee.employeeCode}` : 'Add employee'} size="lg"
@@ -93,7 +95,7 @@ export function EmployeeModal({ open, onClose, employee }) {
       <div className="grid gap-4 sm:grid-cols-2">
         {!employee && (
           <Select className="sm:col-span-2" label="Staff member" required placeholder="Choose (add them under Members first)" hint="Guards, housekeeping, technicians and managers without an HR profile"
-            options={(candidates || []).map((c) => ({ value: c.membership, label: `${c.user.name} · ${label(c.role)}${c.designation ? ` · ${c.designation}` : ''}` }))} {...bind('membership')} />
+            options={(candidates || []).map((c) => ({ value: c.membership, label: `${c.user.name} · ${t(label(c.role))}${c.designation ? ` · ${c.designation}` : ''}` }))} {...bind('membership')} />
         )}
         {section('Employment')}
         <Input label="Employee code" placeholder="Auto (EMP-0001)" {...bind('employeeCode')} />
@@ -114,7 +116,7 @@ export function EmployeeModal({ open, onClose, employee }) {
             <div key={i} className="flex gap-2">
               <Input className="flex-1" placeholder="Allowance (e.g. Conveyance)" value={a.name} onChange={(e) => setAllowances((x) => x.map((y, j) => (j === i ? { ...y, name: e.target.value } : y)))} />
               <Input className="w-36" type="number" min="0" step="0.01" placeholder="₹" value={a.amount} onChange={(e) => setAllowances((x) => x.map((y, j) => (j === i ? { ...y, amount: e.target.value } : y)))} />
-              <button type="button" aria-label="Remove allowance" className="p-2 text-slate-400 hover:text-red-600" onClick={() => setAllowances((x) => x.filter((_, j) => j !== i))}><Trash2 className="size-4" /></button>
+              <button type="button" aria-label={t('Remove allowance')} className="p-2 text-slate-400 hover:text-red-600" onClick={() => setAllowances((x) => x.filter((_, j) => j !== i))}><Trash2 className="size-4" /></button>
             </div>
           ))}
           <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAllowances((x) => [...x, { name: '', amount: '' }])}>Add allowance</Button>
@@ -125,7 +127,7 @@ export function EmployeeModal({ open, onClose, employee }) {
 
         {section('Bank & statutory')}
         <Input label="Account holder" {...bind('accountName')} />
-        <Input label="Account number" inputMode="numeric" placeholder={employee?.bank?.accountLast4 ? `•••• ${employee.bank.accountLast4} (enter to change)` : ''} {...bind('accountNumber')} />
+        <Input label="Account number" inputMode="numeric" placeholder={employee?.bank?.accountLast4 ? t('•••• {last4} (enter to change)', { last4: employee.bank.accountLast4 }) : ''} {...bind('accountNumber')} />
         <Input label="IFSC" {...bind('ifsc')} />
         <Input label="Bank" {...bind('bankName')} />
         <Input label="PAN" placeholder={employee?.panLast4 ? `•••••••${employee.panLast4}` : ''} {...bind('pan')} />

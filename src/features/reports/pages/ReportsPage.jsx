@@ -4,8 +4,9 @@ import { FileSpreadsheet, MailCheck } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, ErrorState, Input, PageLoader, Select } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
-import { currentPeriod, todayISO } from '../../../lib/format';
+import { currentPeriod, label, todayISO } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { useReportCatalogue } from '../api';
 import { useDownload } from '../download';
 
@@ -26,6 +27,7 @@ const OTHER_FORMATS = [
 const monthAgo = () => new Date(Date.now() - 29 * 86400000).toLocaleDateString('en-CA');
 
 function ReportCard({ report, download, busyKey }) {
+  const { t } = useT();
   const [p, setP] = useState({ from: monthAgo(), to: todayISO(), period: report.key === 'bills' ? currentPeriod() : '', status: '' });
   const set = (k) => (e) => setP({ ...p, [k]: e.target.value });
   const query = {
@@ -36,8 +38,8 @@ function ReportCard({ report, download, busyKey }) {
   const get = (format) => download(`/reports/${report.key}/export`, { ...query, format }, `${report.key}.${format}`, `${report.key}-${format}`);
   return (
     <Card className="flex flex-col p-5">
-      <h3 className="font-semibold text-slate-900">{LABELS[report.key] || report.label}</h3>
-      <p className="mt-1 text-sm text-slate-500">{DESCRIPTIONS[report.key] || report.description}</p>
+      <h3 className="font-semibold text-slate-900">{t(LABELS[report.key] || report.label)}</h3>
+      <p className="mt-1 text-sm text-slate-500">{t(DESCRIPTIONS[report.key] || report.description)}</p>
       <div className="mt-4 grid flex-1 gap-3 sm:grid-cols-2">
         {report.params.includes('from') && (
           <>
@@ -47,13 +49,13 @@ function ReportCard({ report, download, busyKey }) {
         )}
         {report.params.includes('period') && <Input label="Month" type="month" hint="Blank = all months" value={p.period} onChange={set('period')} />}
         {report.params.includes('status') && STATUS_OPTIONS[report.key] && (
-          <Select label="Status" placeholder="Any" value={p.status} onChange={set('status')} options={STATUS_OPTIONS[report.key].map((s) => ({ value: s, label: s.replace(/_/g, ' ') }))} />
+          <Select label="Status" placeholder="Any" value={p.status} onChange={set('status')} options={STATUS_OPTIONS[report.key].map((s) => ({ value: s, label: label(s) }))} />
         )}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
         <Button size="sm" icon={FileSpreadsheet} loading={busyKey === `${report.key}-xlsx`} disabled={Boolean(busyKey) && busyKey !== `${report.key}-xlsx`} onClick={() => get('xlsx')}>Download Excel</Button>
         <span className="text-xs text-slate-500">
-          or{' '}
+          {t('or')}{' '}
           {OTHER_FORMATS.map(({ format, label }, i) => (
             <span key={format}>
               {i > 0 && ' · '}

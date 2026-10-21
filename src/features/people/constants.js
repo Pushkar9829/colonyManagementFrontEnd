@@ -46,15 +46,17 @@ const find = (list, v) => list.find((o) => o.value === v)?.label || '';
 export const categoryLabel = (v) => find(WORK_CATEGORIES, v);
 
 // One line for lists and directory cards, e.g. "Engineer · Infosys (IT / Software)" or "Student · COEP Pune".
-export function occupationSummary(o) {
+// Pass the component's t() to get the fixed words (Student, Job, IT / Software…) in the chosen language.
+export function occupationSummary(o, t = (x) => x) {
   if (!o?.type) return '';
-  if (o.type === 'student') return ['Student', o.student?.institutionName, o.student?.course].filter(Boolean).join(' · ');
+  const tx = (s) => (s ? t(s) : s);
+  if (o.type === 'student') return [t('Student'), o.student?.institutionName, o.student?.course].filter(Boolean).join(' · ');
   if (o.type === 'working') {
     const w = o.working || {};
-    const who = [w.designation || find(WORK_MODES, w.mode), w.organisation].filter(Boolean).join(' · ');
-    return `${who}${w.category ? ` (${categoryLabel(w.category)})` : ''}`;
+    const who = [w.designation || tx(find(WORK_MODES, w.mode)), w.organisation].filter(Boolean).join(' · ');
+    return `${who}${w.category ? ` (${tx(categoryLabel(w.category))})` : ''}`;
   }
-  return find(OCCUPATION_TYPES, o.type);
+  return tx(find(OCCUPATION_TYPES, o.type));
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

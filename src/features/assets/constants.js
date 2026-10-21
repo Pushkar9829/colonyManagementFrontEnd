@@ -13,7 +13,9 @@ export const CATEGORY_LABELS = {
   other: 'Other',
 };
 export const CATEGORIES = Object.entries(CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
-export const STATUSES = opts(['working', 'under_repair', 'retired']);
+// Equipment wording, kept apart from the words for people ("Working", "Retired") used in member profiles.
+export const ASSET_STATUS_LABELS = { working: 'In service', under_repair: 'Under repair', retired: 'Taken out of service' };
+export const STATUSES = Object.entries(ASSET_STATUS_LABELS).map(([value, label]) => ({ value, label }));
 export const STATUS_TONES = { working: 'green', under_repair: 'amber', retired: 'slate' };
 export const COVERAGE = opts(['comprehensive', 'non_comprehensive', 'labour_only', 'parts_only']);
 export const EXTINGUISHER_TYPES = [

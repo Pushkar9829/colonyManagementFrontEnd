@@ -7,11 +7,13 @@ import { useAssets } from '../../assets/api';
 import { ASSIGNEE_ROLES, clean, numOrUndef, usePeople } from '../../assets/shared';
 import { useCreateSchedule, useUpdateSchedule } from '../api';
 import { CHECK_TYPES, FREQUENCIES } from '../constants';
+import { useT } from '../../../context/LanguageContext';
 
 const newItem = () => ({ key: Math.random().toString(36).slice(2), label: '', type: 'yes_no', unit: '', min: '', max: '', required: true });
 
 // Create or edit a PPM schedule with its checklist. `assetId` pre-selects the asset.
 export function ScheduleModal({ open, onClose, schedule, assetId }) {
+  const { t } = useT();
   const blank = { asset: assetId || '', title: '', description: '', frequency: 'monthly', intervalDays: '', startDate: todayISO(), endDate: '', assigneeRole: 'staff', assignee: '', leadDays: '7', graceDays: '3', active: true };
   const { values, bind, set, setValues, applyServerErrors } = useForm(blank);
   const [items, setItems] = useState([newItem()]);
@@ -69,7 +71,7 @@ export function ScheduleModal({ open, onClose, schedule, assetId }) {
         </div>
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-sm font-semibold text-slate-800">Checklist</p>
+            <p className="text-sm font-semibold text-slate-800">{t('Checklist')}</p>
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => setItems((l) => [...l, newItem()])}>Add item</Button>
           </div>
           <div className="space-y-2">
@@ -86,7 +88,7 @@ export function ScheduleModal({ open, onClose, schedule, assetId }) {
                 ) : <div className="hidden sm:col-span-3 sm:block" />}
                 <div className="flex items-center justify-between gap-2 sm:col-span-2">
                   <Checkbox label="Required" checked={i.required} onChange={(e) => setItem(i.key, { required: e.target.checked })} />
-                  <button type="button" className="rounded p-1 text-slate-400 hover:text-red-600" aria-label="Remove item" onClick={() => setItems((l) => l.filter((x) => x.key !== i.key))}><Trash2 className="size-4" /></button>
+                  <button type="button" className="rounded p-1 text-slate-400 hover:text-red-600" aria-label={t('Remove item')} onClick={() => setItems((l) => l.filter((x) => x.key !== i.key))}><Trash2 className="size-4" /></button>
                 </div>
               </div>
             ))}

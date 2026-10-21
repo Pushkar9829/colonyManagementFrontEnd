@@ -8,23 +8,26 @@ import { date, label } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
 import { useAssets, useAssetStats } from '../api';
 import { AssetFormModal } from '../components/AssetFormModal';
-import { CATEGORIES, CATEGORY_LABELS, STATUSES, STATUS_TONES } from '../constants';
+import { CATEGORIES, CATEGORY_LABELS, STATUSES, STATUS_TONES, ASSET_STATUS_LABELS } from '../constants';
 import { DUE_TONES } from '../shared';
+import { useT } from '../../../context/LanguageContext';
 
 function Stats() {
+  const { t } = useT();
   const { data } = useAssetStats();
   if (!data) return null;
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard icon={Boxes} label="Assets" value={data.total} sub={`${data.retired} retired`} />
-      <StatCard icon={CheckCircle2} tone="green" label="Working" value={data.working} />
+      <StatCard icon={Boxes} label="Assets" value={data.total} sub={t('{n} retired', { n: data.retired })} />
+      <StatCard icon={CheckCircle2} tone="green" label="In service" value={data.working} />
       <StatCard icon={Wrench} tone="amber" label="Under repair" value={data.underRepair} />
-      <StatCard icon={ShieldAlert} tone="red" label="AMC / warranty ≤ 30 days" value={data.amcExpiring + data.warrantyExpiring} sub={data.amcExpired ? `${data.amcExpired} AMC expired` : undefined} />
+      <StatCard icon={ShieldAlert} tone="red" label="AMC / warranty ≤ 30 days" value={data.amcExpiring + data.warrantyExpiring} sub={data.amcExpired ? t('{n} AMC expired', { n: data.amcExpired }) : undefined} />
     </div>
   );
 }
 
 export default function AssetsPage() {
+  const { t } = useT();
   const { user } = useAuth();
   const manager = isManager(user);
   const navigate = useNavigate();
@@ -60,9 +63,9 @@ export default function AssetsPage() {
           onRowClick={(a) => navigate(`/assets/${a._id}`)}
           columns={[
             { key: 'code', header: 'Code', render: (a) => <span className="font-mono text-xs font-semibold text-slate-700">{a.code}</span> },
-            { key: 'name', header: 'Asset', className: 'max-w-xs', render: (a) => <div className="truncate"><p className="truncate font-medium text-slate-900">{a.name}</p><p className="text-xs text-slate-500">{CATEGORY_LABELS[a.category]}{a.location ? ` · ${a.location}` : ''}</p></div> },
-            { key: 'status', header: 'Status', render: (a) => <Badge tone={STATUS_TONES[a.status]}>{label(a.status)}</Badge> },
-            { key: 'amc', header: 'AMC', render: (a) => (a.amcStatus === 'none' ? <span className="text-slate-400">—</span> : <Badge tone={DUE_TONES[a.amcStatus]}>{a.amcStatus === 'expired' ? 'Expired' : `till ${date(a.amc.endDate)}`}</Badge>) },
+            { key: 'name', header: 'Asset', className: 'max-w-xs', render: (a) => <div className="truncate"><p className="truncate font-medium text-slate-900">{a.name}</p><p className="text-xs text-slate-500">{t(CATEGORY_LABELS[a.category])}{a.location ? ` · ${a.location}` : ''}</p></div> },
+            { key: 'status', header: 'Status', render: (a) => <Badge tone={STATUS_TONES[a.status]}>{t(ASSET_STATUS_LABELS[a.status] || label(a.status))}</Badge> },
+            { key: 'amc', header: 'AMC', render: (a) => (a.amcStatus === 'none' ? <span className="text-slate-400">—</span> : <Badge tone={DUE_TONES[a.amcStatus]}>{a.amcStatus === 'expired' ? t('Expired') : t('till {date}', { date: date(a.amc.endDate) })}</Badge>) },
             { key: 'warranty', header: 'Warranty', render: (a) => (a.warrantyStatus === 'none' ? <span className="text-slate-400">—</span> : <span className="flex items-center gap-1">{a.warrantyStatus !== 'active' && <AlertTriangle className="size-3.5 text-amber-500" />}{date(a.warrantyExpiry)}</span>) },
           ]}
         />

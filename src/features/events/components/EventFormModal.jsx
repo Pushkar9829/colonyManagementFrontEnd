@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button, Checkbox, FileUpload, Input, Modal, Select, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { label, toPaise, toRupees } from '../../../lib/format';
 import { AudienceFields, cleanAudience } from '../../community/AudienceFields';
 import { useAmenities } from '../../amenities/api';
@@ -17,6 +18,7 @@ export const toLocalInput = (d) => {
 const iso = (v) => (v ? new Date(v).toISOString() : undefined);
 
 export function EventFormModal({ open, onClose, event, onSaved }) {
+  const { t } = useT();
   const editing = Boolean(event);
   const { data: amenities = [] } = useAmenities();
   const [audience, setAudience] = useState(event?.audience || { type: 'all', blocks: [], roles: [] });
@@ -77,7 +79,7 @@ export function EventFormModal({ open, onClose, event, onSaved }) {
         {Number(values.ticketPrice) > 0 && <Checkbox className="sm:col-span-2" label="Allow online payment (otherwise pay at the venue)" checked={values.allowOnlinePayment} onChange={bind('allowOnlinePayment').onChange} />}
         {!editing && <div className="sm:col-span-2"><AudienceFields value={audience} onChange={setAudience} /></div>}
         <div className="sm:col-span-2">
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Cover image {editing && event.cover ? '(replace)' : ''}</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{editing && event.cover ? t('Cover image (replace)') : t('Cover image')}</p>
           <FileUpload folder="events" files={cover} onChange={setCover} max={1} label="Add cover" />
         </div>
         {Object.keys(errors).some((k) => errors[k] && !(k in values)) && (

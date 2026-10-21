@@ -3,6 +3,7 @@ import { CheckCircle2, FileClock, Percent } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Attachments, Badge, Button, Card, Checkbox, Modal, Pagination, Select, StatCard, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
 import { date as fmtDate, label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { CATEGORY_LABELS, KYC_TYPE_OPTIONS, useKycCompletion, useKycQueue, useRejectKyc, useVerifyKyc } from '../api';
 
 const TONE = { verified: 'green', pending: 'amber', rejected: 'red', missing: 'slate' };
@@ -13,8 +14,9 @@ function ReviewModal({ doc, onClose }) {
   const reject = useRejectKyc();
   const [reason, setReason] = useState('');
   const done = { onSuccess: onClose };
+  const { t } = useT();
   return (
-    <Modal open onClose={onClose} title={`${typeLabel(doc.type)} · ${doc.user?.name}`} description={`${doc.unit?.label || 'No unit'} · submitted ${fmtDate(doc.updatedAt)}`} size="lg"
+    <Modal open onClose={onClose} title={`${t(typeLabel(doc.type))} · ${doc.user?.name}`} description={t('{unit} · submitted {date}', { unit: doc.unit?.label || t('No unit'), date: fmtDate(doc.updatedAt) })} size="lg"
       footer={doc.status === 'pending' || doc.status === 'rejected' ? (
         <>
           <Button variant="secondary" onClick={onClose}>Close</Button>
@@ -29,12 +31,12 @@ function ReviewModal({ doc, onClose }) {
       )}>
       <div className="space-y-4 text-sm">
         <div className="flex flex-wrap gap-4">
-          <p>Status: <StatusBadge status={doc.status} /></p>
-          {doc.last4 && <p>Number ends with <span className="font-mono font-semibold">{doc.last4}</span></p>}
-          {doc.nameOnDocument && <p>Name on document: <b>{doc.nameOnDocument}</b></p>}
+          <p>{t('Status:')} <StatusBadge status={doc.status} /></p>
+          {doc.last4 && <p>{t('Number ends with')} <span className="font-mono font-semibold">{doc.last4}</span></p>}
+          {doc.nameOnDocument && <p>{t('Name on document:')} <b>{doc.nameOnDocument}</b></p>}
         </div>
         <Attachments items={doc.files} />
-        <p className="text-xs text-slate-500">Match the name, photo and last digits with the member before verifying. Full ID numbers are never stored.</p>
+        <p className="text-xs text-slate-500">{t('Match the name, photo and last digits with the member before verifying. Full ID numbers are never stored.')}</p>
         <Textarea label="Reason (needed to reject)" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
       </div>
     </Modal>
@@ -45,6 +47,7 @@ function Queue() {
   const [filters, setFilters] = useState({ status: 'pending', type: '', page: 1 });
   const { data, isLoading } = useKycQueue(Object.fromEntries(Object.entries(filters).filter(([, v]) => v !== '')));
   const [open, setOpen] = useState(null);
+  const { t } = useT();
   return (
     <Card>
       <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-2">
@@ -54,7 +57,7 @@ function Queue() {
       <Table loading={isLoading} rows={data?.data} empty="Nothing to review" onRowClick={setOpen}
         columns={[
           { key: 'who', header: 'Member', render: (d) => <div><p className="font-medium text-slate-900">{d.user?.name}</p><p className="text-xs text-slate-500">{d.unit?.label || '—'}</p></div> },
-          { key: 'type', header: 'Document', render: (d) => `${typeLabel(d.type)}${d.last4 ? ` ••••${d.last4}` : ''}` },
+          { key: 'type', header: 'Document', render: (d) => `${t(typeLabel(d.type))}${d.last4 ? ` ••••${d.last4}` : ''}` },
           { key: 'date', header: 'Submitted', render: (d) => fmtDate(d.updatedAt) },
           { key: 'status', header: 'Status', render: (d) => <StatusBadge status={d.status} /> },
           { key: 'by', header: 'Reviewed', render: (d) => (d.reviewedBy ? `${d.reviewedBy.name} · ${fmtDate(d.reviewedAt)}` : '—') },
@@ -70,6 +73,7 @@ function Completion() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useKycCompletion({ incompleteOnly: incompleteOnly || undefined, page });
   const summary = data?.meta?.summary;
+  const { t } = useT();
   return (
     <div className="space-y-4">
       {summary && (
@@ -84,15 +88,15 @@ function Completion() {
         <Table loading={isLoading} rows={data?.data?.map((r) => ({ ...r, key: r.unit._id }))} rowKey="key" empty="No units"
           columns={[
             { key: 'unit', header: 'Unit', render: (r) => <span className="font-medium text-slate-900">{r.unit.label}</span> },
-            { key: 'pct', header: 'Completion', render: (r) => (r.percent == null ? <span className="text-slate-400">No residents</span> : <Badge tone={r.complete ? 'green' : r.percent ? 'amber' : 'red'}>{r.percent}%</Badge>) },
+            { key: 'pct', header: 'Completion', render: (r) => (r.percent == null ? <span className="text-slate-400">{t('No residents')}</span> : <Badge tone={r.complete ? 'green' : r.percent ? 'amber' : 'red'}>{r.percent}%</Badge>) },
             {
               key: 'people', header: 'Residents', className: 'whitespace-normal', render: (r) => (
                 <div className="space-y-1">
                   {r.residents.map((p) => (
                     <div key={p.membership} className="flex flex-wrap items-center gap-1 text-xs">
                       <span className="font-medium text-slate-700">{p.name}</span>
-                      <span className="text-slate-400">({label(p.residentType)})</span>
-                      {p.items.map((i) => <Badge key={i.category} tone={TONE[i.status]}>{CATEGORY_LABELS[i.category]}</Badge>)}
+                      <span className="text-slate-400">({t(label(p.residentType))})</span>
+                      {p.items.map((i) => <Badge key={i.category} tone={TONE[i.status]}>{t(CATEGORY_LABELS[i.category])}</Badge>)}
                     </div>
                   ))}
                 </div>

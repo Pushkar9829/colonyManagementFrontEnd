@@ -7,6 +7,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { useApiMutation } from '../../../hooks/useApiMutation';
 import { dateTime, label } from '../../../lib/format';
 import { PermissionGate } from '../../platform/components/PermissionGate';
+import { useT } from '../../../context/LanguageContext';
 
 const STATUSES = [
   { value: 'pending', label: 'Pending' },
@@ -28,6 +29,7 @@ export default function DeletionRequestsPage() {
 }
 
 function DeletionRequests() {
+  const { t } = useT();
   const { user } = useAuth();
   const [status, setStatus] = useState('pending');
   const [page, setPage] = useState(1);
@@ -64,14 +66,14 @@ function DeletionRequests() {
             { key: 'userName', header: 'Member', render: (r) => (
               <div>
                 <p className="font-medium text-slate-800">{r.userName}</p>
-                {r.roles?.length > 0 && <p className="text-xs text-slate-500">{r.roles.map((m) => [label(m.role), m.unit].filter(Boolean).join(' · ')).join(', ')}</p>}
+                {r.roles?.length > 0 && <p className="text-xs text-slate-500">{r.roles.map((m) => [t(label(m.role)), m.unit].filter(Boolean).join(' · ')).join(', ')}</p>}
               </div>
             ) },
             { key: 'reason', header: 'Reason', className: 'max-w-xs', render: (r) => <span className="text-sm text-slate-600">{r.reason || '—'}</span> },
             { key: 'status', header: 'Status', render: (r) => (
               <div>
                 <StatusBadge status={r.status} />
-                {r.status === 'pending' && r.societies > 1 && <p className="mt-1 text-xs text-slate-500">{r.approvals}/{r.societies} societies approved</p>}
+                {r.status === 'pending' && r.societies > 1 && <p className="mt-1 text-xs text-slate-500">{t('{approved}/{total} societies approved', { approved: r.approvals, total: r.societies })}</p>}
                 {r.decisionNote && <p className="mt-1 text-xs text-slate-500">{r.decisionNote}</p>}
               </div>
             ) },
@@ -85,7 +87,7 @@ function DeletionRequests() {
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>
 
-      <Modal open={Boolean(deciding)} onClose={close} title={approving ? `Delete ${deciding?.request.userName}'s account?` : 'Decline this request'}
+      <Modal open={Boolean(deciding)} onClose={close} title={approving ? t("Delete {name}'s account?", { name: deciding?.request.userName }) : 'Decline this request'}
         footer={<>
           <Button variant="ghost" onClick={close}>Cancel</Button>
           <Button variant={approving ? 'danger' : 'primary'} loading={decide.isPending} disabled={!approving && note.trim().length < 3}
@@ -95,9 +97,9 @@ function DeletionRequests() {
         </>}>
         <div className="space-y-4 text-sm text-slate-600">
           {approving ? (
-            <p>Their name, email, phone and photo are removed, all sessions end and their memberships close. Bills, payments, receipts, registers and the audit log stay with the flat. This cannot be undone.</p>
+            <p>{t('Their name, email, phone and photo are removed, all sessions end and their memberships close. Bills, payments, receipts, registers and the audit log stay with the flat. This cannot be undone.')}</p>
           ) : (
-            <p>The member is told why. Under the DPDP Act a request can be declined only for a lawful reason (for example, an open dispute or records you must keep).</p>
+            <p>{t('The member is told why. Under the DPDP Act a request can be declined only for a lawful reason (for example, an open dispute or records you must keep).')}</p>
           )}
           <Textarea label={approving ? 'Note (optional)' : 'Reason'} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
         </div>

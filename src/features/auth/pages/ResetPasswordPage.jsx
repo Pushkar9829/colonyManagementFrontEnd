@@ -4,6 +4,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { api } from '../../../api/client';
 import { Button, Input, PageLoader } from '../../../components/ui';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Handles both "forgot password" links and "set your password" invites for imported/added members.
 export default function ResetPasswordPage() {
@@ -24,7 +25,7 @@ export default function ResetPasswordPage() {
       setInvalid('This link is missing its token.');
       return;
     }
-    api.post('/auth/password/check', { token }, { auth: false }).then(setInfo).catch((err) => setInvalid(err.message));
+    api.post('/auth/password/check', { token }, { auth: false }).then(setInfo).catch((err) => setInvalid(errorText(err, t)));
   }, [token]);
 
   const submit = async (e) => {
@@ -39,7 +40,7 @@ export default function ResetPasswordPage() {
       await api.post('/auth/password/reset', { token, password }, { auth: false });
       setDone(true);
     } catch (err) {
-      setError(err.fieldErrors?.password || err.message);
+      setError(err.fieldErrors?.password || errorText(err, t));
     } finally {
       setLoading(false);
     }

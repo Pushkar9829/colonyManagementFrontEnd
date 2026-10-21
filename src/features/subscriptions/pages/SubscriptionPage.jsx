@@ -5,13 +5,14 @@ import { Badge, Button, Card, CardHeader, ErrorState, Input, Modal, PageLoader, 
 import { useAuth } from '../../../context/AuthContext';
 import { date, label, money } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { useDownload } from '../../reports/download';
 import { useApplyLicence, usePayInvoice, useSubscription, useSubscriptionInvoice, useSubscriptionInvoices, useUpdateSubscription } from '../api';
 
 // A lifetime licence is "paid until" 2100-01-01 on the server.
 const isLifetime = (d) => Boolean(d) && new Date(d).getUTCFullYear() >= 2099;
-const until = (d) => (isLifetime(d) ? 'Lifetime' : date(d));
-const periodText = (i) => (i.lifetime ? `Lifetime from ${date(i.periodStart)}` : `${date(i.periodStart)} – ${date(new Date(new Date(i.periodEnd).getTime() - 1))}`);
+const until = (d, t) => (isLifetime(d) ? t('Lifetime') : date(d));
+const periodText = (i, t) => (i.lifetime ? t('Lifetime from {date}', { date: date(i.periodStart) }) : `${date(i.periodStart)} – ${date(new Date(new Date(i.periodEnd).getTime() - 1))}`);
 const CYCLE_LABELS = { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly', one_time: 'One-time licence' };
 
 function LicenceKeyCard({ canEdit }) {
@@ -30,6 +31,7 @@ function LicenceKeyCard({ canEdit }) {
 }
 
 function BillingDetails({ sub, canEdit, cycleOptions = [] }) {
+  const { t } = useT();
   const [form, setForm] = useState(null);
   const update = useUpdateSubscription({ onSuccess: () => setForm(null) });
   const v = form ?? { billingCycle: sub.billingCycle, billingEmail: sub.billingEmail || '', gstin: sub.gstin || '' };
@@ -42,7 +44,7 @@ function BillingDetails({ sub, canEdit, cycleOptions = [] }) {
         <Select label="Billing cycle" disabled={!canEdit} value={v.billingCycle} onChange={set('billingCycle')}
           options={(cycleOptions.length ? cycleOptions : Object.keys(CYCLE_LABELS).map((c) => ({ cycle: c, available: true })))
             .filter((c) => c.available || c.cycle === sub.billingCycle)
-            .map((c) => ({ value: c.cycle, label: `${CYCLE_LABELS[c.cycle]}${c.total ? ` · ${money(c.total)}` : ''}${c.discountPercent ? ` (${c.discountPercent}% off)` : ''}` }))} />
+            .map((c) => ({ value: c.cycle, label: `${t(CYCLE_LABELS[c.cycle])}${c.total ? ` · ${money(c.total)}` : ''}${c.discountPercent ? ` ${t('({n}% off)', { n: c.discountPercent })}` : ''}` }))} />
         <Input label="Invoice email" type="email" disabled={!canEdit} placeholder="accounts@society.in" value={v.billingEmail} onChange={set('billingEmail')} error={errors.billingEmail} />
         <Input label="GSTIN" disabled={!canEdit} placeholder="27ABCDE1234F1Z5" value={v.gstin} onChange={set('gstin')} error={errors.gstin} />
         {canEdit && (
@@ -56,30 +58,31 @@ function BillingDetails({ sub, canEdit, cycleOptions = [] }) {
 }
 
 function InvoiceModal({ id, onClose }) {
+  const { t } = useT();
   const { data: inv, isLoading } = useSubscriptionInvoice(id);
   const pay = usePayInvoice();
   const { download, busyKey } = useDownload();
   return (
-    <Modal open onClose={onClose} title={inv ? `Invoice ${inv.number}` : 'Invoice'} description={inv ? periodText(inv) : undefined}
+    <Modal open onClose={onClose} title={inv ? t('Invoice {number}', { number: inv.number }) : 'Invoice'} description={inv ? periodText(inv, t) : undefined}
       footer={inv && (
         <>
           <Button variant="secondary" icon={Download} loading={busyKey === 'pdf'} onClick={() => download(`/subscription/invoices/${inv._id}/pdf`, null, `${inv.number}.pdf`, 'pdf')}>PDF</Button>
-          {inv.status === 'unpaid' && <Button icon={CreditCard} loading={pay.isPending} onClick={() => pay.mutate(inv._id, { onSuccess: onClose })}>Pay {money(inv.total)}</Button>}
+          {inv.status === 'unpaid' && <Button icon={CreditCard} loading={pay.isPending} onClick={() => pay.mutate(inv._id, { onSuccess: onClose })}>{t('Pay {amount}', { amount: money(inv.total) })}</Button>}
         </>
       )}>
       {isLoading || !inv ? <PageLoader /> : (
         <div className="space-y-4 text-sm">
-          <div className="flex flex-wrap gap-2"><StatusBadge status={inv.status} /><Badge tone="brand">{label(inv.plan)} · {CYCLE_LABELS[inv.billingCycle] || inv.billingCycle}</Badge><Badge>{inv.units} units</Badge></div>
+          <div className="flex flex-wrap gap-2"><StatusBadge status={inv.status} /><Badge tone="brand">{t(label(inv.plan))} · {t(CYCLE_LABELS[inv.billingCycle] || inv.billingCycle)}</Badge><Badge>{t('{n} units', { n: inv.units })}</Badge></div>
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
             {inv.lines.map((l) => <li key={l.description} className="flex justify-between gap-3 px-3 py-2"><span className="text-slate-600">{l.description}</span><span className="shrink-0 font-medium">{money(l.amount)}</span></li>)}
-            <li className="flex justify-between px-3 py-2"><span>Subtotal</span><span>{money(inv.subtotal)}</span></li>
-            <li className="flex justify-between px-3 py-2"><span>GST @ {inv.gstRate}%</span><span>{money(inv.gst)}</span></li>
-            <li className="flex justify-between px-3 py-2 font-semibold"><span>Total</span><span>{money(inv.total)}</span></li>
+            <li className="flex justify-between px-3 py-2"><span>{t('Subtotal')}</span><span>{money(inv.subtotal)}</span></li>
+            <li className="flex justify-between px-3 py-2"><span>{t('GST @ {rate}%', { rate: inv.gstRate })}</span><span>{money(inv.gst)}</span></li>
+            <li className="flex justify-between px-3 py-2 font-semibold"><span>{t('Total')}</span><span>{money(inv.total)}</span></li>
           </ul>
-          <p className="text-slate-500">Due {date(inv.dueDate)}{inv.paidAt ? ` · paid ${date(inv.paidAt)}` : ''}</p>
+          <p className="text-slate-500">{inv.paidAt ? t('Due {due} · paid {paid}', { due: date(inv.dueDate), paid: date(inv.paidAt) }) : t('Due {date}', { date: date(inv.dueDate) })}</p>
           {inv.payLink && (
             <div className="rounded-lg bg-slate-50 p-3">
-              <p className="text-xs text-slate-500">Pay link — share with your treasurer. It also works if the account gets suspended.</p>
+              <p className="text-xs text-slate-500">{t('Pay link — share with your treasurer. It also works if the account gets suspended.')}</p>
               <p className="mt-1 break-all font-mono text-xs text-slate-700">{inv.payLink}</p>
             </div>
           )}
@@ -91,6 +94,7 @@ function InvoiceModal({ id, onClose }) {
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
+  const { t } = useT();
   const { data, isLoading, error, refetch } = useSubscription();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
@@ -110,24 +114,24 @@ export default function SubscriptionPage() {
       {overdueInvoices > 0 && (
         <div className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <AlertTriangle className="mt-0.5 size-5 shrink-0" />
-          <p>{overdueInvoices} invoice{overdueInvoices > 1 ? 's are' : ' is'} overdue. Access for all members will be suspended on {date(suspendsOn)} unless paid.</p>
+          <p>{t(overdueInvoices > 1 ? '{n} invoices are overdue. Access for all members will be suspended on {date} unless paid.' : '{n} invoice is overdue. Access for all members will be suspended on {date} unless paid.', { n: overdueInvoices, date: date(suspendsOn) })}</p>
         </div>
       )}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Layers} label="Plan" value={label(society.plan?.name || 'free')} sub={`${units} units · ${society.plan?.unitLimit ? `limit ${society.plan.unitLimit}` : 'no unit limit'}`} />
-        <StatCard icon={CalendarClock} tone="green" label="Paid until" value={sub.paidUntil ? until(sub.paidUntil) : '—'} sub={sub.licenceKey ? 'Licence key' : label(sub.status)} />
+        <StatCard icon={Layers} label="Plan" value={t(label(society.plan?.name || 'free'))} sub={society.plan?.unitLimit ? t('{n} units · limit {limit}', { n: units, limit: society.plan.unitLimit }) : t('{n} units · no unit limit', { n: units })} />
+        <StatCard icon={CalendarClock} tone="green" label="Paid until" value={sub.paidUntil ? until(sub.paidUntil, t) : '—'} sub={sub.licenceKey ? 'Licence key' : label(sub.status)} />
         <StatCard icon={IndianRupee} tone={outstanding ? 'amber' : 'slate'} label="Outstanding" value={money(outstanding)} />
-        <StatCard icon={CreditCard} tone="sky" label={`Next invoice (${(CYCLE_LABELS[nextInvoice.cycle || sub.billingCycle] || '').toLowerCase()})`} value={lifetime ? 'None' : nextInvoice.total ? money(nextInvoice.total) : 'Free'} sub={lifetime ? 'lifetime licence' : nextInvoice.total ? `from ${date(nextInvoice.startsOn)} incl. GST` : 'no charge on this plan'} />
+        <StatCard icon={CreditCard} tone="sky" label={t('Next invoice ({cycle})', { cycle: t(CYCLE_LABELS[nextInvoice.cycle || sub.billingCycle] || '').toLowerCase() })} value={lifetime ? t('None') : nextInvoice.total ? money(nextInvoice.total) : t('Free')} sub={lifetime ? 'lifetime licence' : nextInvoice.total ? t('from {date} incl. GST', { date: date(nextInvoice.startsOn) }) : 'no charge on this plan'} />
       </div>
       <div className="mb-6 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
           <CardHeader title="Your price" subtitle="Set by ColonyHub for your plan" />
           <dl className="space-y-2 p-5 text-sm">
-            <div className="flex justify-between"><dt className="text-slate-500">Per unit per month</dt><dd>{money(price.perUnitMonthly)}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Platform fee per month</dt><dd>{money(price.flatMonthly)}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Quarterly discount</dt><dd>{price.quarterlyDiscountPercent || 0}%</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Yearly discount</dt><dd>{price.yearlyDiscountPercent || 0}%</dd></div>
-            {price.oneTimePrice > 0 && <div className="flex justify-between"><dt className="text-slate-500">One-time licence</dt><dd>{money(price.oneTimePrice)} · {price.oneTimeValidityMonths ? `${price.oneTimeValidityMonths} months` : 'lifetime'}</dd></div>}
+            <div className="flex justify-between"><dt className="text-slate-500">{t('Per unit per month')}</dt><dd>{money(price.perUnitMonthly)}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-500">{t('Platform fee per month')}</dt><dd>{money(price.flatMonthly)}</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-500">{t('Quarterly discount')}</dt><dd>{price.quarterlyDiscountPercent || 0}%</dd></div>
+            <div className="flex justify-between"><dt className="text-slate-500">{t('Yearly discount')}</dt><dd>{price.yearlyDiscountPercent || 0}%</dd></div>
+            {price.oneTimePrice > 0 && <div className="flex justify-between"><dt className="text-slate-500">{t('One-time licence')}</dt><dd>{money(price.oneTimePrice)} · {price.oneTimeValidityMonths ? t('{n} months', { n: price.oneTimeValidityMonths }) : t('lifetime')}</dd></div>}
             <div className="flex justify-between"><dt className="text-slate-500">GST</dt><dd>18%</dd></div>
           </dl>
         </Card>
@@ -139,7 +143,7 @@ export default function SubscriptionPage() {
         <Table loading={invoices.isLoading} rows={invoices.data?.data} empty="No invoices yet" onRowClick={(i) => setOpenId(i._id)}
           columns={[
             { key: 'number', header: 'Invoice', render: (i) => <span className="font-medium text-slate-900">{i.number}</span> },
-            { key: 'period', header: 'Period', render: periodText },
+            { key: 'period', header: 'Period', render: (i) => periodText(i, t) },
             { key: 'total', header: 'Amount', render: (i) => money(i.total) },
             { key: 'dueDate', header: 'Due', render: (i) => <span className={i.status === 'unpaid' && new Date(i.dueDate) < new Date() ? 'font-medium text-red-600' : ''}>{date(i.dueDate)}</span> },
             { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },

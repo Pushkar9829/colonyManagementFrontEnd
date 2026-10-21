@@ -4,6 +4,7 @@ import { ArrowLeft, CalendarDays, Download, IndianRupee, UserX, Wallet } from 'l
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, Input, StatCard, Table } from '../../../components/ui';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { money, todayISO } from '../../../lib/format';
 import { useUsageReport } from '../api';
 import { downloadFile } from '../download';
@@ -11,6 +12,7 @@ import { downloadFile } from '../download';
 const monthStart = () => `${todayISO().slice(0, 7)}-01`;
 
 export default function AmenityReportsPage() {
+  const { t } = useT();
   const [range, setRange] = useState({ from: monthStart(), to: todayISO() });
   const { data, isLoading } = useUsageReport(range);
   const toast = useToast();
@@ -25,22 +27,22 @@ export default function AmenityReportsPage() {
       setBusy(false);
     }
   };
-  const t = data?.totals;
+  const tot = data?.totals;
 
   return (
     <div>
-      <Link to="/amenities" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> Amenities</Link>
+      <Link to="/amenities" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> {t('Amenities')}</Link>
       <PageHeader title="Amenity usage & revenue" description="Bookings, utilisation, no-shows and money collected per amenity." actions={<Button variant="secondary" icon={Download} loading={busy} onClick={exportXlsx}>Export Excel</Button>} />
       <Card className="mb-6 grid gap-3 p-4 sm:grid-cols-2">
         <Input label="From" type="date" value={range.from} max={range.to} onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))} />
         <Input label="To" type="date" value={range.to} min={range.from} onChange={(e) => setRange((r) => ({ ...r, to: e.target.value }))} />
       </Card>
-      {t && (
+      {tot && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard icon={CalendarDays} label="Bookings" value={t.bookings} sub={`${t.cancelled} cancelled`} />
-          <StatCard icon={UserX} tone="red" label="No-shows" value={t.noShows} />
-          <StatCard icon={IndianRupee} tone="green" label="Revenue" value={money(t.revenue)} sub="Fees + pass sales, net of refunds" />
-          <StatCard icon={Wallet} tone="amber" label="Deposits held" value={money(t.depositsHeld)} />
+          <StatCard icon={CalendarDays} label="Bookings" value={tot.bookings} sub={t('{n} cancelled', { n: tot.cancelled })} />
+          <StatCard icon={UserX} tone="red" label="No-shows" value={tot.noShows} />
+          <StatCard icon={IndianRupee} tone="green" label="Revenue" value={money(tot.revenue)} sub="Fees + pass sales, net of refunds" />
+          <StatCard icon={Wallet} tone="amber" label="Deposits held" value={money(tot.depositsHeld)} />
         </div>
       )}
       <Card>
@@ -59,7 +61,7 @@ export default function AmenityReportsPage() {
               ),
             },
             { key: 'fees', header: 'Fees', render: (r) => money(r.feeRevenue) },
-            { key: 'passes', header: 'Passes', render: (r) => `${money(r.passSales)} · ${r.activePasses} active` },
+            { key: 'passes', header: 'Passes', render: (r) => `${money(r.passSales)} · ${t('{n} active', { n: r.activePasses })}` },
             { key: 'deposits', header: 'Deposits held', render: (r) => money(r.depositsHeld) },
           ]}
         />

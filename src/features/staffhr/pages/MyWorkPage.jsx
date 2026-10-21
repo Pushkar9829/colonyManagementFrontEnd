@@ -6,7 +6,7 @@ import { Badge, Button, Card, CardHeader, EmptyState, Input, Pagination, Spinner
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useT } from '../../../context/LanguageContext';
-import { currentPeriod, date, label, money, periodLabel, time, todayISO } from '../../../lib/format';
+import { currentPeriod, date, hoursMinutes, label, money, periodLabel, time, todayISO } from '../../../lib/format';
 import { addDays, openPdf } from '../../assets/shared';
 import { useBreakdowns, useRuns, useTasks, useWorkOrders } from '../../maintenance/api';
 import { breakdownTone, BreakdownDetailModal } from '../../maintenance/components/BreakdownModals';
@@ -19,6 +19,7 @@ import { ATT_TONES } from '../constants';
 import { ApplyLeaveModal, BalanceCards, LEAVE_TONES } from '../components/LeaveModals';
 import { PunchCard } from '../components/PunchCard';
 import { MyTicketsCard } from '../components/MyTicketsCard';
+import { errorText } from '../../../lib/errorText';
 
 const isTech = (role) => ['staff', 'facility_manager', 'admin'].includes(role);
 
@@ -113,7 +114,7 @@ function AttendanceTab() {
   const [period, setPeriod] = useState(currentPeriod());
   const { data, isLoading, error } = useMyAttendance(period);
   const { t: tx } = useT();
-  if (error) return <Card className="p-5 text-sm text-slate-600">{error.message}</Card>;
+  if (error) return <Card className="p-5 text-sm text-slate-600">{errorText(error, tx)}</Card>;
   const t = data?.totals;
   return (
     <Card>
@@ -124,8 +125,8 @@ function AttendanceTab() {
           { key: 'shift', header: 'Shift', render: (r) => r.shift?.name || '—' },
           { key: 'in', header: 'In', render: (r) => (r.checkIn?.at ? time(r.checkIn.at) : '—') },
           { key: 'out', header: 'Out', render: (r) => (r.checkOut?.at ? time(r.checkOut.at) : '—') },
-          { key: 'worked', header: 'Worked', render: (r) => (r.workedMinutes ? `${Math.floor(r.workedMinutes / 60)}h ${r.workedMinutes % 60}m` : '—') },
-          { key: 'status', header: 'Status', render: (r) => <Badge tone={ATT_TONES[r.status]}>{tx(label(r.status))}{r.status === 'late' ? ` +${r.lateMinutes}m` : ''}</Badge> },
+          { key: 'worked', header: 'Worked', render: (r) => (r.workedMinutes ? hoursMinutes(r.workedMinutes) : '—') },
+          { key: 'status', header: 'Status', render: (r) => <Badge tone={ATT_TONES[r.status]}>{tx(label(r.status))}{r.status === 'late' ? ` ${tx('+{n}m', { n: r.lateMinutes })}` : ''}</Badge> },
         ]} />
     </Card>
   );
@@ -138,7 +139,7 @@ function LeaveTab() {
   const { data, isLoading } = useLeaves({ mine: true, page });
   const cancel = useCancelLeave();
   const { t } = useT();
-  if (error) return <Card className="p-5 text-sm text-slate-600">{error.message}</Card>;
+  if (error) return <Card className="p-5 text-sm text-slate-600">{errorText(error, t)}</Card>;
   return (
     <div className="space-y-4">
       <Card className="space-y-4 p-5">

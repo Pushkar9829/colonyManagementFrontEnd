@@ -34,6 +34,7 @@ const bookingStart = (b) => new Date(`${b.date}T${b.startTime}:00+05:30`);
 const bookingEnd = (b) => new Date(`${b.date}T${b.endTime}:00+05:30`);
 
 function AmenityModal({ amenity, onClose }) {
+  const { t } = useT();
   const editing = Boolean(amenity?._id);
   const { values, bind, applyServerErrors } = useForm({
     name: amenity?.name || '',
@@ -78,7 +79,7 @@ function AmenityModal({ amenity, onClose }) {
   };
   const paid = toPaise(values.fee) + toPaise(values.deposit) > 0;
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${amenity.name}` : 'Add amenity'} size="lg"
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: amenity.name }) : 'Add amenity'} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending || addPhotos.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-3">
         <Input className="sm:col-span-3" label="Name" required {...bind('name')} />
@@ -94,24 +95,24 @@ function AmenityModal({ amenity, onClose }) {
         <Select label="Payment" options={[{ value: 'online', label: 'Pay online to confirm' }, { value: 'desk', label: 'Pay at the office' }]} {...bind('paymentMode')} />
         {paid && (
           <div className="rounded-lg bg-slate-50 p-3 sm:col-span-3">
-            <p className="mb-2 text-sm font-medium text-slate-700">Cancellation policy (fee refund)</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">{t('Cancellation policy (fee refund)')}</p>
             <div className="grid gap-3 sm:grid-cols-3">
               <Input label="Full refund if cancelled ≥ (hours before)" type="number" min={0} {...bind('fullRefundHours')} />
               <Input label="Partial refund if ≥ (hours before)" type="number" min={0} {...bind('partialRefundHours')} />
               <Input label="Partial refund (%)" type="number" min={0} max={100} {...bind('partialRefundPercent')} />
             </div>
-            <p className="mt-2 text-xs text-slate-500">Later cancellations get no fee refund. Deposits are always returned on cancellation.</p>
+            <p className="mt-2 text-xs text-slate-500">{t('Later cancellations get no fee refund. Deposits are always returned on cancellation.')}</p>
           </div>
         )}
         <Textarea className="sm:col-span-3" label="Rules" rows={2} {...bind('rules')} />
         <div className="space-y-2 sm:col-span-3">
-          <p className="text-sm font-medium text-slate-700">Photos</p>
+          <p className="text-sm font-medium text-slate-700">{t('Photos')}</p>
           {amenity?.photos?.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {amenity.photos.map((p) => (
                 <div key={p._id} className="relative size-20 overflow-hidden rounded-lg border border-slate-200">
-                  <img src={p.url} alt={p.name || 'Amenity'} className="size-full object-cover" />
-                  <button type="button" aria-label="Remove photo" onClick={() => removePhoto.mutate({ id: amenity._id, photoId: p._id })} className="absolute right-0.5 top-0.5 rounded-full bg-white/90 p-1 text-slate-600 shadow hover:text-red-600">
+                  <img src={p.url} alt={p.name || t('Amenity')} className="size-full object-cover" />
+                  <button type="button" aria-label={t('Remove photo')} onClick={() => removePhoto.mutate({ id: amenity._id, photoId: p._id })} className="absolute right-0.5 top-0.5 rounded-full bg-white/90 p-1 text-slate-600 shadow hover:text-red-600">
                     <Trash2 className="size-3" />
                   </button>
                 </div>
@@ -226,14 +227,15 @@ function CancelModal({ booking, manager, onClose }) {
 }
 
 function DeskPaymentModal({ booking, onClose }) {
+  const { t } = useT();
   const [method, setMethod] = useState('cash');
   const [reference, setReference] = useState('');
   const markPaid = useMarkBookingPaid({ onSuccess: onClose });
   return (
     <Modal open onClose={onClose} title="Record desk payment" size="sm"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={markPaid.isPending} onClick={() => markPaid.mutate({ id: booking._id, method, reference: reference || undefined })}>Record {money(booking.fee + booking.deposit)}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={markPaid.isPending} onClick={() => markPaid.mutate({ id: booking._id, method, reference: reference || undefined })}>{t('Record {amount}', { amount: money(booking.fee + booking.deposit) })}</Button></>}>
       <div className="space-y-3">
-        <p className="text-sm text-slate-600">Fee {money(booking.fee)}{booking.deposit ? ` + deposit ${money(booking.deposit)}` : ''}</p>
+        <p className="text-sm text-slate-600">{booking.deposit ? t('Fee {fee} + deposit {deposit}', { fee: money(booking.fee), deposit: money(booking.deposit) }) : t('Fee {fee}', { fee: money(booking.fee) })}</p>
         <Select label="Method" options={DESK_METHODS} value={method} onChange={(e) => setMethod(e.target.value)} />
         <Input label="Reference (optional)" value={reference} onChange={(e) => setReference(e.target.value)} />
       </div>
@@ -242,6 +244,7 @@ function DeskPaymentModal({ booking, onClose }) {
 }
 
 function DepositModal({ booking, onClose }) {
+  const { t } = useT();
   const held = booking.deposit;
   const [amount, setAmount] = useState(String(toRupees(held)));
   const [reason, setReason] = useState('');
@@ -249,10 +252,10 @@ function DepositModal({ booking, onClose }) {
   const deduction = held - toPaise(amount);
   return (
     <Modal open onClose={onClose} title="Refund deposit" description={`${booking.amenity?.name} · ${fmtDate(booking.date)} · ${booking.user?.name}`} size="sm"
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={refund.isPending} onClick={() => refund.mutate({ id: booking._id, amount: toPaise(amount), reason: reason || undefined })}>Refund {money(toPaise(amount))}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={refund.isPending} onClick={() => refund.mutate({ id: booking._id, amount: toPaise(amount), reason: reason || undefined })}>{t('Refund {amount}', { amount: money(toPaise(amount)) })}</Button></>}>
       <div className="space-y-3">
-        <Input label="Refund amount (₹)" type="number" min={0} max={toRupees(held)} value={amount} onChange={(e) => setAmount(e.target.value)} hint={`Deposit held: ${money(held)}`} />
-        {deduction > 0 && <Textarea label="Reason for the deduction" required rows={2} value={reason} onChange={(e) => setReason(e.target.value)} hint={`${money(deduction)} will be kept`} />}
+        <Input label="Refund amount (₹)" type="number" min={0} max={toRupees(held)} value={amount} onChange={(e) => setAmount(e.target.value)} hint={t('Deposit held: {amount}', { amount: money(held) })} />
+        {deduction > 0 && <Textarea label="Reason for the deduction" required rows={2} value={reason} onChange={(e) => setReason(e.target.value)} hint={t('{amount} will be kept', { amount: money(deduction) })} />}
       </div>
     </Modal>
   );
@@ -324,7 +327,7 @@ export default function AmenitiesPage() {
   const manager = isManager(user);
   const [params, setParams] = useSearchParams();
   const tab = params.get('tab') || (manager ? 'amenities' : 'book');
-  const setTab = (t) => setParams({ tab: t }, { replace: true });
+  const setTab = (v) => setParams({ tab: v }, { replace: true });
   const [selected, setSelected] = useState(null);
   const [editing, setEditing] = useState(null);
   const { data: amenities = [], isLoading } = useAmenities();

@@ -5,6 +5,7 @@ import { Button, Input, Modal } from '../../../components/ui';
 import { money } from '../../../lib/format';
 import { useT } from '../../../context/LanguageContext';
 import { useCheckIn } from '../api';
+import { errorText } from '../../../lib/errorText';
 
 // Organiser check-in: scan the ticket QR with the camera, or type the 8-character code.
 // When the attendee still owes money, offers to record it as collected (cash / UPI) and check in.
@@ -26,7 +27,7 @@ export function CheckInModal({ eventId, open, onClose }) {
         onError: (err) =>
           setResult(err.code === 'PAYMENT_PENDING'
             ? { ok: false, title: t('Payment pending'), sub: t('{amount} to collect', { amount: money(err.details?.amountDue) }), pending: code }
-            : { ok: false, title: t('Not checked in'), sub: err.message }),
+            : { ok: false, title: t('Not checked in'), sub: errorText(err, t) }),
       },
     );
   };

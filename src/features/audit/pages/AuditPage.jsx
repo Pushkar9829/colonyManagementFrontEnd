@@ -5,6 +5,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Card, Pagination, Select, Table } from '../../../components/ui';
 import { dateTime, label } from '../../../lib/format';
 import { actionLabel, detailLines } from '../actions';
+import { useT } from '../../../context/LanguageContext';
 
 const ENTITIES = [
   { value: 'Society', label: 'Society settings' },
@@ -28,13 +29,14 @@ const ENTITIES = [
   { value: 'SosAlert', label: 'SOS alerts' },
 ];
 
-const who = (actor) => {
-  if (!actor) return 'System';
-  const role = label(actor.role);
+const who = (actor, t) => {
+  if (!actor) return t('System');
+  const role = actor.role ? t(label(actor.role)) : '';
   return role ? `${actor.name} (${role})` : actor.name;
 };
 
 export default function AuditPage() {
+  const { t } = useT();
   const [entity, setEntity] = useState('');
   const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({
@@ -51,12 +53,12 @@ export default function AuditPage() {
         </div>
         <Table loading={isLoading} rows={data?.data} empty="No activity yet"
           columns={[
-            { key: 'action', header: 'What happened', render: (l) => <span className="font-medium text-slate-900" title={l.action}>{actionLabel(l.action)}</span> },
-            { key: 'actor', header: 'Who', render: (l) => who(l.actor) },
+            { key: 'action', header: 'What happened', render: (l) => <span className="font-medium text-slate-900" title={l.action}>{actionLabel(l.action, t)}</span> },
+            { key: 'actor', header: 'Who', render: (l) => who(l.actor, t) },
             { key: 'createdAt', header: 'When', render: (l) => dateTime(l.createdAt) },
             {
               key: 'meta', header: 'Details', render: (l) => {
-                const lines = detailLines(l.meta);
+                const lines = detailLines(l.meta, t);
                 if (!lines.length) return '';
                 return (
                   <dl className="max-w-md space-y-0.5 whitespace-normal text-xs">

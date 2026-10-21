@@ -11,6 +11,7 @@ import { useAgeing, useCancelVendorBill, useExpenseReport, useRecurring, useRunR
 import { BILL_STATUSES } from '../constants';
 import { VendorPicker } from '../components/VendorPicker';
 import { RecurringForm, VendorBillForm } from '../components/VendorBillForm';
+import { useT } from '../../../context/LanguageContext';
 
 const overdue = (b) => ['unpaid', 'partial'].includes(b.status) && b.dueDate < todayISO();
 
@@ -20,46 +21,47 @@ function BillDetail({ id, onClose }) {
   const [reason, setReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const cancel = useCancelVendorBill({ onSuccess: onClose });
+  const { t } = useT();
   return (
-    <Modal open onClose={onClose} size="lg" title={b ? `${b.number} · ${b.vendor?.name}` : 'Vendor bill'} description={b && `Invoice ${b.billNo} · ${date(b.billDate)} · due ${date(b.dueDate)}`}
+    <Modal open onClose={onClose} size="lg" title={b ? `${b.number} · ${b.vendor?.name}` : 'Vendor bill'} description={b && t('Invoice {no} · {date} · due {due}', { no: b.billNo, date: date(b.billDate), due: date(b.dueDate) })}
       footer={b && b.status !== 'cancelled' && (
         <>
           {b.paid === 0 && (cancelling
             ? <Button variant="danger" disabled={reason.trim().length < 3} loading={cancel.isPending} onClick={() => cancel.mutate({ id: b._id, reason })}>Confirm cancel</Button>
             : <Button variant="ghost" onClick={() => setCancelling(true)}>Cancel bill</Button>)}
-          {b.balance > 0 && <Button icon={IndianRupee} onClick={() => navigate(`/expenses/payments?vendor=${b.vendor._id}&bill=${b._id}`)}>Pay {money(b.balance)}</Button>}
+          {b.balance > 0 && <Button icon={IndianRupee} onClick={() => navigate(`/expenses/payments?vendor=${b.vendor._id}&bill=${b._id}`)}>{t('Pay {amount}', { amount: money(b.balance) })}</Button>}
         </>
       )}>
       {isLoading || !b ? <div className="flex justify-center py-8"><Spinner /></div> : (
         <div className="space-y-4 text-sm">
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={b.status} />
-            {overdue(b) && <Badge tone="red">Overdue</Badge>}
-            {b.purchaseRequest && <span className="text-slate-600">Against {b.purchaseRequest.number}</span>}
-            {b.recurringPeriod && <Badge tone="blue">Recurring · {b.recurringPeriod}</Badge>}
+            {overdue(b) && <Badge tone="red">{t('Overdue')}</Badge>}
+            {b.purchaseRequest && <span className="text-slate-600">{t('Against {number}', { number: b.purchaseRequest.number })}</span>}
+            {b.recurringPeriod && <Badge tone="blue">{t('Recurring · {period}', { period: b.recurringPeriod })}</Badge>}
           </div>
           <table className="min-w-full overflow-hidden rounded-lg border border-slate-200">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">Description</th><th className="px-3 py-2 text-left">Account</th><th className="px-3 py-2 text-right">Amount</th></tr></thead>
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="px-3 py-2 text-left">{t('Description')}</th><th className="px-3 py-2 text-left">{t('Account')}</th><th className="px-3 py-2 text-right">{t('Amount')}</th></tr></thead>
             <tbody className="divide-y divide-slate-100">
               {b.lines.map((l, n) => <tr key={n}><td className="px-3 py-2">{l.description}</td><td className="px-3 py-2 font-mono text-xs">{l.account}</td><td className="px-3 py-2 text-right tabular-nums">{money(l.amount)}</td></tr>)}
-              <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>Subtotal</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.subtotal)}</td></tr>
-              {b.gstAmount > 0 && <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>GST {b.claimGst ? '(input credit)' : '(part of cost)'}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.gstAmount)}</td></tr>}
-              <tr className="font-semibold"><td className="px-3 py-1.5" colSpan={2}>Invoice total</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.total)}</td></tr>
-              {b.tdsAmount > 0 && <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>TDS {b.tdsRate}% {b.tdsSection || ''} withheld</td><td className="px-3 py-1.5 text-right tabular-nums">−{money(b.tdsAmount)}</td></tr>}
-              <tr className="font-semibold"><td className="px-3 py-1.5" colSpan={2}>Payable · paid {money(b.paid)}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.payable)}</td></tr>
+              <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>{t('Subtotal')}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.subtotal)}</td></tr>
+              {b.gstAmount > 0 && <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>GST {b.claimGst ? t('(input credit)') : t('(part of cost)')}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.gstAmount)}</td></tr>}
+              <tr className="font-semibold"><td className="px-3 py-1.5" colSpan={2}>{t('Invoice total')}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.total)}</td></tr>
+              {b.tdsAmount > 0 && <tr><td className="px-3 py-1.5 text-slate-500" colSpan={2}>{t('TDS {rate}% {section} withheld', { rate: b.tdsRate, section: b.tdsSection || '' })}</td><td className="px-3 py-1.5 text-right tabular-nums">−{money(b.tdsAmount)}</td></tr>}
+              <tr className="font-semibold"><td className="px-3 py-1.5" colSpan={2}>{t('Payable · paid {amount}', { amount: money(b.paid) })}</td><td className="px-3 py-1.5 text-right tabular-nums">{money(b.payable)}</td></tr>
             </tbody>
           </table>
           {b.payments.length > 0 && (
             <div>
-              <p className="mb-1 font-medium text-slate-900">Payments</p>
+              <p className="mb-1 font-medium text-slate-900">{t('Payments')}</p>
               <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-                {b.payments.map((p) => <li key={p._id} className={cn('flex justify-between px-3 py-2', p.status === 'cancelled' && 'text-slate-400 line-through')}><span>{p.number} · {date(p.date)} · {label(p.method)}{p.reference ? ` · ${p.reference}` : ''}</span><span className="tabular-nums">{money(p.amount)}</span></li>)}
+                {b.payments.map((p) => <li key={p._id} className={cn('flex justify-between px-3 py-2', p.status === 'cancelled' && 'text-slate-400 line-through')}><span>{p.number} · {date(p.date)} · {t(label(p.method))}{p.reference ? ` · ${p.reference}` : ''}</span><span className="tabular-nums">{money(p.amount)}</span></li>)}
               </ul>
             </div>
           )}
           {b.notes && <p className="text-slate-600">{b.notes}</p>}
           <Attachments items={b.attachments} />
-          {b.cancelReason && <p className="rounded-lg bg-slate-50 px-3 py-2">Cancelled: {b.cancelReason}</p>}
+          {b.cancelReason && <p className="rounded-lg bg-slate-50 px-3 py-2">{t('Cancelled: {reason}', { reason: b.cancelReason })}</p>}
           {cancelling && <Textarea label="Reason for cancelling" required rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />}
         </div>
       )}
@@ -106,20 +108,21 @@ function Recurring() {
   const [adding, setAdding] = useState(false);
   const update = useUpdateRecurring();
   const run = useRunRecurring();
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title="Recurring expenses" subtitle="Monthly contracts that raise a vendor bill automatically" action={<Button size="sm" icon={Plus} onClick={() => setAdding(true)}>Add</Button>} />
       <Table loading={isLoading} rows={data} empty="No recurring expenses"
         columns={[
-          { key: 'name', header: 'Name', render: (t) => <div><p className="font-medium text-slate-900">{t.name}</p><p className="text-xs text-slate-500">{t.vendor?.name}</p></div> },
-          { key: 'amount', header: 'Amount', className: 'text-right', render: (t) => <span className="tabular-nums">{money(t.lines.reduce((s, l) => s + l.amount, 0) + (t.gstAmount || 0))}</span> },
-          { key: 'day', header: 'Bills on', render: (t) => `Day ${t.dayOfMonth}` },
-          { key: 'last', header: 'Last bill', render: (t) => (t.lastBill ? `${t.lastBill.number} · ${date(t.lastBill.billDate)}` : '—') },
-          { key: 'active', header: 'Status', render: (t) => <StatusBadge status={t.active ? 'active' : 'inactive'} /> },
-          { key: 'actions', header: '', className: 'text-right', render: (t) => (
+          { key: 'name', header: 'Name', render: (r) => <div><p className="font-medium text-slate-900">{r.name}</p><p className="text-xs text-slate-500">{r.vendor?.name}</p></div> },
+          { key: 'amount', header: 'Amount', className: 'text-right', render: (r) => <span className="tabular-nums">{money(r.lines.reduce((s, l) => s + l.amount, 0) + (r.gstAmount || 0))}</span> },
+          { key: 'day', header: 'Bills on', render: (r) => t('Day {day}', { day: r.dayOfMonth }) },
+          { key: 'last', header: 'Last bill', render: (r) => (r.lastBill ? `${r.lastBill.number} · ${date(r.lastBill.billDate)}` : '—') },
+          { key: 'active', header: 'Status', render: (r) => <StatusBadge status={r.active ? 'active' : 'inactive'} /> },
+          { key: 'actions', header: '', className: 'text-right', render: (r) => (
             <div className="flex justify-end gap-1">
-              {t.active && <Button size="sm" variant="ghost" icon={Play} loading={run.isPending && run.variables === t._id} onClick={() => run.mutate(t._id)}>Bill now</Button>}
-              <Button size="sm" variant="ghost" loading={update.isPending && update.variables?.id === t._id} onClick={() => update.mutate({ id: t._id, active: !t.active })}>{t.active ? 'Pause' : 'Resume'}</Button>
+              {r.active && <Button size="sm" variant="ghost" icon={Play} loading={run.isPending && run.variables === r._id} onClick={() => run.mutate(r._id)}>Bill now</Button>}
+              <Button size="sm" variant="ghost" loading={update.isPending && update.variables?.id === r._id} onClick={() => update.mutate({ id: r._id, active: !r.active })}>{r.active ? 'Pause' : 'Resume'}</Button>
             </div>
           ) },
         ]} />
@@ -131,10 +134,11 @@ function Recurring() {
 function Ageing() {
   const [asOf, setAsOf] = useState(todayISO());
   const { data, isLoading } = useAgeing({ asOf });
+  const { t } = useT();
   return (
     <Card>
       <CardHeader title="Unpaid vendor bills by age" subtitle="How long each unpaid bill has been waiting, counted from the bill date"
-        action={<div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium text-slate-700">As of</span><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/expenses/reports/ageing" query={{ asOf }} filename={`payables-ageing-${asOf}`} /></div>} />
+        action={<div className="flex flex-wrap items-center gap-2"><span className="text-sm font-medium text-slate-700">{t('As of')}</span><Input type="date" aria-label="As of" value={asOf} onChange={(e) => setAsOf(e.target.value)} /><DownloadButtons path="/expenses/reports/ageing" query={{ asOf }} filename={`payables-ageing-${asOf}`} /></div>} />
       {isLoading || !data ? <div className="flex justify-center py-10"><Spinner /></div> : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:gap-3 p-4 sm:grid-cols-5">
@@ -159,6 +163,7 @@ function ExpenseReport() {
   const [groupBy, setGroupBy] = useState('account');
   const query = { ...range, groupBy };
   const { data, isLoading } = useExpenseReport(query);
+  const { t } = useT();
   const monthLabel = (m) => new Date(`${m}-01T00:00:00`).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
   return (
     <Card>
@@ -172,7 +177,7 @@ function ExpenseReport() {
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr><th className="sticky left-0 bg-slate-50 px-4 py-2.5 text-left">{groupBy === 'account' ? 'Account' : 'Category'}</th>{data.months.map((m) => <th key={m} className="px-3 py-2.5 text-right">{monthLabel(m)}</th>)}<th className="px-4 py-2.5 text-right">Total</th></tr>
+              <tr><th className="sticky left-0 bg-slate-50 px-4 py-2.5 text-left">{groupBy === 'account' ? t('Account') : t('Category')}</th>{data.months.map((m) => <th key={m} className="px-3 py-2.5 text-right">{monthLabel(m)}</th>)}<th className="px-4 py-2.5 text-right">{t('Total')}</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data.rows.map((r) => (
@@ -182,10 +187,10 @@ function ExpenseReport() {
                   <td className="px-4 py-2 text-right font-semibold tabular-nums">{money(r.total)}</td>
                 </tr>
               ))}
-              <tr className="bg-slate-50 font-semibold"><td className="sticky left-0 bg-slate-50 px-4 py-2">Total</td>{data.months.map((m) => <td key={m} className="px-3 py-2 text-right tabular-nums">{money(data.totals[m])}</td>)}<td className="px-4 py-2 text-right tabular-nums">{money(data.total)}</td></tr>
+              <tr className="bg-slate-50 font-semibold"><td className="sticky left-0 bg-slate-50 px-4 py-2">{t('Total')}</td>{data.months.map((m) => <td key={m} className="px-3 py-2 text-right tabular-nums">{money(data.totals[m])}</td>)}<td className="px-4 py-2 text-right tabular-nums">{money(data.total)}</td></tr>
             </tbody>
           </table>
-          {!data.rows.length && <p className="px-4 py-8 text-center text-sm text-slate-500">No expenses in this period.</p>}
+          {!data.rows.length && <p className="px-4 py-8 text-center text-sm text-slate-500">{t('No expenses in this period.')}</p>}
         </div>
       )}
     </Card>
@@ -194,10 +199,11 @@ function ExpenseReport() {
 
 function Stats() {
   const { data } = useAgeing({});
+  const { t } = useT();
   if (!data) return null;
   return (
     <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
-      <StatCard icon={Receipt} label="Owed to vendors" value={money(data.totals.total)} sub={`${data.totals.bills} open bills`} />
+      <StatCard icon={Receipt} label="Owed to vendors" value={money(data.totals.total)} sub={t('{count} open bills', { count: data.totals.bills })} />
       <StatCard icon={AlertTriangle} tone="red" label="Overdue" value={money(data.totals.overdue)} />
       <StatCard icon={Repeat} tone="amber" label="Older than 60 days" value={money(data.totals.d61_90 + data.totals.d90_plus)} />
     </div>

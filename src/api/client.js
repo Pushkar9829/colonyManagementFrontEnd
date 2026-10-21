@@ -2,11 +2,16 @@ export const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/
 const REFRESH_KEY = 'cms.refreshToken';
 
 export class ApiError extends Error {
-  constructor(status, code, message, details) {
+  // template/params: the English message with its dynamic parts left as {placeholders}, so it can be translated.
+  constructor(status, code, message, details, { template, params } = {}) {
     super(message);
     this.status = status;
     this.code = code;
     this.details = details;
+    if (template) {
+      this.template = template;
+      this.params = params || {};
+    }
   }
 
   // field -> message map for forms
@@ -78,7 +83,7 @@ async function raw(method, path, { body, query, auth = true } = {}) {
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) {
     const e = json.error || {};
-    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Request failed (${res.status})`, e.details);
+    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Request failed (${res.status})`, e.details, e);
   }
   return json;
 }
@@ -132,7 +137,7 @@ export async function upload(path, formData) {
   const json = await res.json().catch(() => ({}));
   if (!res.ok || json.success === false) {
     const e = json.error || {};
-    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Upload failed (${res.status})`, e.details);
+    throw new ApiError(res.status, e.code || 'HTTP_ERROR', e.message || `Upload failed (${res.status})`, e.details, e);
   }
   return json.data;
 }

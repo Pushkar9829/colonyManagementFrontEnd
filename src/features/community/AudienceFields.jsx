@@ -1,4 +1,5 @@
 import { Checkbox, Select } from '../../components/ui';
+import { useT } from '../../context/LanguageContext';
 import { ROLE_LABELS } from '../../lib/roles';
 import { useBlocks } from '../units/api';
 
@@ -7,6 +8,7 @@ const ROLE_OPTIONS = ['resident', 'guard', 'staff', 'facility_manager', 'account
 // Shared audience picker for notices and polls: everyone / specific blocks / specific roles.
 export function AudienceFields({ value, onChange }) {
   const { data: blocks = [] } = useBlocks();
+  const { t } = useT();
   const toggle = (key, id) => {
     const list = value[key] || [];
     onChange({ ...value, [key]: list.includes(id) ? list.filter((x) => x !== id) : [...list, id] });
@@ -25,7 +27,7 @@ export function AudienceFields({ value, onChange }) {
       />
       {value.type === 'blocks' && (
         <div className="flex flex-wrap gap-4">
-          {blocks.map((b) => <Checkbox key={b._id} label={`Block ${b.name}`} checked={value.blocks?.includes(b._id)} onChange={() => toggle('blocks', b._id)} />)}
+          {blocks.map((b) => <Checkbox key={b._id} label={t('Block {name}', { name: b.name })} checked={value.blocks?.includes(b._id)} onChange={() => toggle('blocks', b._id)} />)}
         </div>
       )}
       {value.type === 'roles' && (

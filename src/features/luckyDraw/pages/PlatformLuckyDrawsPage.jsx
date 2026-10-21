@@ -7,6 +7,7 @@ import { usePlatformCancelDraw, usePlatformDraws } from '../api';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { prizeSummary } from '../lib';
 import { PhaseBadge } from './LuckyDrawsPage';
+import { useT } from '../../../context/LanguageContext';
 
 const STATUSES = [
   { value: '', label: 'All statuses' },
@@ -19,6 +20,7 @@ const STATUSES = [
 
 // Platform console: every society's lucky draws, with a cancel switch for misuse (e.g. a paid "draw").
 export default function PlatformLuckyDrawsPage() {
+  const { t } = useT();
   const [f, setF] = useState({ status: '', page: 1 });
   const [cancelling, setCancelling] = useState(null);
   const { data, isLoading } = usePlatformDraws(Object.fromEntries(Object.entries(f).filter(([, v]) => v !== '')));
@@ -43,7 +45,7 @@ export default function PlatformLuckyDrawsPage() {
         <Pagination meta={data?.meta} onPage={(page) => setF({ ...f, page })} />
       </Card>
       {cancelling && (
-        <ConfirmModal title={`Cancel ${cancelling.number}?`} message={`"${cancelling.title}" at ${cancelling.society?.name}. Entrants are notified and the society sees your reason.`}
+        <ConfirmModal title={t('Cancel {number}?', { number: cancelling.number })} message={t('"{title}" at {society}. Entrants are notified and the society sees your reason.', { title: cancelling.title, society: cancelling.society?.name })}
           confirmLabel="Cancel draw" variant="danger" reasonLabel="Reason" loading={cancel.isPending}
           onConfirm={(reason) => cancel.mutate({ id: cancelling._id, reason })} onClose={() => setCancelling(null)} />
       )}

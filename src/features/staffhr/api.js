@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { useT } from '../../context/LanguageContext';
 import { put } from '../assets/shared';
+import { tt } from '../../lib/i18n/toastText';
 
 const emp = { invalidate: ['staffhr'] };
 const att = { invalidate: ['attendance'] };
@@ -15,7 +16,7 @@ export const useUpdateHrSettings = (o) => useApiMutation((b) => api.patch('/staf
 export const useEmployees = (params, enabled = true) => useQuery({ queryKey: ['staffhr', 'employees', params], queryFn: () => api.list('/staffhr/employees', params), placeholderData: (p) => p, enabled });
 export const useEmployee = (id) => useQuery({ queryKey: ['staffhr', 'employee', id], queryFn: () => api.get(`/staffhr/employees/${id}`), enabled: Boolean(id) });
 export const useCandidates = (enabled) => useQuery({ queryKey: ['staffhr', 'candidates'], queryFn: () => api.get('/staffhr/employees/candidates'), enabled });
-export const useCreateEmployee = (o) => useApiMutation((b) => api.post('/staffhr/employees', b), { ...emp, success: (e) => `Employee ${e.employeeCode} added`, ...o });
+export const useCreateEmployee = (o) => useApiMutation((b) => api.post('/staffhr/employees', b), { ...emp, success: (e) => tt('Employee {code} added', { code: e.employeeCode }), ...o });
 export const useUpdateEmployee = (o) => useApiMutation(({ id, ...b }) => api.patch(`/staffhr/employees/${id}`, b), { ...emp, success: 'Employee updated', ...o });
 export const useShifts = (enabled = true) => useQuery({ queryKey: ['staffhr', 'shifts'], queryFn: () => api.get('/staffhr/shifts'), enabled, staleTime: 60000 });
 export const useCreateShift = (o) => useApiMutation((b) => api.post('/staffhr/shifts', b), { ...emp, success: 'Shift added', ...o });
@@ -40,14 +41,14 @@ export const useLeaves = (params) => useQuery({ queryKey: ['leave', 'list', para
 export const useLeaveCalendar = (period) => useQuery({ queryKey: ['leave', 'calendar', period], queryFn: () => api.get('/staffhr/leaves/calendar', { period }) });
 export const useLeaveBalances = (params, enabled = true) => useQuery({ queryKey: ['leave', 'balances', params], queryFn: () => api.get('/staffhr/leaves/balances', params), enabled });
 export const useApplyLeave = (o) => useApiMutation((b) => api.post('/staffhr/leaves', b), { ...lv, success: (l) => (l.status === 'approved' ? 'Leave recorded' : 'Leave request sent'), ...o });
-export const useDecideLeave = (o) => useApiMutation(({ id, ...b }) => api.post(`/staffhr/leaves/${id}/decide`, b), { ...lv, success: (l) => `Leave ${l.status}`, ...o });
+export const useDecideLeave = (o) => useApiMutation(({ id, ...b }) => api.post(`/staffhr/leaves/${id}/decide`, b), { ...lv, success: (l) => (l.status === 'approved' ? 'Leave approved' : l.status === 'rejected' ? 'Leave rejected' : tt('Leave {status}', { status: l.status })), ...o });
 export const useCancelLeave = (o) => useApiMutation((id) => api.post(`/staffhr/leaves/${id}/cancel`), { ...lv, success: 'Leave cancelled', ...o });
 export const useSetLeaveBalance = (o) => useApiMutation((b) => put('/staffhr/leaves/balances', b), { ...lv, success: 'Allocation saved', ...o });
 
 // payroll
 export const useRuns = (params) => useQuery({ queryKey: ['payroll', 'runs', params], queryFn: () => api.list('/staffhr/payroll-runs', params), placeholderData: (p) => p });
 export const useRun = (id) => useQuery({ queryKey: ['payroll', 'run', id], queryFn: () => api.get(`/staffhr/payroll-runs/${id}`), enabled: Boolean(id) });
-export const useCreateRun = (o) => useApiMutation((b) => api.post('/staffhr/payroll-runs', b), { ...pay, success: (r) => `Draft payroll for ${r.period} ready`, ...o });
+export const useCreateRun = (o) => useApiMutation((b) => api.post('/staffhr/payroll-runs', b), { ...pay, success: (r) => tt('Draft payroll for {period} ready', { period: r.period }), ...o });
 export const useRecomputeRun = (o) => useApiMutation((id) => api.post(`/staffhr/payroll-runs/${id}/recompute`), { ...pay, success: 'Recalculated from latest attendance', ...o });
 export const useApproveRun = (o) => useApiMutation((id) => api.post(`/staffhr/payroll-runs/${id}/approve`), { ...pay, success: 'Payroll approved', ...o });
 export const usePayRun = (o) => useApiMutation(({ id, ...b }) => api.post(`/staffhr/payroll-runs/${id}/pay`, b), { ...pay, success: 'Marked as paid', ...o });

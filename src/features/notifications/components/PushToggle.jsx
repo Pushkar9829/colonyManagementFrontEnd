@@ -35,7 +35,7 @@ export function PushToggle() {
       }
       setState(await pushState());
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err);
       setState(await pushState().catch(() => 'unsupported'));
     } finally {
       setBusy(false);

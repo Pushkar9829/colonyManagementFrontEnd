@@ -3,10 +3,13 @@ import { CheckCircle2 } from 'lucide-react';
 import { api } from '../../../api/client';
 import { Button, Input, Modal, Select } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Lets a signed-in person request another flat — in this society or a different one.
 export function AddHomeModal({ onClose }) {
   const { reloadUser } = useAuth();
+  const { t } = useT();
   const [code, setCode] = useState('');
   const [society, setSociety] = useState(null);
   const [block, setBlock] = useState('');
@@ -22,7 +25,7 @@ export function AddHomeModal({ onClose }) {
     try {
       setSociety(await api.get(`/auth/societies/${code.trim().toUpperCase()}`));
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
     } finally {
       setLoading(false);
     }
@@ -36,7 +39,7 @@ export function AddHomeModal({ onClose }) {
       await reloadUser();
       setDone(true);
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
     } finally {
       setLoading(false);
     }
@@ -47,7 +50,7 @@ export function AddHomeModal({ onClose }) {
       <Modal open onClose={onClose} title="Request sent" size="sm" footer={<Button onClick={onClose}>Done</Button>}>
         <div className="text-center">
           <CheckCircle2 className="mx-auto size-10 text-emerald-500" />
-          <p className="mt-3 text-sm text-slate-600">The {society.society.name} admin will review it. Once approved it appears in your home switcher.</p>
+          <p className="mt-3 text-sm text-slate-600">{t('The {society} admin will review it. Once approved it appears in your home switcher.', { society: society.society.name })}</p>
         </div>
       </Modal>
     );

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, FilterBar, Input, Modal, Pagination, Select, Spinner, Table, Textarea, Card } from '../../../components/ui';
 import { date, dateTime, label, money, timeAgo } from '../../../lib/format';
@@ -20,6 +21,7 @@ function SocietyModal({ id, onClose }) {
   const { startSupportSession } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const { t } = useT();
   const [plan, setPlan] = useState(null);
   const [notes, setNotes] = useState(null);
   const can = useCan();
@@ -38,12 +40,12 @@ function SocietyModal({ id, onClose }) {
     });
 
   return (
-    <Modal open onClose={onClose} size="lg" title={s.name} description={`${[s.city, s.state].filter(Boolean).join(', ') || 'No address'} · code ${s.code} · since ${date(s.createdAt)}`}
+    <Modal open onClose={onClose} size="lg" title={s.name} description={t('{address} · code {code} · since {date}', { address: [s.city, s.state].filter(Boolean).join(', ') || t('No address'), code: s.code, date: date(s.createdAt) })}
       footer={s.active ? (
         (can('support.access') || can('societies.suspend')) && <>
           {can('support.access') && <Button variant="secondary" onClick={async () => {
             // Audited, 1-hour admin access; the society's admins are notified.
-            const reason = window.prompt('Why do you need support access? (visible to the society admins)');
+            const reason = window.prompt(t('Why do you need support access? (visible to the society admins)'));
             if (reason === null) return;
             try {
               await startSupportSession(id, reason || undefined);
@@ -52,21 +54,21 @@ function SocietyModal({ id, onClose }) {
               toast.error(err);
             }
           }}>Open support session</Button>}
-          {can('societies.suspend') && <Button variant="danger" loading={update.isPending} onClick={() => { const reason = window.prompt('Reason for suspending (shown to the society)?'); if (reason !== null) update.mutate({ id, active: false, suspendedReason: reason || undefined }); }}>Suspend society</Button>}
+          {can('societies.suspend') && <Button variant="danger" loading={update.isPending} onClick={() => { const reason = window.prompt(t('Reason for suspending (shown to the society)?')); if (reason !== null) update.mutate({ id, active: false, suspendedReason: reason || undefined }); }}>Suspend society</Button>}
         </>
       ) : (
         can('societies.suspend') && <Button variant="success" loading={update.isPending} onClick={() => update.mutate({ id, active: true })}>Reactivate society</Button>
       )}>
       <div className="space-y-5 text-sm">
-        {!s.active && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">Suspended{s.suspendedReason ? `: ${s.suspendedReason}` : ''}. Members cannot use the app.</p>}
+        {!s.active && <p className="rounded-lg bg-red-50 px-3 py-2 text-red-700">{s.suspendedReason ? t('Suspended: {reason}. Members cannot use the app.', { reason: s.suspendedReason }) : t('Suspended. Members cannot use the app.')}</p>}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">Units</p><p className="text-lg font-semibold">{s.units}</p></div>
-          {Object.entries(s.membersByRole).map(([r, n]) => <div key={r} className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{label(r)}</p><p className="text-lg font-semibold">{n}</p></div>)}
+          <div className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{t('Units')}</p><p className="text-lg font-semibold">{s.units}</p></div>
+          {Object.entries(s.membersByRole).map(([r, n]) => <div key={r} className="rounded-lg bg-slate-50 p-3"><p className="text-xs text-slate-500">{t(label(r))}</p><p className="text-lg font-semibold">{n}</p></div>)}
         </div>
         <div>
-          <p className="mb-2 font-medium text-slate-700">Admins</p>
+          <p className="mb-2 font-medium text-slate-700">{t('Admins')}</p>
           <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200">
-            {s.admins.map((a) => <li key={a._id} className="flex justify-between px-3 py-2"><span>{a.name}{a.designation ? ` (${a.designation})` : ''}</span><span className="text-slate-500">{a.email || a.phone} · {a.lastLoginAt ? `seen ${timeAgo(a.lastLoginAt)}` : 'never logged in'}</span></li>)}
+            {s.admins.map((a) => <li key={a._id} className="flex justify-between px-3 py-2"><span>{a.name}{a.designation ? ` (${a.designation})` : ''}</span><span className="text-slate-500">{a.email || a.phone} · {a.lastLoginAt ? t('seen {ago}', { ago: timeAgo(a.lastLoginAt) }) : t('never logged in')}</span></li>)}
           </ul>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
@@ -82,10 +84,10 @@ function SocietyModal({ id, onClose }) {
         {s.active && <SocietyMembersPanel societyId={id} />}
         {can('whatsapp.manage') && <WhatsAppPanel societyId={id} />}
         <div>
-          <p className="mb-2 font-medium text-slate-700">Recent activity</p>
+          <p className="mb-2 font-medium text-slate-700">{t('Recent activity')}</p>
           <ul className="space-y-1 text-xs text-slate-500">
-            {!s.recentActivity.length && <li>No activity yet</li>}
-            {s.recentActivity.map((l) => <li key={l._id}>{dateTime(l.createdAt)} · {l.actor?.name || 'System'} · <span className="font-mono">{l.action}</span></li>)}
+            {!s.recentActivity.length && <li>{t('No activity yet')}</li>}
+            {s.recentActivity.map((l) => <li key={l._id}>{dateTime(l.createdAt)} · {l.actor?.name || t('System')} · <span className="font-mono">{l.action}</span></li>)}
           </ul>
         </div>
       </div>
@@ -102,6 +104,7 @@ export default function PlatformSocietiesPage() {
 }
 
 function SocietiesList() {
+  const { t } = useT();
   const [params] = useSearchParams();
   // The overview's tiles link here with ?plan=trial or ?status=suspended.
   const [filters, setFilters] = useState({ search: '', status: params.get('status') || '', plan: params.get('plan') || '', page: 1 });
@@ -111,10 +114,10 @@ function SocietiesList() {
   const expired = (s) => s.plan?.validUntil && new Date(s.plan.validUntil) < new Date();
   const daysLeft = (s) => Math.ceil((new Date(s.plan.validUntil) - Date.now()) / 86400000);
   const until = (s) => {
-    if (!s.plan?.validUntil) return <span className="text-slate-400">No end date</span>;
+    if (!s.plan?.validUntil) return <span className="text-slate-400">{t('No end date')}</span>;
     const d = daysLeft(s);
     const tone = d < 0 ? 'text-red-600 font-medium' : d <= 7 ? 'text-amber-700 font-medium' : '';
-    return <span className={tone}>{date(s.plan.validUntil)}{d >= 0 && d <= 30 ? ` · ${d === 0 ? 'today' : `${d} day${d === 1 ? '' : 's'} left`}` : ''}</span>;
+    return <span className={tone}>{date(s.plan.validUntil)}{d >= 0 && d <= 30 ? ` · ${d === 0 ? t('today') : d === 1 ? t('{n} day left', { n: d }) : t('{n} days left', { n: d })}` : ''}</span>;
   };
 
   return (
@@ -129,9 +132,9 @@ function SocietiesList() {
         <Table loading={isLoading} rows={data?.data} empty="No societies" onRowClick={(s) => setOpenId(s._id)}
           columns={[
             { key: 'name', header: 'Society', render: (s) => <div><p className="font-medium text-slate-900">{s.name}</p><p className="text-xs text-slate-500">{s.city || '—'} · {s.code}</p></div> },
-            { key: 'plan', header: 'Plan', render: (s) => <div className="flex gap-1"><Badge tone="brand">{label(s.plan?.name || 'free')}</Badge>{expired(s) && <Badge tone="red">{s.plan?.name === 'trial' ? 'Trial over' : 'Expired'}</Badge>}</div> },
+            { key: 'plan', header: 'Plan', render: (s) => <div className="flex gap-1"><Badge tone="brand">{t(label(s.plan?.name || 'free'))}</Badge>{expired(s) && <Badge tone="red">{s.plan?.name === 'trial' ? t('Trial over') : t('Expired')}</Badge>}</div> },
             { key: 'validUntil', header: 'Trial ends / paid until', mobileLabel: 'Ends', render: until },
-            { key: 'active', header: 'Status', render: (s) => (s.active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Suspended</Badge>) },
+            { key: 'active', header: 'Status', render: (s) => (s.active ? <Badge tone="green">{t('Active')}</Badge> : <Badge tone="red">{t('Suspended')}</Badge>) },
             { key: 'units', header: 'Units', render: (s) => `${s.units}${s.plan?.unitLimit ? ` / ${s.plan.unitLimit}` : ''}` },
             { key: 'members', header: 'Members', mobile: false },
             { key: 'collectedThisMonth', header: 'Society collections (month)', mobile: false, render: (s) => money(s.collectedThisMonth) },

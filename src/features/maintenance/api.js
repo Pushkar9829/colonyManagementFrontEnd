@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { useT } from '../../context/LanguageContext';
+import { tt } from '../../lib/i18n/toastText';
 
 const ppm = { invalidate: ['ppm', 'assets'] };
 const bd = { invalidate: ['breakdowns', 'assets', 'ppm'] };
@@ -12,7 +13,7 @@ export const useMaintenanceStats = () => useQuery({ queryKey: ['ppm', 'stats'], 
 
 // PPM schedules & tasks
 export const useSchedules = (params, enabled = true) => useQuery({ queryKey: ['ppm', 'schedules', params], queryFn: () => api.list('/maintenance/schedules', params), placeholderData: (p) => p, enabled });
-export const useCreateSchedule = (o) => useApiMutation((b) => api.post('/maintenance/schedules', b), { ...ppm, success: (s) => `Schedule saved · ${s.tasksCreated} task(s) planned`, ...o });
+export const useCreateSchedule = (o) => useApiMutation((b) => api.post('/maintenance/schedules', b), { ...ppm, success: (s) => tt(s.tasksCreated === 1 ? 'Schedule saved · {n} task planned' : 'Schedule saved · {n} tasks planned', { n: s.tasksCreated }), ...o });
 export const useUpdateSchedule = (o) => useApiMutation(({ id, ...b }) => api.patch(`/maintenance/schedules/${id}`, b), { ...ppm, success: 'Schedule updated', ...o });
 export const useTasks = (params, enabled = true) => useQuery({ queryKey: ['ppm', 'tasks', params], queryFn: () => api.list('/maintenance/tasks', params), placeholderData: (p) => p, enabled });
 export const useTask = (id) => useQuery({ queryKey: ['ppm', 'task', id], queryFn: () => api.get(`/maintenance/tasks/${id}`), enabled: Boolean(id) });

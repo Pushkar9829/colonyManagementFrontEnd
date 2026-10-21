@@ -6,10 +6,11 @@ import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
-import { date, dateTime, label, money, periodLabel, toPaise, todayISO } from '../../../lib/format';
+import { date, dateTime, hoursMinutes, label, money, periodLabel, toPaise, todayISO } from '../../../lib/format';
 import { isManager } from '../../../lib/roles';
 import { addDays, clean, downloadFile, numOrUndef } from '../../assets/shared';
 import { useCreatePoint, useCreateReading, usePoints, useReadings, useUtilitySummary } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 const KINDS = [
   { value: 'dg', label: 'DG sets (generator)', one: 'DG set (generator)' },
@@ -25,12 +26,13 @@ const SHIFTS = ['morning', 'afternoon', 'evening', 'night'].map((v) => ({ value:
 const fmt = (v, unit = '') => (v === undefined || v === null ? '—' : `${Number(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}${unit}`);
 
 function PointModal({ kind, open, onClose }) {
+  const { t } = useT();
   const { values, bind, reset, applyServerErrors } = useForm({ name: '', location: '', capacity: '', openingDieselStock: '', openingHours: '', openingMeterReading: '' });
   const create = useCreatePoint({ onSuccess: () => { reset(); onClose(); } });
   const submit = () =>
     create.mutate({ kind, ...clean({ name: values.name, location: values.location, capacity: numOrUndef(values.capacity), openingDieselStock: numOrUndef(values.openingDieselStock), openingHours: numOrUndef(values.openingHours), openingMeterReading: numOrUndef(values.openingMeterReading) }) }, { onError: applyServerErrors });
   return (
-    <Modal open={open} onClose={onClose} title={`Add ${KINDS.find((k) => k.value === kind)?.one || 'log point'}`} description={['stp', 'wtp'].includes(kind) ? 'Standard parameters (pH, TDS…) with normal ranges are added; adjust later if needed.' : undefined}
+    <Modal open={open} onClose={onClose} title={t('Add {thing}', { thing: t(KINDS.find((k) => k.value === kind)?.one || 'log point') })} description={['stp', 'wtp'].includes(kind) ? 'Standard parameters (pH, TDS…) with normal ranges are added; adjust later if needed.' : undefined}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={submit}>Add</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Name" required {...bind('name')} />
@@ -45,6 +47,7 @@ function PointModal({ kind, open, onClose }) {
 }
 
 function ReadingModal({ point, onClose }) {
+  const { t } = useT();
   const { values, bind, set, applyServerErrors } = useForm({ date: todayISO(), shift: '', notes: '', hoursStart: '', hoursEnd: '', runHours: '', startTime: '', endTime: '', runMinutes: '', dieselFilled: '', dieselConsumed: '', dieselCost: '', levelPercent: '', levelLitres: '', meterReading: '', meterReset: false });
   const [params, setParams] = useState({});
   const create = useCreateReading({ onSuccess: onClose });
@@ -60,7 +63,7 @@ function ReadingModal({ point, onClose }) {
     create.mutate(clean(body), { onError: applyServerErrors });
   };
   return (
-    <Modal open onClose={onClose} title={`Add reading · ${point.name}`} description={point.kind === 'dg' ? `Diesel in tank: ${fmt(point.dieselStock, ' L')} · hour meter ${fmt(point.lastHours)}` : point.kind === 'meter' ? `Last reading: ${fmt(point.lastMeterReading, ' kWh')}` : undefined}
+    <Modal open onClose={onClose} title={t('Add reading · {name}', { name: point.name })} description={point.kind === 'dg' ? t('Diesel in tank: {stock} · hour meter {hours}', { stock: fmt(point.dieselStock, ' L'), hours: fmt(point.lastHours) }) : point.kind === 'meter' ? t('Last reading: {value}', { value: fmt(point.lastMeterReading, ' kWh') }) : undefined}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Date" type="date" {...bind('date')} />
@@ -100,7 +103,7 @@ function ReadingModal({ point, onClose }) {
         )}
         {['stp', 'wtp'].includes(point.kind) && point.parameters.map((p) => (
           <Input key={p.key} label={`${p.label}${p.unit ? ` (${p.unit})` : ''}`} type="number" step="any"
-            hint={[p.min !== undefined && p.min !== null ? `min ${p.min}` : null, p.max !== undefined && p.max !== null ? `max ${p.max}` : null].filter(Boolean).join(' · ') || undefined}
+            hint={[p.min !== undefined && p.min !== null ? t('min {n}', { n: p.min }) : null, p.max !== undefined && p.max !== null ? t('max {n}', { n: p.max }) : null].filter(Boolean).join(' · ') || undefined}
             value={params[p.key] ?? ''} onChange={(e) => setParams((x) => ({ ...x, [p.key]: e.target.value }))} />
         ))}
         <Textarea className="sm:col-span-2" label="Notes" rows={2} {...bind('notes')} />
@@ -109,12 +112,12 @@ function ReadingModal({ point, onClose }) {
   );
 }
 
-function readingText(r) {
+function readingText(r, t) {
   switch (r.kind) {
     case 'dg':
-      return [r.runHours !== undefined && r.runHours !== null ? `${fmt(r.runHours)} h run` : null, r.dieselConsumed ? `${fmt(r.dieselConsumed)} L used` : null, r.dieselFilled ? `${fmt(r.dieselFilled)} L filled` : null, `stock ${fmt(r.dieselStock, ' L')}`].filter(Boolean).join(' · ');
+      return [r.runHours !== undefined && r.runHours !== null ? t('{n} h run', { n: fmt(r.runHours) }) : null, r.dieselConsumed ? t('{n} L used', { n: fmt(r.dieselConsumed) }) : null, r.dieselFilled ? t('{n} L filled', { n: fmt(r.dieselFilled) }) : null, t('stock {n}', { n: fmt(r.dieselStock, ' L') })].filter(Boolean).join(' · ');
     case 'pump':
-      return `${fmt(r.runMinutes)} min`;
+      return t('{n} min', { n: fmt(r.runMinutes) });
     case 'tank':
       return `${fmt(r.levelPercent, '%')}${r.levelLitres ? ` (${fmt(r.levelLitres, ' L')})` : ''}`;
     case 'meter':
@@ -126,7 +129,7 @@ function readingText(r) {
 
 const SUMMARY_COLS = {
   dg: [{ key: 'runHours', header: 'Run hours', render: (r) => fmt(r.runHours) }, { key: 'dieselConsumed', header: 'Used (L)', render: (r) => fmt(r.dieselConsumed) }, { key: 'dieselFilled', header: 'Filled (L)', render: (r) => fmt(r.dieselFilled) }, { key: 'dieselCost', header: 'Fill cost', render: (r) => (r.dieselCost ? money(r.dieselCost) : '—') }, { key: 'closingStock', header: 'Closing (L)', render: (r) => fmt(r.closingStock) }],
-  pump: [{ key: 'runMinutes', header: 'Run time', render: (r) => `${Math.floor(r.runMinutes / 60)}h ${r.runMinutes % 60}m` }],
+  pump: [{ key: 'runMinutes', header: 'Run time', render: (r) => hoursMinutes(r.runMinutes) }],
   tank: [{ key: 'levelMin', header: 'Min', render: (r) => fmt(r.levelMin, '%') }, { key: 'levelAvg', header: 'Avg', render: (r) => fmt(r.levelAvg, '%') }, { key: 'levelMax', header: 'Max', render: (r) => fmt(r.levelMax, '%') }],
   meter: [{ key: 'consumption', header: 'Consumption (kWh)', render: (r) => fmt(r.consumption) }, { key: 'closingReading', header: 'Closing reading', render: (r) => fmt(r.closingReading) }],
   stp: [{ key: 'parameters', header: 'Averages', className: 'whitespace-normal', render: (r) => r.parameters.map((p) => `${p.label} ${fmt(p.avg)}`).join(' · ') }, { key: 'outOfRange', header: 'Out of range', render: (r) => (r.outOfRange ? <Badge tone="red">{r.outOfRange}</Badge> : 0) }],
@@ -134,6 +137,7 @@ const SUMMARY_COLS = {
 SUMMARY_COLS.wtp = SUMMARY_COLS.stp;
 
 function KindPanel({ kind, manager }) {
+  const { t } = useT();
   const toast = useToast();
   const { data: points, isLoading } = usePoints({ kind, active: true });
   const [logPoint, setLogPoint] = useState(null);
@@ -155,7 +159,7 @@ function KindPanel({ kind, manager }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{p.name}</p>
                   <p className="text-xs text-slate-500">
-                    {p.kind === 'dg' ? `Diesel ${fmt(p.dieselStock, ' L')}${p.capacity ? ` / ${fmt(p.capacity)}` : ''}` : p.kind === 'meter' ? `Last ${fmt(p.lastMeterReading, ' kWh')}` : p.location || label(p.kind)}
+                    {p.kind === 'dg' ? t('Diesel {stock}', { stock: `${fmt(p.dieselStock, ' L')}${p.capacity ? ` / ${fmt(p.capacity)}` : ''}` }) : p.kind === 'meter' ? t('Last {value}', { value: fmt(p.lastMeterReading, ' kWh') }) : p.location || t(label(p.kind))}
                     {p.lastReadingAt ? ` · ${dateTime(p.lastReadingAt)}` : ''}
                   </p>
                 </div>
@@ -170,9 +174,9 @@ function KindPanel({ kind, manager }) {
         <CardHeader title="Recent readings" />
         <Table loading={readings.isLoading} rows={readings.data?.data} empty="No readings yet"
           columns={[
-            { key: 'date', header: 'Date', render: (r) => <div><p>{date(r.date)}</p><p className="text-xs text-slate-400">{r.shift ? label(r.shift) : dateTime(r.at)}</p></div> },
+            { key: 'date', header: 'Date', render: (r) => <div><p>{date(r.date)}</p><p className="text-xs text-slate-400">{r.shift ? t(label(r.shift)) : dateTime(r.at)}</p></div> },
             { key: 'point', header: 'Point', render: (r) => r.point?.name },
-            { key: 'value', header: 'Reading', className: 'whitespace-normal', render: (r) => <span className="flex items-center gap-2">{readingText(r)}{r.outOfRange && <Badge tone="red">Out of range</Badge>}</span> },
+            { key: 'value', header: 'Reading', className: 'whitespace-normal', render: (r) => <span className="flex items-center gap-2">{readingText(r, t)}{r.outOfRange && <Badge tone="red">{t('Out of range')}</Badge>}</span> },
             { key: 'by', header: 'By', mobile: false, render: (r) => r.recordedBy?.name || '—' },
             { key: 'notes', header: 'Notes', className: 'max-w-xs truncate', render: (r) => r.notes || '' },
           ]} />

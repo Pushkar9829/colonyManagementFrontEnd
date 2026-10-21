@@ -10,17 +10,19 @@ import { isManager } from '../../../lib/roles';
 import { useAddAmcVisit, useAddAssetEvent, useAddAssetFiles, useAmcVisits, useAsset, useAssetStatus, useAssetTimeline, useRemoveAssetFile, useSetAmc } from '../api';
 import { AssetFormModal } from '../components/AssetFormModal';
 import { QrLabelModal } from '../components/QrLabelModal';
-import { CATEGORY_LABELS, COVERAGE, STATUSES, STATUS_TONES } from '../constants';
+import { CATEGORY_LABELS, COVERAGE, STATUSES, STATUS_TONES, ASSET_STATUS_LABELS } from '../constants';
 import { DUE_TONES, clean } from '../shared';
 import { useBreakdowns, useSchedules } from '../../maintenance/api';
 import { BreakdownDetailModal, ReportBreakdownModal, breakdownTone } from '../../maintenance/components/BreakdownModals';
 import { ScheduleModal } from '../../maintenance/components/ScheduleModal';
 import { CreateWorkOrderModal } from '../../maintenance/components/WorkOrderModals';
 import { FREQUENCIES } from '../../maintenance/constants';
+import { useT } from '../../../context/LanguageContext';
 
 const EVENT_TONES = { breakdown_reported: 'red', breakdown_resolved: 'green', ppm_completed: 'green', ppm_missed: 'amber', amc_visit: 'blue', amc_renewed: 'brand', work_order: 'blue', status_changed: 'amber' };
 
 function AmcModal({ asset, open, onClose, renew }) {
+  const { t } = useT();
   const a = renew ? {} : asset.amc || {};
   const { values, bind, applyServerErrors } = useForm({
     vendorName: a.vendorName || asset.amc?.vendorName || '',
@@ -37,7 +39,7 @@ function AmcModal({ asset, open, onClose, renew }) {
   const save = useSetAmc({ onSuccess: onClose });
   const submit = () => save.mutate({ id: asset._id, ...clean({ ...values, cost: values.cost ? toPaise(values.cost) : 0, visitsPerYear: Number(values.visitsPerYear || 0) }), renew, documents: docs.map((d) => d._id) }, { onError: applyServerErrors });
   return (
-    <Modal open={open} onClose={onClose} title={renew ? 'Renew AMC' : asset.amc ? 'Edit AMC' : 'Add AMC'} size="lg"
+    <Modal open={open} onClose={onClose} title={renew ? t('Renew AMC') : asset.amc ? t('Edit AMC') : t('Add AMC')} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={save.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Vendor" required {...bind('vendorName')} />
@@ -90,10 +92,12 @@ function EventModal({ asset, open, onClose }) {
 }
 
 function Row({ k, v }) {
-  return <div><dt className="text-xs text-slate-500">{k}</dt><dd className="font-medium text-slate-800">{v || '—'}</dd></div>;
+  const { t } = useT();
+  return <div><dt className="text-xs text-slate-500">{t(k)}</dt><dd className="font-medium text-slate-800">{v || '—'}</dd></div>;
 }
 
 export default function AssetDetailPage() {
+  const { t } = useT();
   const { id } = useParams();
   const { user } = useAuth();
   const manager = isManager(user);
@@ -117,10 +121,10 @@ export default function AssetDetailPage() {
 
   return (
     <div>
-      <Link to="/assets" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" />Assets</Link>
+      <Link to="/assets" className="mb-3 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" />{t('Assets')}</Link>
       <PageHeader
         title={asset.name}
-        description={`${asset.code}${asset.tag ? ` · tag ${asset.tag}` : ''} · ${CATEGORY_LABELS[asset.category]}${asset.location ? ` · ${asset.location}` : ''}`}
+        description={`${asset.code}${asset.tag ? ` · ${t('tag {tag}', { tag: asset.tag })}` : ''} · ${t(CATEGORY_LABELS[asset.category])}${asset.location ? ` · ${asset.location}` : ''}`}
         actions={
           <>
             <Button variant="secondary" icon={QrCode} onClick={() => setModal('qr')}>QR label</Button>
@@ -134,7 +138,7 @@ export default function AssetDetailPage() {
           <Card>
             <CardHeader title="Details" action={manager ? (
               <Select className="w-40" options={STATUSES} value={asset.status} onChange={(e) => status.mutate({ id: asset._id, status: e.target.value })} />
-            ) : <Badge tone={STATUS_TONES[asset.status]}>{label(asset.status)}</Badge>} />
+            ) : <Badge tone={STATUS_TONES[asset.status]}>{t(ASSET_STATUS_LABELS[asset.status] || label(asset.status))}</Badge>} />
             <dl className="grid gap-4 p-5 text-sm sm:grid-cols-3">
               <Row k="Make" v={asset.make} />
               <Row k="Model" v={asset.model} />
@@ -144,7 +148,7 @@ export default function AssetDetailPage() {
               <Row k="Cost" v={asset.purchaseCost ? money(asset.purchaseCost) : null} />
               <div>
                 <dt className="text-xs text-slate-500">Warranty</dt>
-                <dd>{asset.warrantyExpiry ? <Badge tone={DUE_TONES[asset.warrantyStatus]}>{asset.warrantyStatus === 'expired' ? 'Expired' : 'Till'} {date(asset.warrantyExpiry)}</Badge> : '—'}</dd>
+                <dd>{asset.warrantyExpiry ? <Badge tone={DUE_TONES[asset.warrantyStatus]}>{asset.warrantyStatus === 'expired' ? t('Expired {date}', { date: date(asset.warrantyExpiry) }) : t('Till {date}', { date: date(asset.warrantyExpiry) })}</Badge> : '—'}</dd>
               </div>
             </dl>
             {asset.notes && <p className="border-t border-slate-100 px-5 py-3 text-sm text-slate-600">{asset.notes}</p>}
@@ -159,12 +163,12 @@ export default function AssetDetailPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-slate-800">{e.title}</p>
                     {e.notes && <p className="text-slate-600">{e.notes}</p>}
-                    <p className="text-xs text-slate-400">{e.date ? date(e.date) : dateTime(e.createdAt)} · {e.by?.name || 'System'}{e.cost ? ` · ${money(e.cost)}` : ''}</p>
+                    <p className="text-xs text-slate-400">{e.date ? date(e.date) : dateTime(e.createdAt)} · {e.by?.name || t('System')}{e.cost ? ` · ${money(e.cost)}` : ''}</p>
                     {e.attachments?.length > 0 && <div className="mt-2"><Attachments items={e.attachments} /></div>}
                   </div>
                 </li>
               ))}
-              {!timeline?.data?.length && <li className="px-5 py-6 text-center text-sm text-slate-500">No history yet</li>}
+              {!timeline?.data?.length && <li className="px-5 py-6 text-center text-sm text-slate-500">{t('No history yet')}</li>}
             </ol>
             <Pagination meta={timeline?.meta} onPage={setPage} />
           </Card>
@@ -172,23 +176,23 @@ export default function AssetDetailPage() {
 
         <div className="space-y-6">
           <Card>
-            <CardHeader title="AMC" subtitle={asset.amc ? `${asset.amc.vendorName}${asset.amc.contractNumber ? ` · ${asset.amc.contractNumber}` : ''}` : 'No contract on record'}
-              action={manager && <div className="flex gap-1">{asset.amc && <Button size="sm" variant="secondary" onClick={() => setModal('renew')}>Renew</Button>}<Button size="sm" variant="secondary" icon={asset.amc ? Pencil : Plus} onClick={() => setModal('amc')}>{asset.amc ? 'Edit' : 'Add'}</Button></div>} />
+            <CardHeader title="AMC" subtitle={asset.amc ? `${asset.amc.vendorName}${asset.amc.contractNumber ? ` · ${asset.amc.contractNumber}` : ''}` : t('No contract on record')}
+              action={manager && <div className="flex gap-1">{asset.amc && <Button size="sm" variant="secondary" onClick={() => setModal('renew')}>Renew</Button>}<Button size="sm" variant="secondary" icon={asset.amc ? Pencil : Plus} onClick={() => setModal('amc')}>{asset.amc ? t('Edit') : t('Add')}</Button></div>} />
             {asset.amc && (
               <div className="space-y-3 p-5 text-sm">
-                <div className="flex items-center gap-2"><ShieldCheck className="size-4 text-slate-400" /><span>{date(asset.amc.startDate)} – {date(asset.amc.endDate)}</span><Badge tone={DUE_TONES[asset.amcStatus]}>{asset.amcStatus === 'expired' ? 'Expired' : asset.amcStatus === 'expiring' ? `${asset.amcDaysLeft} days left` : 'Active'}</Badge></div>
-                <p className="text-slate-600">{label(asset.amc.coverage)} · {money(asset.amc.cost)}{asset.amc.contactPhone ? ` · ${asset.amc.contactPhone}` : ''}</p>
+                <div className="flex items-center gap-2"><ShieldCheck className="size-4 text-slate-400" /><span>{date(asset.amc.startDate)} – {date(asset.amc.endDate)}</span><Badge tone={DUE_TONES[asset.amcStatus]}>{asset.amcStatus === 'expired' ? t('Expired') : asset.amcStatus === 'expiring' ? t('{n} days left', { n: asset.amcDaysLeft }) : t('Active')}</Badge></div>
+                <p className="text-slate-600">{t(label(asset.amc.coverage))} · {money(asset.amc.cost)}{asset.amc.contactPhone ? ` · ${asset.amc.contactPhone}` : ''}</p>
                 {asset.amcVisits && (
                   <div className="rounded-lg bg-slate-50 p-3">
-                    <p className="font-medium text-slate-800">Visits: {asset.amcVisits.done} done of {asset.amcVisits.total}</p>
-                    <p className={asset.amcVisits.behind ? 'text-amber-700' : 'text-slate-500'}>{asset.amcVisits.dueToDate} due so far{asset.amcVisits.behind ? ` · ${asset.amcVisits.behind} behind` : ''}</p>
+                    <p className="font-medium text-slate-800">{t('Visits: {done} done of {total}', { done: asset.amcVisits.done, total: asset.amcVisits.total })}</p>
+                    <p className={asset.amcVisits.behind ? 'text-amber-700' : 'text-slate-500'}>{asset.amcVisits.behind ? t('{due} due so far · {behind} behind', { due: asset.amcVisits.dueToDate, behind: asset.amcVisits.behind }) : t('{due} due so far', { due: asset.amcVisits.dueToDate })}</p>
                   </div>
                 )}
                 {asset.amc.documents?.length > 0 && <Attachments items={asset.amc.documents} />}
                 {manager && <Button size="sm" variant="secondary" icon={ClipboardList} onClick={() => setModal('visit')}>Log visit</Button>}
                 {manager && visits?.length > 0 && (
                   <ul className="space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
-                    {visits.slice(0, 6).map((v) => <li key={v._id}>{date(v.date)} · {label(v.type)}{v.technician ? ` · ${v.technician}` : ''}{v.findings ? ` — ${v.findings}` : ''}</li>)}
+                    {visits.slice(0, 6).map((v) => <li key={v._id}>{date(v.date)} · {t(label(v.type))}{v.technician ? ` · ${v.technician}` : ''}{v.findings ? ` — ${v.findings}` : ''}</li>)}
                   </ul>
                 )}
               </div>
@@ -202,10 +206,10 @@ export default function AssetDetailPage() {
                 {(schedules?.data || []).map((s) => (
                   <li key={s._id} className="flex items-center justify-between px-5 py-2.5">
                     <span className="font-medium text-slate-800">{s.title}</span>
-                    <span className="text-xs text-slate-500">{FREQUENCIES.find((f) => f.value === s.frequency)?.label}{s.frequency === 'every_n_days' ? ` (${s.intervalDays}d)` : ''}{!s.active && ' · paused'}</span>
+                    <span className="text-xs text-slate-500">{t(FREQUENCIES.find((f) => f.value === s.frequency)?.label || '')}{s.frequency === 'every_n_days' ? ` (${t('{n}d', { n: s.intervalDays })})` : ''}{!s.active && ` · ${t('paused')}`}</span>
                   </li>
                 ))}
-                {!schedules?.data?.length && <li className="px-5 py-4 text-slate-500">No preventive maintenance planned</li>}
+                {!schedules?.data?.length && <li className="px-5 py-4 text-slate-500">{t('No preventive maintenance planned')}</li>}
               </ul>
             </Card>
           )}
@@ -217,23 +221,23 @@ export default function AssetDetailPage() {
                 <li key={b._id}>
                   <button type="button" className="flex w-full items-center justify-between gap-2 px-5 py-2.5 text-left hover:bg-slate-50" onClick={() => setBreakdownId(b._id)}>
                     <span className="min-w-0 truncate"><span className="font-mono text-xs text-slate-500">{b.number}</span> {b.title}</span>
-                    <Badge tone={breakdownTone(b.status)}>{label(b.status)}</Badge>
+                    <Badge tone={breakdownTone(b.status)}>{t(label(b.status))}</Badge>
                   </button>
                 </li>
               ))}
-              {!breakdowns?.data?.length && <li className="px-5 py-4 text-slate-500">None reported</li>}
+              {!breakdowns?.data?.length && <li className="px-5 py-4 text-slate-500">{t('None reported')}</li>}
             </ul>
           </Card>
 
           <Card>
             <CardHeader title="Photos & documents" />
             <div className="space-y-3 p-5">
-              {[...asset.photos.map((f) => ({ ...f, kind: 'photos' })), ...asset.documents.map((f) => ({ ...f, kind: 'documents' }))].length === 0 && <p className="text-sm text-slate-500">Nothing attached</p>}
+              {[...asset.photos.map((f) => ({ ...f, kind: 'photos' })), ...asset.documents.map((f) => ({ ...f, kind: 'documents' }))].length === 0 && <p className="text-sm text-slate-500">{t('Nothing attached')}</p>}
               <div className="flex flex-wrap gap-2">
                 {[...asset.photos.map((f) => ({ ...f, kind: 'photos' })), ...asset.documents.map((f) => ({ ...f, kind: 'documents' }))].map((f) => (
                   <div key={f.url} className="relative">
                     <Attachments items={[f]} />
-                    {manager && <button type="button" aria-label="Remove file" className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-0.5 text-slate-500 shadow hover:text-red-600" onClick={() => removeFile.mutate({ id: asset._id, kind: f.kind, url: f.url })}><X className="size-3" /></button>}
+                    {manager && <button type="button" aria-label={t('Remove file')} className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-0.5 text-slate-500 shadow hover:text-red-600" onClick={() => removeFile.mutate({ id: asset._id, kind: f.kind, url: f.url })}><X className="size-3" /></button>}
                   </div>
                 ))}
               </div>
@@ -242,7 +246,7 @@ export default function AssetDetailPage() {
                   <FileUpload folder="facility" files={newFiles} onChange={setNewFiles} label="Upload" />
                   {newFiles.length > 0 && (
                     <div className="flex gap-2">
-                      <Button size="sm" icon={FilePlus2} loading={addFiles.isPending} onClick={() => addFiles.mutate({ id: asset._id, kind: newFiles.every((f) => f.mimetype?.startsWith('image/')) ? 'photos' : 'documents', uploads: newFiles.map((f) => f._id) })}>Save {newFiles.length} file(s)</Button>
+                      <Button size="sm" icon={FilePlus2} loading={addFiles.isPending} onClick={() => addFiles.mutate({ id: asset._id, kind: newFiles.every((f) => f.mimetype?.startsWith('image/')) ? 'photos' : 'documents', uploads: newFiles.map((f) => f._id) })}>{t(newFiles.length === 1 ? 'Save {n} file' : 'Save {n} files', { n: newFiles.length })}</Button>
                     </div>
                   )}
                 </>

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api, upload } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['meters'] };
 
@@ -12,10 +13,10 @@ export const useTariffs = () => useQuery({ queryKey: ['meters', 'tariffs'], quer
 
 export const useCreateMeter = (o) => useApiMutation((b) => api.post('/meters', b), { ...inv, success: 'Meter added', ...o });
 export const useUpdateMeter = (o) => useApiMutation(({ id, ...b }) => api.patch(`/meters/${id}`, b), { ...inv, success: 'Meter updated', ...o });
-export const useReplaceMeter = (o) => useApiMutation(({ id, ...b }) => api.post(`/meters/${id}/replace`, b), { ...inv, success: (m) => `Replaced with ${m.serial}`, ...o });
+export const useReplaceMeter = (o) => useApiMutation(({ id, ...b }) => api.post(`/meters/${id}/replace`, b), { ...inv, success: (m) => tt('Replaced with {serial}', { serial: m.serial }), ...o });
 export const useAddReading = (o) => useApiMutation(({ id, ...b }) => api.post(`/meters/${id}/readings`, b), { ...inv, success: 'Reading saved', ...o });
 export const useDeleteReading = () => useApiMutation((id) => api.del(`/meters/readings/${id}`), { ...inv, success: 'Reading deleted' });
-export const useBulkReadings = (o) => useApiMutation((b) => api.post('/meters/readings/bulk', b), { ...inv, success: (r) => `${r.saved} readings saved${r.failed ? `, ${r.failed} need attention` : ''}`, ...o });
+export const useBulkReadings = (o) => useApiMutation((b) => api.post('/meters/readings/bulk', b), { ...inv, success: (r) => (r.failed ? tt('{saved} readings saved, {failed} need attention', { saved: r.saved, failed: r.failed }) : tt('{saved} readings saved', { saved: r.saved })), ...o });
 export const useImportReadings = (o) =>
   useApiMutation(
     (file) => {
@@ -23,7 +24,7 @@ export const useImportReadings = (o) =>
       fd.append('file', file);
       return upload('/meters/readings/import', fd);
     },
-    { ...inv, success: (r) => `${r.saved} readings imported${r.failed ? `, ${r.failed} rejected` : ''}`, ...o },
+    { ...inv, success: (r) => (r.failed ? tt('{saved} readings imported, {failed} rejected', { saved: r.saved, failed: r.failed }) : tt('{saved} readings imported', { saved: r.saved })), ...o },
   );
 export const useSaveTariff = (o) =>
   useApiMutation(({ id, ...b }) => (id ? api.patch(`/meters/tariffs/${id}`, b) : api.post('/meters/tariffs', b)), { ...inv, success: 'Tariff saved', ...o });

@@ -5,6 +5,7 @@ import { api } from '../../../api/client';
 import { Button, Input, Select } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 export default function JoinSocietyPage() {
   const { t } = useT();
@@ -22,7 +23,7 @@ export default function JoinSocietyPage() {
       setSociety(await api.get(`/auth/societies/${values.code.trim().toUpperCase()}`));
       setStep('details');
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
     } finally {
       setLoading(false);
     }
@@ -49,7 +50,7 @@ export default function JoinSocietyPage() {
       setStep('done');
     } catch (err) {
       applyServerErrors(err);
-      if (err.code !== 'VALIDATION_ERROR') setError(err.message);
+      if (err.code !== 'VALIDATION_ERROR') setError(errorText(err, t));
     } finally {
       setLoading(false);
     }

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { History, PenLine, Plus, TriangleAlert, UserMinus, Users } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, ErrorState, Input, Modal, PageLoader, Select, StatusBadge, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
-import { date } from '../../../lib/format';
+import { date, label } from '../../../lib/format';
 import { useActivateTerm, useAddPosition, useCommitteeTerms, useCreateTerm, useDissolveTerm, useEndPosition, useGovernance, useMemberOptions, useRemovePosition, useUpdatePosition } from '../api';
 import { POSITIONS, positionLabel } from '../lib';
 
@@ -27,8 +28,9 @@ function AddPositionModal({ term, onClose }) {
   const { data: members = [] } = useMemberOptions(Boolean(term));
   const { values, bind, set, applyServerErrors, reset } = useForm({ membership: '', position: 'member', title: '', isSignatory: false });
   const add = useAddPosition({ onSuccess: () => { reset(); onClose(); } });
+  const { t } = useT();
   const taken = new Set((term?.positions || []).filter((p) => p.active).map((p) => String(p.user)));
-  const options = members.filter((m) => !taken.has(String(m.user))).map((m) => ({ value: m._id, label: `${m.name}${m.unit?.label ? ` (${m.unit.label})` : ''} · ${m.role.replace('_', ' ')}` }));
+  const options = members.filter((m) => !taken.has(String(m.user))).map((m) => ({ value: m._id, label: `${m.name}${m.unit?.label ? ` (${m.unit.label})` : ''} · ${t(label(m.role))}` }));
   return (
     <Modal open={Boolean(term)} onClose={onClose} title="Add office-bearer" description={term?.name}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={add.isPending} disabled={!values.membership} onClick={() => add.mutate({ id: term._id, ...values, title: values.title || undefined }, { onError: applyServerErrors })}>Add</Button></>}>
@@ -46,16 +48,17 @@ function PositionRow({ term, p, admin }) {
   const end = useEndPosition();
   const remove = useRemovePosition();
   const update = useUpdatePosition();
+  const { t } = useT();
   const editable = admin && term.status !== 'dissolved' && p.active;
   return (
     <li className="flex flex-wrap items-center justify-between gap-3 py-3">
       <div className="min-w-0">
         <p className="font-medium text-slate-900">{p.name}{p.unitLabel && <span className="ml-1 text-sm font-normal text-slate-500">· {p.unitLabel}</span>}</p>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <Badge tone="brand">{positionLabel(p)}</Badge>
-          {p.isSignatory && <Badge tone="blue">Can sign</Badge>}
-          {!p.active && <Badge>Ended {p.to ? date(p.to) : ''}</Badge>}
-          {p.from && <span className="text-xs text-slate-500">since {date(p.from)}</span>}
+          <Badge tone="brand">{t(positionLabel(p))}</Badge>
+          {p.isSignatory && <Badge tone="blue">{t('Can sign')}</Badge>}
+          {!p.active && <Badge>{t('Ended {date}', { date: p.to ? date(p.to) : '' })}</Badge>}
+          {p.from && <span className="text-xs text-slate-500">{t('since {date}', { date: date(p.from) })}</span>}
         </div>
       </div>
       {editable && (
@@ -64,7 +67,7 @@ function PositionRow({ term, p, admin }) {
           {term.status === 'upcoming' ? (
             <Button size="sm" variant="ghost" onClick={() => remove.mutate({ id: term._id, positionId: p._id })}>Remove</Button>
           ) : (
-            <Button size="sm" variant="ghost" icon={UserMinus} onClick={() => { if (window.confirm(`End ${p.name}'s term as ${positionLabel(p)}?`)) end.mutate({ id: term._id, positionId: p._id }); }}>Step down</Button>
+            <Button size="sm" variant="ghost" icon={UserMinus} onClick={() => { if (window.confirm(t("End {name}'s term as {position}?", { name: p.name, position: t(positionLabel(p)) }))) end.mutate({ id: term._id, positionId: p._id }); }}>Step down</Button>
           )}
         </div>
       )}
@@ -76,6 +79,7 @@ function TermCard({ term, admin, onAdd }) {
   const activate = useActivateTerm();
   const dissolve = useDissolveTerm();
   const [confirming, setConfirming] = useState(false);
+  const { t } = useT();
   const positions = term.positions || [];
   return (
     <Card>
@@ -85,7 +89,7 @@ function TermCard({ term, admin, onAdd }) {
         action={admin && term.status !== 'dissolved' && (
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="secondary" icon={Plus} onClick={() => onAdd(term)}>Add</Button>
-            {term.status === 'upcoming' && <Button size="sm" loading={activate.isPending} onClick={() => { if (window.confirm('Seat this committee? The current committee will be dissolved.')) activate.mutate(term._id); }}>Seat committee</Button>}
+            {term.status === 'upcoming' && <Button size="sm" loading={activate.isPending} onClick={() => { if (window.confirm(t('Seat this committee? The current committee will be dissolved.'))) activate.mutate(term._id); }}>Seat committee</Button>}
           </div>
         )}
       />
@@ -97,7 +101,7 @@ function TermCard({ term, admin, onAdd }) {
       {admin && term.status === 'active' && (
         // Kept apart from everyday buttons: dissolving ends every office-bearer's term at once.
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-red-100 bg-red-50/40 px-5 py-3">
-          <p className="min-w-0 flex-1 basis-56 text-xs text-slate-600"><span className="font-semibold text-red-700">Danger zone · </span>Dissolving ends this committee and every office-bearer's term.</p>
+          <p className="min-w-0 flex-1 basis-56 text-xs text-slate-600"><span className="font-semibold text-red-700">{t('Danger zone')} · </span>{t("Dissolving ends this committee and every office-bearer's term.")}</p>
           <Button size="sm" variant="secondary" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirming(true)}>Dissolve committee…</Button>
         </div>
       )}
@@ -105,7 +109,7 @@ function TermCard({ term, admin, onAdd }) {
         footer={<><Button variant="secondary" onClick={() => setConfirming(false)}>Keep committee</Button><Button variant="danger" loading={dissolve.isPending} onClick={() => dissolve.mutate(term._id, { onSuccess: () => setConfirming(false) })}>Dissolve</Button></>}>
         <div className="flex gap-3 text-sm text-slate-600">
           <TriangleAlert className="size-5 shrink-0 text-red-600" />
-          <p>{term.name} will end today and all {positions.filter((p) => p.active).length} office-bearers will step down. It moves to past committees and cannot be seated again. Start and seat a new committee instead if you are replacing it.</p>
+          <p>{t('{name} will end today and all {n} office-bearers will step down. It moves to past committees and cannot be seated again. Start and seat a new committee instead if you are replacing it.', { name: term.name, n: positions.filter((p) => p.active).length })}</p>
         </div>
       </Modal>
     </Card>
@@ -118,11 +122,12 @@ export default function CommitteePage() {
   const [creating, setCreating] = useState(false);
   const [adding, setAdding] = useState(null);
   const admin = Boolean(access?.isAdmin);
+  const { t } = useT();
 
   if (isLoading) return <PageLoader />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
-  const live = terms.filter((t) => t.status !== 'dissolved');
-  const past = terms.filter((t) => t.status === 'dissolved');
+  const live = terms.filter((x) => x.status !== 'dissolved');
+  const past = terms.filter((x) => x.status === 'dissolved');
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -133,17 +138,17 @@ export default function CommitteePage() {
       />
       {access?.positions?.length > 0 && (
         <Card className="mb-6 border-brand-200 bg-brand-50/50 p-4 text-sm text-brand-800">
-          You serve as {access.positions.map((p) => positionLabel(p)).join(', ')} and can manage meetings, registers, documents and requests.
+          {t('You serve as {positions} and can manage meetings, registers, documents and requests.', { positions: access.positions.map((p) => t(positionLabel(p))).join(', ') })}
         </Card>
       )}
       <div className="space-y-6">
-        {live.length ? live.map((t) => <TermCard key={t._id} term={t} admin={admin} onAdd={setAdding} />) : (
+        {live.length ? live.map((x) => <TermCard key={x._id} term={x} admin={admin} onAdd={setAdding} />) : (
           <Card><EmptyState icon={Users} title="No committee on record" description={admin ? 'Start a new committee and add its office-bearers.' : 'The committee has not been recorded yet.'} /></Card>
         )}
         {past.length > 0 && (
           <div>
-            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500"><History className="size-4" /> Past committees</h2>
-            <div className="space-y-4">{past.map((t) => <TermCard key={t._id} term={t} admin={admin} onAdd={setAdding} />)}</div>
+            <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-500"><History className="size-4" /> {t('Past committees')}</h2>
+            <div className="space-y-4">{past.map((x) => <TermCard key={x._id} term={x} admin={admin} onAdd={setAdding} />)}</div>
           </div>
         )}
       </div>

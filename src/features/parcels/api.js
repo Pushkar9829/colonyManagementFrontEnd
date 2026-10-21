@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { words } from '../../lib/format';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { useT } from '../../context/LanguageContext';
@@ -49,9 +50,9 @@ export const useRemovePreference = () => useApiMutation((id) => api.del(`/parcel
 // ageHours from the API → "3h", "2d 4h"
 export function formatAge(hours) {
   const h = Math.max(0, Number(hours) || 0);
-  if (h < 1) return '<1h';
-  if (h < 24) return `${h}h`;
+  if (h < 1) return words('<1h');
+  if (h < 24) return words('{h}h', { h });
   const d = Math.floor(h / 24);
   const rest = h % 24;
-  return rest ? `${d}d ${rest}h` : `${d}d`;
+  return rest ? words('{d}d {h}h', { d, h: rest }) : words('{d}d', { d });
 }

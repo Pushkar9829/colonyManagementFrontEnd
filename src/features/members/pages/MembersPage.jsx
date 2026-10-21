@@ -9,6 +9,7 @@ import { date, label } from '../../../lib/format';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { LoginAsButton } from '../../loginAs/components/LoginAsModal';
+import { useT } from '../../../context/LanguageContext';
 import { useApproveMember, useCreateMember, useMembers, useRejectMember, useResetPassword, useUpdateMember } from '../api';
 
 const ROLE_OPTIONS = ['resident', 'admin', 'accountant', 'facility_manager', 'guard', 'staff'].map((r) => ({ value: r, label: ROLE_LABELS[r] }));
@@ -29,6 +30,7 @@ function MemberModal({ member, onClose }) {
   const create = useCreateMember({ onSuccess: onClose });
   const update = useUpdateMember({ onSuccess: onClose });
   const isResident = values.role === 'resident';
+  const { t } = useT();
 
   const submit = () => {
     const body = { name: values.name, email: values.email || undefined, phone: values.phone || undefined, role: values.role, designation: values.designation || undefined };
@@ -38,7 +40,7 @@ function MemberModal({ member, onClose }) {
   };
 
   return (
-    <Modal open onClose={onClose} title={editing ? `Edit ${member.name}` : 'Add member'} description={editing ? undefined : 'Share the login details with them; they can change the password later.'}
+    <Modal open onClose={onClose} title={editing ? t('Edit {name}', { name: member.name }) : 'Add member'} description={editing ? undefined : 'Share the login details with them; they can change the password later.'}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Full name" required {...bind('name')} />
@@ -65,6 +67,7 @@ export default function MembersPage() {
   const reject = useRejectMember();
   const update = useUpdateMember();
   const resetPw = useResetPassword();
+  const { t } = useT();
   const waiting = pendingCount?.meta?.total || 0;
   const showTab = (v) => { setParams({ status: v }, { replace: true }); setFilters((f) => ({ ...f, page: 1 })); };
 
@@ -74,7 +77,7 @@ export default function MembersPage() {
       {waiting > 0 && status !== 'pending' && (
         <Card className="mb-4 flex flex-wrap items-center gap-3 border-amber-200 bg-amber-50 p-4">
           <UserPlus className="size-5 shrink-0 text-amber-600" />
-          <p className="min-w-0 flex-1 text-sm font-medium text-amber-900">{waiting === 1 ? '1 person is' : `${waiting} people are`} waiting to join</p>
+          <p className="min-w-0 flex-1 text-sm font-medium text-amber-900">{waiting === 1 ? t('1 person is waiting to join') : t('{count} people are waiting to join', { count: waiting })}</p>
           <Button size="sm" onClick={() => showTab('pending')}>Review</Button>
         </Card>
       )}
@@ -87,8 +90,8 @@ export default function MembersPage() {
         </FilterBar>
         <Table loading={isLoading} rows={data?.data} empty={status === 'pending' ? 'No pending requests' : 'No members'}
           columns={[
-            { key: 'name', header: 'Name', render: (m) => <div><p className="font-medium text-slate-900">{m.name}{String(m.user) === String(user._id) && <span className="ml-1 text-xs text-slate-400">(you)</span>}</p><p className="text-xs text-slate-500">{m.email || m.phone}</p></div> },
-            { key: 'role', header: 'Role', render: (m) => <div className="flex flex-wrap gap-1"><Badge tone="brand">{ROLE_LABELS[m.role]}</Badge>{m.residentType && <Badge>{label(m.residentType)}</Badge>}</div> },
+            { key: 'name', header: 'Name', render: (m) => <div><p className="font-medium text-slate-900">{m.name}{String(m.user) === String(user._id) && <span className="ml-1 text-xs text-slate-400">{t('(you)')}</span>}</p><p className="text-xs text-slate-500">{m.email || m.phone}</p></div> },
+            { key: 'role', header: 'Role', render: (m) => <div className="flex flex-wrap gap-1"><Badge tone="brand">{t(ROLE_LABELS[m.role] || m.role)}</Badge>{m.residentType && <Badge>{t(label(m.residentType))}</Badge>}</div> },
             { key: 'unit', header: 'Unit / designation', render: (m) => m.unit?.label || m.designation || '—' },
             { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
             { key: 'createdAt', header: 'Joined', render: (m) => date(m.createdAt) },
@@ -98,13 +101,13 @@ export default function MembersPage() {
                   {m.status === 'pending' ? (
                     <>
                       <Button size="sm" variant="success" icon={Check} loading={approve.isPending && approve.variables === m._id} onClick={() => approve.mutate(m._id)}>Approve</Button>
-                      <Button size="sm" variant="ghost" icon={X} onClick={() => window.confirm(`Reject ${m.name}?`) && reject.mutate(m._id)}>Reject</Button>
+                      <Button size="sm" variant="ghost" icon={X} onClick={() => window.confirm(t('Reject {name}?', { name: m.name })) && reject.mutate(m._id)}>Reject</Button>
                     </>
                   ) : String(m.user) !== String(user._id) && (
                     <>
                       {m.status === 'active' && <LoginAsButton target={{ membershipId: m._id, user: m.user, name: m.name, role: m.role, unitLabel: m.unit?.label }} />}
                       <Button size="sm" variant="ghost" onClick={() => setEditing(m)}>Edit</Button>
-                      <Button size="sm" variant="ghost" icon={KeyRound} title="Reset password" onClick={() => { const pw = window.prompt(`New password for ${m.name} (min 8 characters)`); if (pw) resetPw.mutate({ id: m._id, password: pw }); }} />
+                      <Button size="sm" variant="ghost" icon={KeyRound} title={t('Reset password')} onClick={() => { const pw = window.prompt(t('New password for {name} (min 8 characters)', { name: m.name })); if (pw) resetPw.mutate({ id: m._id, password: pw }); }} />
                       {['active', 'inactive'].includes(m.status) && (
                         <Button size="sm" variant="ghost" onClick={() => update.mutate({ id: m._id, status: m.status === 'active' ? 'inactive' : 'active' })}>{m.status === 'active' ? 'Deactivate' : 'Activate'}</Button>
                       )}

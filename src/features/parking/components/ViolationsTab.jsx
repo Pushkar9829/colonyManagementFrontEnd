@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { Attachments, Badge, Button, Card, CardHeader, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { dateTime, label } from '../../../lib/format';
 import { TONES, VIOLATION_STATUSES, VIOLATION_TYPES, violationTypeLabel } from '../constants';
 import { useDisputeViolation, useParkingSlots, useReportViolation, useResolveViolation, useViolations } from '../api';
 
 function ReportModal({ onClose }) {
+  const { t } = useT();
   const { values, bind, set, applyServerErrors } = useForm({ vehicleNumber: '', type: 'wrong_slot', slot: '', location: '', description: '', fine: '' });
   const [photos, setPhotos] = useState([]);
   const [slotSearch, setSlotSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(slotSearch.trim()), 250);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebounced(slotSearch.trim()), 250);
+    return () => clearTimeout(timer);
   }, [slotSearch]);
   const { data: slots } = useParkingSlots({ search: debounced, limit: 30 });
   const report = useReportViolation({ onSuccess: onClose });
@@ -37,7 +39,7 @@ function ReportModal({ onClose }) {
         <Input label="Vehicle number" required placeholder="MH12AB1234" autoCapitalize="characters" {...bind('vehicleNumber')} onChange={(e) => set('vehicleNumber', e.target.value.toUpperCase())} />
         <Select label="Type" options={VIOLATION_TYPES} {...bind('type')} />
         <Input label="Find slot (optional)" placeholder="Type slot number" value={slotSearch} onChange={(e) => setSlotSearch(e.target.value)} />
-        <Select label="Slot" placeholder="No specific slot" options={(slots?.data || []).map((s) => ({ value: s._id, label: `${s.number}${s.unit ? ` · ${s.unit.label}` : s.pool === 'visitor' ? ' · visitor' : ''}` }))} {...bind('slot')} />
+        <Select label="Slot" placeholder="No specific slot" options={(slots?.data || []).map((s) => ({ value: s._id, label: `${s.number}${s.unit ? ` · ${s.unit.label}` : s.pool === 'visitor' ? ` · ${t('visitor')}` : ''}` }))} {...bind('slot')} />
         <Input className="sm:col-span-2" label="Location" placeholder="e.g. Near Tower B ramp" {...bind('location')} />
         <Textarea className="sm:col-span-2" label="Description" rows={3} {...bind('description')} />
         <Input className="sm:col-span-2" label="Fine" placeholder="e.g. ₹500 as per bye-law 12" hint="Shown to the household; billing is raised separately" {...bind('fine')} />
@@ -48,17 +50,18 @@ function ReportModal({ onClose }) {
 }
 
 function ResolveModal({ violation, onClose }) {
+  const { t } = useT();
   const [status, setStatus] = useState('resolved');
   const [resolution, setResolution] = useState('');
   const [error, setError] = useState();
   const resolve = useResolveViolation({ onSuccess: onClose });
   return (
-    <Modal open onClose={onClose} title={`Close ${violation.number}`} description={`${violation.vehicleNumber} · ${violationTypeLabel(violation.type)}`}
+    <Modal open onClose={onClose} title={t('Close {number}', { number: violation.number })} description={`${violation.vehicleNumber} · ${t(violationTypeLabel(violation.type))}`}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={resolve.isPending} disabled={resolution.trim().length < 2} onClick={() => resolve.mutate({ id: violation._id, status, resolution }, { onError: (e) => setError(e.fieldErrors?.resolution) })}>Save</Button></>}>
       <div className="space-y-4">
         {violation.disputeNote && (
           <div className="rounded-lg bg-sky-50 p-3 text-sm text-sky-800">
-            <p className="font-medium">Resident's dispute</p>
+            <p className="font-medium">{t("Resident's dispute")}</p>
             <p>{violation.disputeNote}</p>
           </div>
         )}
@@ -70,10 +73,11 @@ function ResolveModal({ violation, onClose }) {
 }
 
 function DisputeModal({ violation, onClose }) {
+  const { t } = useT();
   const [note, setNote] = useState('');
   const dispute = useDisputeViolation({ onSuccess: onClose });
   return (
-    <Modal open onClose={onClose} title={`Dispute ${violation.number}`} description="Tell the management why this is not correct."
+    <Modal open onClose={onClose} title={t('Dispute {number}', { number: violation.number })} description="Tell the management why this is not correct."
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={dispute.isPending} disabled={note.trim().length < 3} onClick={() => dispute.mutate({ id: violation._id, note })}>Send</Button></>}>
       <Textarea label="Your note" required rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
     </Modal>
@@ -81,27 +85,28 @@ function DisputeModal({ violation, onClose }) {
 }
 
 export function ViolationRow({ v, actions }) {
+  const { t } = useT();
   return (
     <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="font-medium text-slate-900">
-            <span className="font-mono">{v.vehicleNumber}</span> · {violationTypeLabel(v.type)}
+            <span className="font-mono">{v.vehicleNumber}</span> · {t(violationTypeLabel(v.type))}
           </p>
           <p className="text-xs text-slate-500">
             {v.number} · {dateTime(v.createdAt)}
-            {v.unit?.label ? ` · ${v.unit.label}` : ' · unregistered vehicle'}
-            {v.slot?.number ? ` · slot ${v.slot.number}` : ''}
+            {v.unit?.label ? ` · ${v.unit.label}` : ` · ${t('unregistered vehicle')}`}
+            {v.slot?.number ? ` · ${t('slot {number}', { number: v.slot.number })}` : ''}
             {v.location ? ` · ${v.location}` : ''}
           </p>
         </div>
-        <Badge tone={TONES[v.status]}>{label(v.status)}</Badge>
+        <Badge tone={TONES[v.status]}>{t(label(v.status))}</Badge>
       </div>
       {v.description && <p className="text-sm text-slate-700">{v.description}</p>}
-      {v.fine && <p className="text-sm font-medium text-amber-700">Fine: {v.fine}</p>}
+      {v.fine && <p className="text-sm font-medium text-amber-700">{t('Fine: {fine}', { fine: v.fine })}</p>}
       <Attachments items={v.photos} />
-      {v.disputeNote && <p className="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-800">Dispute: {v.disputeNote}</p>}
-      {v.resolution && <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-700">Resolution: {v.resolution}{v.resolvedBy?.name ? ` — ${v.resolvedBy.name}` : ''}</p>}
+      {v.disputeNote && <p className="rounded-md bg-sky-50 px-3 py-2 text-xs text-sky-800">{t('Dispute: {note}', { note: v.disputeNote })}</p>}
+      {v.resolution && <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-700">{t('Resolution: {text}', { text: v.resolution })}{v.resolvedBy?.name ? ` — ${v.resolvedBy.name}` : ''}</p>}
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
     </li>
   );

@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { BookOpen, Download, FileBadge, Plus, Trash2 } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, EmptyState, Input, Modal, PageLoader, Pagination, Select, StatusBadge, Table, Tabs, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { useToast } from '../../../context/ToastContext';
 import { useForm } from '../../../hooks/useForm';
-import { date, money, toPaise } from '../../../lib/format';
+import { date, label, money, toPaise } from '../../../lib/format';
 import { useGovernance, useMemberOptions } from '../../committee/api';
 import { downloadPdf } from '../../committee/lib';
 import {
@@ -58,8 +59,9 @@ function AdmitModal({ open, onClose, isAdmin }) {
 function IssueModal({ member, onClose }) {
   const { values, bind, applyServerErrors, reset } = useForm({ shareCount: '5', faceValue: '50', issueDate: '', shareFrom: '' });
   const issue = useIssueCertificate({ onSuccess: () => { reset(); onClose(); } });
+  const { t } = useT();
   return (
-    <Modal open={Boolean(member)} onClose={onClose} title="Issue share certificate" description={member && `${member.name} · Member No. ${member.memberNo}`}
+    <Modal open={Boolean(member)} onClose={onClose} title="Issue share certificate" description={member && t('{name} · Member No. {no}', { name: member.name, no: member.memberNo })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={issue.isPending} onClick={() => issue.mutate({
         member: member._id, shareCount: Number(values.shareCount), faceValue: toPaise(values.faceValue), issueDate: values.issueDate, shareFrom: values.shareFrom ? Number(values.shareFrom) : undefined,
       }, { onError: applyServerErrors })}>Issue</Button></>}>
@@ -78,10 +80,11 @@ function NominationModal({ member, onClose }) {
   const [witness, setWitness] = useState('');
   const [nominationDate, setDate] = useState('');
   const save = useRecordNomination({ onSuccess: onClose });
+  const { t } = useT();
   const total = nominees.reduce((s, n) => s + Number(n.sharePercent || 0), 0);
   const setN = (i, patch) => setNominees(nominees.map((n, j) => (j === i ? { ...n, ...patch } : n)));
   return (
-    <Modal open={Boolean(member)} onClose={onClose} size="lg" title="Record nomination" description={member ? `${member.name} — replaces any earlier nomination` : ''}
+    <Modal open={Boolean(member)} onClose={onClose} size="lg" title="Record nomination" description={member ? t('{name} — replaces any earlier nomination', { name: member.name }) : ''}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={save.isPending} disabled={Math.abs(total - 100) > 0.001} onClick={() => save.mutate({
         member: member._id, nominationDate, witnesses: witness ? [{ name: witness }] : [], nominees: nominees.map((n) => ({ name: n.name, relation: n.relation || undefined, sharePercent: Number(n.sharePercent) })),
       })}>Save</Button></>}>
@@ -92,12 +95,12 @@ function NominationModal({ member, onClose }) {
             <Input className="col-span-5" placeholder="Nominee name" value={n.name} onChange={(e) => setN(i, { name: e.target.value })} />
             <Input className="col-span-3" placeholder="Relation" value={n.relation} onChange={(e) => setN(i, { relation: e.target.value })} />
             <Input className="col-span-3" type="number" min="0" max="100" placeholder="%" value={n.sharePercent} onChange={(e) => setN(i, { sharePercent: e.target.value })} />
-            <Button className="col-span-1" variant="ghost" icon={Trash2} aria-label="Remove nominee" disabled={nominees.length === 1} onClick={() => setNominees(nominees.filter((_, j) => j !== i))} />
+            <Button className="col-span-1" variant="ghost" icon={Trash2} aria-label={t('Remove nominee')} disabled={nominees.length === 1} onClick={() => setNominees(nominees.filter((_, j) => j !== i))} />
           </div>
         ))}
         <div className="flex items-center justify-between">
           <Button size="sm" variant="secondary" icon={Plus} onClick={() => setNominees([...nominees, { name: '', relation: '', sharePercent: '' }])}>Add nominee</Button>
-          <span className={Math.abs(total - 100) > 0.001 ? 'text-sm font-medium text-red-600' : 'text-sm text-emerald-700'}>Total {total}% {Math.abs(total - 100) > 0.001 && '(must be 100%)'}</span>
+          <span className={Math.abs(total - 100) > 0.001 ? 'text-sm font-medium text-red-600' : 'text-sm text-emerald-700'}>{t('Total {n}%', { n: total })} {Math.abs(total - 100) > 0.001 && t('(must be 100%)')}</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label="Witness" required value={witness} onChange={(e) => setWitness(e.target.value)} />
@@ -112,9 +115,10 @@ function TransferModal({ cert, onClose }) {
   const { data: members } = useRegisterMembers({ status: 'active', limit: 100 }, Boolean(cert));
   const { values, bind, applyServerErrors, reset } = useForm({ transferee: '', newName: '', date: '', reason: 'sale', transferFee: '', premium: '', meetingRef: '' });
   const transfer = useTransfer({ onSuccess: () => { reset(); onClose(); } });
+  const { t } = useT();
   const options = (members?.data || []).filter((m) => m._id !== cert?.member?._id).map((m) => ({ value: m._id, label: `${m.memberNo}. ${m.name}` }));
   return (
-    <Modal open={Boolean(cert)} onClose={onClose} title={`Transfer certificate No. ${cert?.certificateNo}`} description={cert && `Shares ${cert.shareFrom}-${cert.shareTo} held by ${cert.member?.name}`}
+    <Modal open={Boolean(cert)} onClose={onClose} title={t('Transfer certificate No. {no}', { no: cert?.certificateNo })} description={cert && t('Shares {from}-{to} held by {name}', { from: cert.shareFrom, to: cert.shareTo, name: cert.member?.name })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={transfer.isPending} onClick={() => transfer.mutate({
         certificate: cert._id,
         transferee: values.transferee || undefined,
@@ -142,42 +146,43 @@ function MemberModal({ id, onClose, onIssue, onNominate }) {
   const { data: m, isLoading } = useRegisterMember(id);
   const cease = useCeaseMember();
   const { busy, run } = usePdf();
+  const { t } = useT();
   return (
-    <Modal open={Boolean(id)} onClose={onClose} size="lg" title={m ? `${m.memberNo}. ${m.name}` : 'Member'} description={m && `${m.unitLabel || 'No flat'} · admitted ${date(m.admissionDate)}`}>
+    <Modal open={Boolean(id)} onClose={onClose} size="lg" title={m ? `${m.memberNo}. ${m.name}` : 'Member'} description={m && t('{flat} · admitted {date}', { flat: m.unitLabel || t('No flat'), date: date(m.admissionDate) })}>
       {isLoading || !m ? <PageLoader /> : (
         <div className="space-y-5 text-sm">
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={m.status === 'ceased' ? 'inactive' : 'active'} />
-            <Badge tone="brand">{m.sharesHeld} shares</Badge>
-            {m.entranceFee > 0 && <Badge>Entrance fee {money(m.entranceFee)}</Badge>}
+            <Badge tone="brand">{t('{n} shares', { n: m.sharesHeld })}</Badge>
+            {m.entranceFee > 0 && <Badge>{t('Entrance fee {amount}', { amount: money(m.entranceFee) })}</Badge>}
           </div>
-          {m.cessationReason && <p className="text-slate-600">Ceased {date(m.cessationDate)}: {m.cessationReason}</p>}
+          {m.cessationReason && <p className="text-slate-600">{t('Ceased {date}: {reason}', { date: date(m.cessationDate), reason: m.cessationReason })}</p>}
           <div>
-            <p className="mb-1 font-medium text-slate-900">Share certificates</p>
+            <p className="mb-1 font-medium text-slate-900">{t('Share certificates')}</p>
             {m.certificates.length ? m.certificates.map((c) => (
               <div key={c._id} className="flex items-center justify-between border-b border-slate-100 py-1.5">
-                <span>No. {c.certificateNo} · shares {c.shareFrom}-{c.shareTo} {c.member !== m._id && <Badge>transferred</Badge>} {c.status === 'cancelled' && <Badge tone="red">cancelled</Badge>}</span>
+                <span>{t('No. {no} · shares {from}-{to}', { no: c.certificateNo, from: c.shareFrom, to: c.shareTo })} {c.member !== m._id && <Badge>{t('transferred')}</Badge>} {c.status === 'cancelled' && <Badge tone="red">{t('cancelled')}</Badge>}</span>
                 <Button size="sm" variant="ghost" icon={Download} loading={busy === `/registers/certificates/${c._id}/pdf`} onClick={() => run(`/registers/certificates/${c._id}/pdf`, `Share-Certificate-${c.certificateNo}.pdf`)}>PDF</Button>
               </div>
-            )) : <p className="text-slate-500">None</p>}
+            )) : <p className="text-slate-500">{t('None')}</p>}
           </div>
           <div>
-            <p className="mb-1 font-medium text-slate-900">Nominations</p>
+            <p className="mb-1 font-medium text-slate-900">{t('Nominations')}</p>
             {m.nominations.length ? m.nominations.map((n) => (
-              <p key={n._id} className="border-b border-slate-100 py-1.5">{n.nominees.map((x) => `${x.name} (${x.sharePercent}%)`).join(', ')} · {date(n.nominationDate)} {n.status === 'revoked' && <Badge>revoked</Badge>}</p>
-            )) : <p className="text-slate-500">None recorded</p>}
+              <p key={n._id} className="border-b border-slate-100 py-1.5">{n.nominees.map((x) => `${x.name} (${x.sharePercent}%)`).join(', ')} · {date(n.nominationDate)} {n.status === 'revoked' && <Badge>{t('revoked')}</Badge>}</p>
+            )) : <p className="text-slate-500">{t('None recorded')}</p>}
           </div>
           {m.transfers.length > 0 && (
             <div>
-              <p className="mb-1 font-medium text-slate-900">Transfers</p>
-              {m.transfers.map((t) => <p key={t._id} className="border-b border-slate-100 py-1.5">No. {t.transferNo}: {t.transferorName} → {t.transfereeName} on {date(t.date)}</p>)}
+              <p className="mb-1 font-medium text-slate-900">{t('Transfers')}</p>
+              {m.transfers.map((x) => <p key={x._id} className="border-b border-slate-100 py-1.5">{t('No. {no}: {from} → {to} on {date}', { no: x.transferNo, from: x.transferorName, to: x.transfereeName, date: date(x.date) })}</p>)}
             </div>
           )}
           {m.status === 'active' && onIssue && (
             <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
               <Button size="sm" icon={FileBadge} onClick={() => onIssue(m)}>Issue certificate</Button>
               <Button size="sm" variant="secondary" onClick={() => onNominate(m)}>Record nomination</Button>
-              <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt('Reason for cessation of membership'); if (reason?.trim()) cease.mutate({ id: m._id, reason, date: new Date().toLocaleDateString('en-CA') }); }}>Cease membership</Button>
+              <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt(t('Reason for cessation of membership')); if (reason?.trim()) cease.mutate({ id: m._id, reason, date: new Date().toLocaleDateString('en-CA') }); }}>Cease membership</Button>
             </div>
           )}
         </div>
@@ -227,6 +232,7 @@ function CertificatesTab() {
   const [transferring, setTransferring] = useState(null);
   const cancel = useCancelCertificate();
   const { busy, run } = usePdf();
+  const { t } = useT();
   return (
     <Card>
       <Table loading={isLoading} rows={data?.data} empty="No share certificates issued"
@@ -237,12 +243,12 @@ function CertificatesTab() {
           { key: 'range', header: 'Distinctive nos.', render: (c) => `${c.shareFrom} – ${c.shareTo}` },
           { key: 'shareCount', header: 'Shares', render: (c) => `${c.shareCount} × ${money(c.faceValue)}` },
           { key: 'issueDate', header: 'Issued', render: (c) => date(c.issueDate) },
-          { key: 'status', header: '', render: (c) => (c.status === 'cancelled' ? <Badge tone="red">Cancelled</Badge> : c.endorsements.length ? <Badge>{c.endorsements.length} transfer(s)</Badge> : null) },
+          { key: 'status', header: '', render: (c) => (c.status === 'cancelled' ? <Badge tone="red">{t('Cancelled')}</Badge> : c.endorsements.length ? <Badge>{t('{n} transfer(s)', { n: c.endorsements.length })}</Badge> : null) },
           { key: 'actions', header: '', render: (c) => (
             <div className="flex gap-1">
-              <Button size="sm" variant="ghost" icon={Download} loading={busy === `/registers/certificates/${c._id}/pdf`} onClick={() => run(`/registers/certificates/${c._id}/pdf`, `Share-Certificate-${c.certificateNo}.pdf`)} aria-label="Download certificate" />
+              <Button size="sm" variant="ghost" icon={Download} loading={busy === `/registers/certificates/${c._id}/pdf`} onClick={() => run(`/registers/certificates/${c._id}/pdf`, `Share-Certificate-${c.certificateNo}.pdf`)} aria-label={t('Download certificate')} />
               {c.status === 'active' && <Button size="sm" variant="secondary" onClick={() => setTransferring(c)}>Transfer</Button>}
-              {c.status === 'active' && <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt('Reason for cancelling this certificate (e.g. duplicate issued)'); if (reason?.trim()) cancel.mutate({ id: c._id, reason }); }}>Cancel</Button>}
+              {c.status === 'active' && <Button size="sm" variant="ghost" onClick={() => { const reason = window.prompt(t('Reason for cancelling this certificate (e.g. duplicate issued)')); if (reason?.trim()) cancel.mutate({ id: c._id, reason }); }}>Cancel</Button>}
             </div>
           ) },
         ]} />
@@ -255,18 +261,19 @@ function CertificatesTab() {
 function TransfersTab() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useTransfers({ page });
+  const { t } = useT();
   return (
     <Card>
       <Table loading={isLoading} rows={data?.data} empty="No transfers recorded"
         columns={[
           { key: 'transferNo', header: 'No.' },
-          { key: 'date', header: 'Date', render: (t) => date(t.date) },
-          { key: 'unitLabel', header: 'Flat', render: (t) => t.unitLabel || '—' },
-          { key: 'certificateNo', header: 'Cert.', render: (t) => `${t.certificateNo} (${t.shareFrom}-${t.shareTo})` },
+          { key: 'date', header: 'Date', render: (x) => date(x.date) },
+          { key: 'unitLabel', header: 'Flat', render: (x) => x.unitLabel || '—' },
+          { key: 'certificateNo', header: 'Cert.', render: (x) => `${x.certificateNo} (${x.shareFrom}-${x.shareTo})` },
           { key: 'transferorName', header: 'Transferor' },
           { key: 'transfereeName', header: 'Transferee' },
-          { key: 'reason', header: 'Reason', render: (t) => t.reason },
-          { key: 'transferFee', header: 'Fee', render: (t) => money(t.transferFee) },
+          { key: 'reason', header: 'Reason', render: (x) => t(label(x.reason)) },
+          { key: 'transferFee', header: 'Fee', render: (x) => money(x.transferFee) },
         ]} />
       <Pagination meta={data?.meta} onPage={setPage} />
     </Card>
@@ -277,6 +284,7 @@ function NominationsTab() {
   const [page, setPage] = useState(1);
   const { data, isLoading } = useRegisterNominations({ page });
   const revoke = useRevokeNomination();
+  const { t } = useT();
   return (
     <Card>
       <Table loading={isLoading} rows={data?.data} empty="No nominations recorded"
@@ -285,7 +293,7 @@ function NominationsTab() {
           { key: 'nominees', header: 'Nominees', className: 'whitespace-normal', render: (n) => n.nominees.map((x) => `${x.name}${x.relation ? ` (${x.relation})` : ''} ${x.sharePercent}%`).join('; ') },
           { key: 'witnesses', header: 'Witness', render: (n) => n.witnesses.map((w) => w.name).join(', ') },
           { key: 'nominationDate', header: 'Date', render: (n) => date(n.nominationDate) },
-          { key: 'status', header: '', render: (n) => (n.status === 'active' ? <Button size="sm" variant="ghost" onClick={() => revoke.mutate(n._id)}>Revoke</Button> : <Badge>Revoked</Badge>) },
+          { key: 'status', header: '', render: (n) => (n.status === 'active' ? <Button size="sm" variant="ghost" onClick={() => revoke.mutate(n._id)}>Revoke</Button> : <Badge>{t('Revoked')}</Badge>) },
         ]} />
       <Pagination meta={data?.meta} onPage={setPage} />
     </Card>
@@ -295,27 +303,28 @@ function NominationsTab() {
 function MyEntries() {
   const { data = [], isLoading } = useMyRegister();
   const { busy, run } = usePdf();
+  const { t } = useT();
   if (isLoading) return <PageLoader />;
   if (!data.length) return <Card><EmptyState icon={BookOpen} title="No register entries linked to you" description="The society secretary records members, share certificates and nominations. Contact the office if your entry is missing." /></Card>;
   return (
     <div className="space-y-4">
       {data.map((m) => (
         <Card key={m._id}>
-          <CardHeader title={`Member No. ${m.memberNo} · ${m.name}`} subtitle={`${m.unitLabel || ''} · admitted ${date(m.admissionDate)}${m.status === 'ceased' ? ` · ceased ${date(m.cessationDate)}` : ''}`} action={<Badge tone="brand">{m.sharesHeld} shares</Badge>} />
+          <CardHeader title={t('Member No. {no} · {name}', { no: m.memberNo, name: m.name })} subtitle={`${m.unitLabel || ''} · ${t('admitted {date}', { date: date(m.admissionDate) })}${m.status === 'ceased' ? ` · ${t('ceased {date}', { date: date(m.cessationDate) })}` : ''}`} action={<Badge tone="brand">{t('{n} shares', { n: m.sharesHeld })}</Badge>} />
           <div className="grid gap-5 p-5 text-sm sm:grid-cols-2">
             <div>
-              <p className="mb-1 font-medium text-slate-900">Share certificates</p>
+              <p className="mb-1 font-medium text-slate-900">{t('Share certificates')}</p>
               {m.certificates.length ? m.certificates.map((c) => (
                 <div key={c._id} className="flex items-center justify-between py-1">
-                  <span>No. {c.certificateNo} · {c.shareFrom}-{c.shareTo}{c.member !== m._id ? ' (transferred)' : ''}</span>
+                  <span>{t('No. {no} · {from}-{to}', { no: c.certificateNo, from: c.shareFrom, to: c.shareTo })}{c.member !== m._id ? ` (${t('transferred')})` : ''}</span>
                   <Button size="sm" variant="ghost" icon={Download} loading={busy === `/registers/certificates/${c._id}/pdf`} onClick={() => run(`/registers/certificates/${c._id}/pdf`, `Share-Certificate-${c.certificateNo}.pdf`)}>PDF</Button>
                 </div>
-              )) : <p className="text-slate-500">None</p>}
+              )) : <p className="text-slate-500">{t('None')}</p>}
             </div>
             <div>
-              <p className="mb-1 font-medium text-slate-900">Current nomination</p>
+              <p className="mb-1 font-medium text-slate-900">{t('Current nomination')}</p>
               {m.nominations.filter((n) => n.status === 'active').map((n) => <p key={n._id}>{n.nominees.map((x) => `${x.name} — ${x.sharePercent}%`).join(', ')}</p>)}
-              {!m.nominations.some((n) => n.status === 'active') && <p className="text-slate-500">No nomination on record</p>}
+              {!m.nominations.some((n) => n.status === 'active') && <p className="text-slate-500">{t('No nomination on record')}</p>}
             </div>
           </div>
         </Card>

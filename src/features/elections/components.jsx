@@ -1,4 +1,5 @@
 import { Badge } from '../../components/ui';
+import { useT } from '../../context/LanguageContext';
 
 export const ELIGIBILITY = [
   { value: 'unit_owner', label: 'One vote per flat, cast by an owner (default)' },
@@ -17,8 +18,9 @@ const STATUS = {
 };
 
 export function ElectionStatus({ status }) {
+  const { t } = useT();
   const [tone, text] = STATUS[status] || ['slate', status];
-  return <Badge tone={tone}>{text}</Badge>;
+  return <Badge tone={tone}>{t(text)}</Badge>;
 }
 
 export const NOMINATION_LABEL = {

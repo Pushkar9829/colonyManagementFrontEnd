@@ -22,6 +22,7 @@ export const STATUSES = [
   { value: 'cancelled', label: 'Withdrawn' },
 ];
 
-export const requestTitle = (r) => (r.kind === 'noc' ? `${NOC_TYPES.find((t) => t.value === r.nocType)?.label || 'NOC'}` : `${r.kind === 'move_in' ? 'Move-in' : 'Move-out'} on ${r.move?.date}`);
+// t: the translate function from useT().
+export const requestTitle = (r, t) => (r.kind === 'noc' ? t(NOC_TYPES.find((x) => x.value === r.nocType)?.label || 'NOC') : t(r.kind === 'move_in' ? 'Move-in on {date}' : 'Move-out on {date}', { date: r.move?.date }));
 
 export const statusTone = (s) => ({ info_requested: 'on_hold', cancelled: 'cancelled' }[s] || s);

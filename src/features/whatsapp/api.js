@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 // The open society's WhatsApp mode (everyone) plus credits and usage (admin / accountant).
 export const useWhatsApp = (enabled = true) => useQuery({ queryKey: ['whatsapp', 'me'], queryFn: () => api.get('/whatsapp'), staleTime: 5 * 60000, enabled });
@@ -13,4 +14,4 @@ export const usePlatformWhatsAppLedger = (societyId, params) =>
 export const useSetWhatsAppMode = (societyId, o) =>
   useApiMutation((b) => api.patch(`/platform/societies/${societyId}/whatsapp`, b), { invalidate: [['platform', 'whatsapp', societyId]], success: 'WhatsApp settings saved', ...o });
 export const useAddWhatsAppCredits = (societyId, o) =>
-  useApiMutation((b) => api.post(`/platform/societies/${societyId}/whatsapp/credits`, b), { invalidate: [['platform', 'whatsapp', societyId]], success: (d, v) => `${v.amount} credits added`, ...o });
+  useApiMutation((b) => api.post(`/platform/societies/${societyId}/whatsapp/credits`, b), { invalidate: [['platform', 'whatsapp', societyId]], success: (d, v) => tt('{n} credits added', { n: v.amount }), ...o });

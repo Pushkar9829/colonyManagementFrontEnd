@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, FilterBar, Input, Modal, Pagination, Select, Spinner, Table, Textarea } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { UnitPicker } from '../../units/components/UnitPicker';
 import { POOLS, SLOT_TYPES, slotTypeLabel } from '../constants';
 import {
@@ -41,6 +42,7 @@ function AreaModal({ area, onClose }) {
 }
 
 function AreasCard({ areas, isLoading }) {
+  const { t } = useT();
   const [editing, setEditing] = useState(null);
   const remove = useDeleteArea();
   return (
@@ -57,15 +59,15 @@ function AreasCard({ areas, isLoading }) {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate font-medium text-slate-900">{a.name}</p>
-                  {a.level && <p className="text-xs text-slate-500">Level {a.level}</p>}
+                  {a.level && <p className="text-xs text-slate-500">{t('Level {level}', { level: a.level })}</p>}
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button type="button" onClick={() => setEditing(a)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={`Edit ${a.name}`}><Pencil className="size-4" /></button>
-                  <button type="button" disabled={remove.isPending} onClick={() => window.confirm(`Remove area ${a.name}?`) && remove.mutate(a._id)} className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={`Remove ${a.name}`}><Trash2 className="size-4" /></button>
+                  <button type="button" onClick={() => setEditing(a)} className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700" aria-label={t('Edit {name}', { name: a.name })}><Pencil className="size-4" /></button>
+                  <button type="button" disabled={remove.isPending} onClick={() => window.confirm(t('Remove area {name}?', { name: a.name })) && remove.mutate(a._id)} className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600" aria-label={t('Remove {name}', { name: a.name })}><Trash2 className="size-4" /></button>
                 </div>
               </div>
               <p className="mt-2 text-xs text-slate-600">
-                {a.slots} slots · {a.allotted} allotted · {a.visitorSlots} visitor
+                {t('{slots} slots · {allotted} allotted · {visitor} visitor', { slots: a.slots, allotted: a.allotted, visitor: a.visitorSlots })}
               </p>
             </li>
           ))}
@@ -77,6 +79,7 @@ function AreasCard({ areas, isLoading }) {
 }
 
 function AddSlotsModal({ areas, onClose }) {
+  const { t } = useT();
   const [mode, setMode] = useState('single');
   const { values, bind, set, applyServerErrors } = useForm({ area: areas[0]?._id || '', number: '', prefix: '', from: '1', to: '10', type: 'four_wheeler', covered: false, pool: 'resident', notes: '' });
   const create = useCreateSlots({ onSuccess: onClose });
@@ -100,7 +103,7 @@ function AddSlotsModal({ areas, onClose }) {
             <Input label="From" type="number" min="0" {...bind('from')} error={bind('number').error} />
             <Input label="To" type="number" min="0" {...bind('to')} />
             <p className="col-span-3 text-xs text-slate-500">
-              {count > 0 ? `Creates ${count} slot${count === 1 ? '' : 's'}: ${values.prefix}${values.from} … ${values.prefix}${values.to}` : 'The range end must be after the start'}
+              {count > 0 ? t(count === 1 ? 'Creates {count} slot: {from} … {to}' : 'Creates {count} slots: {from} … {to}', { count, from: `${values.prefix}${values.from}`, to: `${values.prefix}${values.to}` }) : t('The range end must be after the start')}
             </p>
           </div>
         )}
@@ -114,6 +117,7 @@ function AddSlotsModal({ areas, onClose }) {
 }
 
 function EditSlotModal({ slot, areas, onClose }) {
+  const { t } = useT();
   const { values, bind, set, applyServerErrors } = useForm({
     area: slot.area?._id || '',
     number: slot.number,
@@ -125,7 +129,7 @@ function EditSlotModal({ slot, areas, onClose }) {
   });
   const update = useUpdateSlot({ onSuccess: onClose });
   return (
-    <Modal open onClose={onClose} title={`Edit slot ${slot.number}`}
+    <Modal open onClose={onClose} title={t('Edit slot {number}', { number: slot.number })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={update.isPending} onClick={() => update.mutate({ id: slot._id, ...values }, { onError: applyServerErrors })}>Save</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Input label="Number" required {...bind('number')} />
@@ -144,23 +148,24 @@ function EditSlotModal({ slot, areas, onClose }) {
 const fits = (slotType, vehicleType) => !(slotType === 'two_wheeler' && vehicleType !== 'two_wheeler');
 
 function AllotModal({ slot, onClose }) {
+  const { t } = useT();
   const [unit, setUnit] = useState(slot.unit?._id || '');
   const [picked, setPicked] = useState(() => (slot.vehicles || []).map((v) => v._id));
   const { data: vehicles = [], isLoading } = useUnitVehicles(unit);
   const allot = useAllotSlot({ onSuccess: onClose });
   const toggle = (id) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
   return (
-    <Modal open onClose={onClose} title={slot.unit ? `Slot ${slot.number} · ${slot.unit.label}` : `Allot slot ${slot.number}`} description={`${slotTypeLabel(slot.type)}${slot.covered ? ' · covered' : ''} · ${slot.area?.name || ''}`}
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={allot.isPending} disabled={!unit} onClick={() => allot.mutate({ id: slot._id, unit, vehicles: picked })}>{slot.unit ? 'Save' : 'Allot'}</Button></>}>
+    <Modal open onClose={onClose} title={slot.unit ? t('Slot {number} · {unit}', { number: slot.number, unit: slot.unit.label }) : t('Allot slot {number}', { number: slot.number })} description={`${slotTypeLabel(slot.type)}${slot.covered ? ` · ${t('covered')}` : ''} · ${slot.area?.name || ''}`}
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={allot.isPending} disabled={!unit} onClick={() => allot.mutate({ id: slot._id, unit, vehicles: picked })}>{slot.unit ? t('Save') : t('Allot')}</Button></>}>
       <div className="space-y-4">
         <UnitPicker required value={unit} initialLabel={slot.unit?.label || ''} onChange={(id) => { setUnit(id); setPicked([]); }} />
         {unit && (
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Link vehicles <span className="font-normal text-slate-500">(optional, up to 5)</span></p>
+            <p className="mb-2 text-sm font-medium text-slate-700">{t('Link vehicles')} <span className="font-normal text-slate-500">{t('(optional, up to 5)')}</span></p>
             {isLoading ? (
               <Spinner className="size-5" />
             ) : !vehicles.length ? (
-              <p className="text-sm text-slate-500">This unit has no registered vehicles.</p>
+              <p className="text-sm text-slate-500">{t('This unit has no registered vehicles.')}</p>
             ) : (
               <ul className="space-y-2">
                 {vehicles.map((v) => {
@@ -173,10 +178,10 @@ function AllotModal({ slot, onClose }) {
                         onChange={() => toggle(v._id)}
                         label={
                           <span className={ok ? '' : 'text-slate-400'}>
-                            <span className="font-mono font-semibold">{v.number}</span> · {v.type === 'two_wheeler' ? '2W' : v.type === 'four_wheeler' ? '4W' : 'Other'}
+                            <span className="font-mono font-semibold">{v.number}</span> · {v.type === 'two_wheeler' ? '2W' : v.type === 'four_wheeler' ? '4W' : t('Other')}
                             {v.make ? ` · ${v.make}` : ''}
-                            {v.parkingSlot && v.parkingSlot !== slot.number ? ` · in ${v.parkingSlot}` : ''}
-                            {!ok && ' · does not fit'}
+                            {v.parkingSlot && v.parkingSlot !== slot.number ? ` · ${t('in {slot}', { slot: v.parkingSlot })}` : ''}
+                            {!ok && ` · ${t('does not fit')}`}
                           </span>
                         }
                       />
@@ -193,19 +198,20 @@ function AllotModal({ slot, onClose }) {
 }
 
 function SlotActions({ s, onAllot, onEdit }) {
+  const { t } = useT();
   const release = useReleaseSlot();
   const remove = useDeleteSlot();
   return (
     <div className="flex flex-wrap justify-end gap-1">
-      {s.pool === 'resident' && s.active && <Button size="sm" variant="secondary" onClick={() => onAllot(s)}>{s.unit ? 'Vehicles' : 'Allot'}</Button>}
+      {s.pool === 'resident' && s.active && <Button size="sm" variant="secondary" onClick={() => onAllot(s)}>{s.unit ? t('Vehicles') : t('Allot')}</Button>}
       {s.unit && (
-        <Button size="sm" variant="ghost" loading={release.isPending && release.variables === s._id} onClick={() => window.confirm(`Release slot ${s.number} from ${s.unit.label}?`) && release.mutate(s._id)}>
+        <Button size="sm" variant="ghost" loading={release.isPending && release.variables === s._id} onClick={() => window.confirm(t('Release slot {number} from {unit}?', { number: s.number, unit: s.unit.label })) && release.mutate(s._id)}>
           Release
         </Button>
       )}
-      <Button size="sm" variant="ghost" icon={Pencil} onClick={() => onEdit(s)} aria-label={`Edit slot ${s.number}`}>Edit</Button>
+      <Button size="sm" variant="ghost" icon={Pencil} onClick={() => onEdit(s)} aria-label={t('Edit slot {number}', { number: s.number })}>Edit</Button>
       {!s.unit && (
-        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" icon={Trash2} loading={remove.isPending && remove.variables === s._id} onClick={() => window.confirm(`Delete slot ${s.number}? This cannot be undone.`) && remove.mutate(s._id)} aria-label={`Delete slot ${s.number}`} title="Delete slot" />
+        <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50" icon={Trash2} loading={remove.isPending && remove.variables === s._id} onClick={() => window.confirm(t('Delete slot {number}? This cannot be undone.', { number: s.number })) && remove.mutate(s._id)} aria-label={t('Delete slot {number}', { number: s.number })} title={t('Delete slot')} />
       )}
     </div>
   );
@@ -217,16 +223,17 @@ const POOL_FILTER = [
   { value: 'visitor', label: 'Visitor' },
 ];
 
-const occupant = (s) =>
+const occupant = (s, t) =>
   s.pool === 'visitor' ? (
-    <Badge tone="blue">Visitor parking</Badge>
+    <Badge tone="blue">{t('Visitor parking')}</Badge>
   ) : s.unit ? (
     <span className="font-medium text-slate-900">{s.unit.label}</span>
   ) : (
-    <Badge tone="green">Free</Badge>
+    <Badge tone="green">{t('Free')}</Badge>
   );
 
 export function SlotsTab() {
+  const { t } = useT();
   const { data: areas = [], isLoading: areasLoading } = useParkingAreas();
   const [filters, setFilters] = useState({ area: '', pool: '', type: '', status: '', search: '', page: 1 });
   const { data, isLoading } = useParkingSlots({ ...filters, limit: 25 });
@@ -240,7 +247,7 @@ export function SlotsTab() {
     <div>
       <AreasCard areas={areas} isLoading={areasLoading} />
       <Card>
-        <CardHeader title="Slots" subtitle={data?.meta ? `${data.meta.total} slots` : undefined} action={<Button size="sm" icon={Plus} disabled={!areas.length} onClick={() => setAdding(true)}>Add slots</Button>} />
+        <CardHeader title="Slots" subtitle={data?.meta ? t('{count} slots', { count: data.meta.total }) : undefined} action={<Button size="sm" icon={Plus} disabled={!areas.length} onClick={() => setAdding(true)}>Add slots</Button>} />
         <FilterBar cols={5} active={[filters.area, filters.pool, filters.type, filters.status].filter(Boolean).length}
           search={<Input label="Slot number" placeholder="Search number" value={filters.search} onChange={setF('search')} />}>
           <Select label="Area" placeholder="All areas" options={areas.map((a) => ({ value: a._id, label: a.name }))} value={filters.area} onChange={setF('area')} />
@@ -262,11 +269,11 @@ export function SlotsTab() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-mono font-semibold text-slate-900">{s.number}</p>
-                      <p className="text-xs text-slate-500">{s.area?.name} · {slotTypeLabel(s.type)}{s.covered ? ' · covered' : ''}</p>
+                      <p className="text-xs text-slate-500">{s.area?.name} · {slotTypeLabel(s.type)}{s.covered ? ` · ${t('covered')}` : ''}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      {occupant(s)}
-                      {!s.active && <Badge>Inactive</Badge>}
+                      {occupant(s, t)}
+                      {!s.active && <Badge>{t('Inactive')}</Badge>}
                     </div>
                   </div>
                   {s.vehicles?.length > 0 && <p className="text-xs text-slate-600">{s.vehicles.map((v) => v.number).join(', ')}</p>}
@@ -284,8 +291,8 @@ export function SlotsTab() {
             columns={[
               { key: 'number', header: 'Slot', render: (s) => <span className="font-mono font-semibold text-slate-900">{s.number}</span> },
               { key: 'area', header: 'Area', render: (s) => s.area?.name || '—' },
-              { key: 'type', header: 'Type', render: (s) => <>{slotTypeLabel(s.type)}{s.covered && <span className="text-xs text-slate-500"> · covered</span>}</> },
-              { key: 'unit', header: 'Allotted to', render: (s) => <div className="flex items-center gap-1.5">{occupant(s)}{!s.active && <Badge>Inactive</Badge>}</div> },
+              { key: 'type', header: 'Type', render: (s) => <>{slotTypeLabel(s.type)}{s.covered && <span className="text-xs text-slate-500"> · {t('covered')}</span>}</> },
+              { key: 'unit', header: 'Allotted to', render: (s) => <div className="flex items-center gap-1.5">{occupant(s, t)}{!s.active && <Badge>{t('Inactive')}</Badge>}</div> },
               { key: 'vehicles', header: 'Vehicles', render: (s) => (s.vehicles?.length ? <span className="font-mono text-xs">{s.vehicles.map((v) => v.number).join(', ')}</span> : <span className="text-slate-400">—</span>) },
               { key: 'a', header: '', className: 'text-right', render: (s) => <SlotActions s={s} onAllot={setAllotting} onEdit={setEditing} /> },
             ]}

@@ -4,21 +4,23 @@ import { Cake, Copy, Heart, PartyPopper } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { date, label } from '../../../lib/format';
 import { SendOnWhatsApp } from '../../whatsapp/components/SendOnWhatsApp';
 import { MODE_LABELS } from '../../whatsapp/lib';
 import { useCelebrationSettings, usePreviewWish, useSaveCelebrationSettings, useUpcomingCelebrations } from '../api';
 
-const when = (d) => (d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : `In ${d} days`);
+const when = (d, t) => (d === 0 ? t('Today') : d === 1 ? t('Tomorrow') : t('In {n} days', { n: d }));
 
 function Upcoming() {
+  const { t } = useT();
   const [days, setDays] = useState(30);
   const { data, isLoading } = useUpcomingCelebrations(days);
   const toast = useToast();
-  const copy = (text) => { navigator.clipboard?.writeText(text); toast.success('Message copied'); };
+  const copy = (text) => { navigator.clipboard?.writeText(text); toast.success(t('Message copied')); };
   return (
     <Card>
-      <CardHeader title="Upcoming celebrations" subtitle={data ? `WhatsApp: ${MODE_LABELS[data.whatsappMode]}${data.whatsappMode === 'api' ? ' — wishes are sent automatically on the day' : ''}` : undefined}
+      <CardHeader title="Upcoming celebrations" subtitle={data ? (data.whatsappMode === 'api' ? t('WhatsApp: {mode} — wishes are sent automatically on the day', { mode: t(MODE_LABELS[data.whatsappMode]) }) : t('WhatsApp: {mode}', { mode: t(MODE_LABELS[data.whatsappMode]) })) : undefined}
         action={<Select aria-label="Period" className="w-36" value={String(days)} onChange={(e) => setDays(Number(e.target.value))} options={[{ value: '7', label: 'Next 7 days' }, { value: '30', label: 'Next 30 days' }, { value: '60', label: 'Next 60 days' }]} />} />
       {isLoading || !data ? <div className="flex justify-center py-8"><Spinner /></div> : !data.items.length ? (
         <EmptyState icon={PartyPopper} title="No birthdays or anniversaries coming up" description="Members add their dates in My profile and My household." />
@@ -27,16 +29,16 @@ function Upcoming() {
           {data.items.map((i) => (
             <li key={`${i.kind}-${i.name}-${i.date}-${i.unit}`} className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-start gap-3">
-                {i.kind === 'birthday' ? <Cake className="mt-0.5 size-5 shrink-0 text-pink-500" aria-label="Birthday" /> : <Heart className="mt-0.5 size-5 shrink-0 text-rose-500" aria-label="Anniversary" />}
+                {i.kind === 'birthday' ? <Cake className="mt-0.5 size-5 shrink-0 text-pink-500" aria-label={t('Birthday')} /> : <Heart className="mt-0.5 size-5 shrink-0 text-rose-500" aria-label={t('Anniversary')} />}
                 <div className="min-w-0">
-                  <p className="font-medium text-slate-900">{i.name} <span className="text-xs font-normal text-slate-500">{[i.unit, i.subject === 'family' && label(i.relation)].filter(Boolean).join(' · ')}</span></p>
+                  <p className="font-medium text-slate-900">{i.name} <span className="text-xs font-normal text-slate-500">{[i.unit, i.subject === 'family' && t(label(i.relation))].filter(Boolean).join(' · ')}</span></p>
                   <p className="text-xs text-slate-500">
-                    {i.kind === 'birthday' ? `Turns ${i.years}` : `${i.years} years married`} · {date(i.date)} · <span className={i.daysAway === 0 ? 'font-semibold text-pink-700' : ''}>{when(i.daysAway)}</span>
+                    {i.kind === 'birthday' ? t('Turns {n}', { n: i.years }) : t('{n} years married', { n: i.years })} · {date(i.date)} · <span className={i.daysAway === 0 ? 'font-semibold text-pink-700' : ''}>{when(i.daysAway, t)}</span>
                   </p>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 pl-8 sm:pl-0">
-                {i.wished && <Badge tone="green">Wished</Badge>}
+                {i.wished && <Badge tone="green">{t('Wished')}</Badge>}
                 {i.phone && <SendOnWhatsApp text={i.message} phone={i.phone} />}
                 <Button size="sm" variant="ghost" icon={Copy} onClick={() => copy(i.message)}>Copy wish</Button>
               </div>
@@ -49,6 +51,7 @@ function Upcoming() {
 }
 
 function Settings() {
+  const { t } = useT();
   const { data, isLoading } = useCelebrationSettings();
   const save = useSaveCelebrationSettings();
   const preview = usePreviewWish();
@@ -70,18 +73,18 @@ function Settings() {
         <Input label="Send time (IST)" type="time" value={form.sendTime} onChange={(e) => set('sendTime', e.target.value)} />
         <Select label="Default message language" value={form.language} onChange={(e) => set('language', e.target.value)} options={[{ value: 'en', label: 'English' }, { value: 'hi', label: 'हिन्दी (Hindi)' }]} />
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium text-slate-700">Channels</p>
+          <p className="text-sm font-medium text-slate-700">{t('Channels')}</p>
           <div className="flex flex-wrap gap-4">
             <Checkbox label="In-app" checked={form.channels.inapp} onChange={setChannel('inapp')} />
             <Checkbox label="Push" checked={form.channels.push} onChange={setChannel('push')} />
-            <Checkbox label={`WhatsApp (${MODE_LABELS[data.whatsappMode]})`} checked={form.channels.whatsapp} onChange={setChannel('whatsapp')} />
+            <Checkbox label={t('WhatsApp ({mode})', { mode: t(MODE_LABELS[data.whatsappMode]) })} checked={form.channels.whatsapp} onChange={setChannel('whatsapp')} />
           </div>
-          {data.whatsappMode !== 'api' && <p className="text-xs text-slate-500">WhatsApp wishes go out automatically only in Automatic (API) mode. {data.whatsappMode === 'click_to_chat' ? 'In click-to-chat mode, send them from the Upcoming list.' : ''}</p>}
+          {data.whatsappMode !== 'api' && <p className="text-xs text-slate-500">{t('WhatsApp wishes go out automatically only in Automatic (API) mode.')} {data.whatsappMode === 'click_to_chat' ? t('In click-to-chat mode, send them from the Upcoming list.') : ''}</p>}
         </div>
         {['birthday', 'anniversary'].map((kind) => (
           <div key={kind} className="space-y-2">
-            <Textarea label={`${label(kind)} message`} rows={4} maxLength={600} placeholder={data.defaults[form.language][kind]} value={form.templates[kind]} onChange={setTemplate(kind)}
-              hint={`Placeholders: ${data.placeholders.join(' ')}. Leave blank for the default.`} />
+            <Textarea label={kind === 'birthday' ? t('Birthday message') : t('Anniversary message')} rows={4} maxLength={600} placeholder={data.defaults[form.language][kind]} value={form.templates[kind]} onChange={setTemplate(kind)}
+              hint={t('Placeholders: {list}. Leave blank for the default.', { list: data.placeholders.join(' ') })} />
             <Button size="sm" variant="secondary" loading={preview.isPending && preview.variables?.kind === kind} onClick={() => show(kind)}>Preview</Button>
           </div>
         ))}

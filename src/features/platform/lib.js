@@ -1,3 +1,6 @@
+// Fills `{name}` placeholders: the default translator for helpers that take an optional `t`.
+export const fillVars = (text, vars) => (vars ? text.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`)) : text);
+
 // "1 invoice", "3 invoices", "1 society", "2 societies".
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -34,13 +37,13 @@ export const CYCLE_OPTIONS = [
 ];
 const MONTHS = { monthly: 1, quarterly: 3, yearly: 12 };
 const withGst = (subtotal) => subtotal + Math.round((subtotal * 18) / 100);
-export function cycleExamples(units, p) {
+export function cycleExamples(units, p, t = fillVars) {
   const monthly = units * (p.perUnitMonthly || 0) + (p.flatMonthly || 0);
   const rows = ['monthly', 'quarterly', 'yearly'].map((cycle) => {
     const gross = monthly * MONTHS[cycle];
     const pct = cycle === 'quarterly' ? p.quarterlyDiscountPercent || 0 : cycle === 'yearly' ? p.yearlyDiscountPercent || 0 : 0;
-    return { cycle, label: CYCLE_OPTIONS.find((c) => c.value === cycle).label, total: withGst(gross - Math.round((gross * pct) / 100)), note: pct ? `${pct}% off` : '' };
+    return { cycle, label: t(CYCLE_OPTIONS.find((c) => c.value === cycle).label), total: withGst(gross - Math.round((gross * pct) / 100)), note: pct ? t('{pct}% off', { pct }) : '' };
   });
-  if (p.oneTimePrice > 0) rows.push({ cycle: 'one_time', label: 'One-time licence', total: withGst(p.oneTimePrice), note: p.oneTimeValidityMonths ? `${p.oneTimeValidityMonths} months` : 'lifetime' });
+  if (p.oneTimePrice > 0) rows.push({ cycle: 'one_time', label: t('One-time licence'), total: withGst(p.oneTimePrice), note: p.oneTimeValidityMonths ? t('{n} months', { n: p.oneTimeValidityMonths }) : t('lifetime') });
   return rows;
 }

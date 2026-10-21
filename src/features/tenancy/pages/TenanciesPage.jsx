@@ -7,6 +7,7 @@ import { date as fmtDate, label, money, toPaise, toRupees, todayISO } from '../.
 import { ROLES } from '../../../lib/roles';
 import { POLICE_STATUS, useCreateLease, useEndLease, useLeases, useUnitLeaseHistory, useUnitOptions, useUnitResidents, useUpdateLease } from '../api';
 import { LeaseCard } from '../components/LeasePanel';
+import { useT } from '../../../context/LanguageContext';
 
 const plusYear = () => {
   const d = new Date();
@@ -23,6 +24,7 @@ function NewLeaseModal({ onClose }) {
   const tenants = residents.filter((r) => r.residentType === 'tenant' && r.status === 'active');
   const set = (k) => (e) => setV((x) => ({ ...x, [k]: e.target.value, ...(k === 'unit' ? { tenantMembership: '' } : {}) }));
   const create = useCreateLease({ onSuccess: onClose });
+  const { t } = useT();
   const submit = () => create.mutate({
     unit: v.unit,
     tenantMembership: v.tenantMembership,
@@ -38,8 +40,8 @@ function NewLeaseModal({ onClose }) {
     <Modal open onClose={onClose} title="Record a lease" description="The tenant must already be a member of the unit (registered as a tenant)." size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!v.unit || !v.tenantMembership} loading={create.isPending} onClick={submit}>Save lease</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Select label="Unit" placeholder="Choose unit" options={units.map((u) => ({ value: u._id, label: `${u.label} · ${label(u.occupancy)}` }))} value={v.unit} onChange={set('unit')} />
-        <Select label="Tenant" placeholder={v.unit ? (tenants.length ? 'Choose tenant' : 'No tenant members in this unit') : 'Choose a unit first'} options={tenants.map((t) => ({ value: t._id, label: t.name }))} value={v.tenantMembership} onChange={set('tenantMembership')} />
+        <Select label="Unit" placeholder="Choose unit" options={units.map((u) => ({ value: u._id, label: `${u.label} · ${t(label(u.occupancy))}` }))} value={v.unit} onChange={set('unit')} />
+        <Select label="Tenant" placeholder={v.unit ? (tenants.length ? 'Choose tenant' : 'No tenant members in this unit') : 'Choose a unit first'} options={tenants.map((m) => ({ value: m._id, label: m.name }))} value={v.tenantMembership} onChange={set('tenantMembership')} />
         <Input label="Start date" type="date" value={v.startDate} onChange={set('startDate')} />
         <Input label="End date" type="date" min={v.startDate} value={v.endDate} onChange={set('endDate')} />
         <Input label="Monthly rent (₹, optional)" type="number" min={0} value={v.rent} onChange={set('rent')} />
@@ -47,7 +49,7 @@ function NewLeaseModal({ onClose }) {
         <Input label="Tenant's emergency contact" value={v.ecName} onChange={set('ecName')} />
         <Input label="Contact phone" type="tel" value={v.ecPhone} onChange={set('ecPhone')} />
         <div className="sm:col-span-2">
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Rental agreement</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{t('Rental agreement')}</p>
           <FileUpload folder="documents" files={files} onChange={setFiles} max={5} label="Attach agreement" />
         </div>
         <Textarea className="sm:col-span-2" label="Notes" rows={2} value={v.notes} onChange={set('notes')} />
@@ -67,8 +69,9 @@ function LeaseModal({ lease, onClose }) {
   const update = useUpdateLease({ onSuccess: onClose });
   const end = useEndLease({ onSuccess: onClose });
   const history = useUnitLeaseHistory(lease.unit?._id);
+  const { t } = useT();
   return (
-    <Modal open onClose={onClose} title={`Lease · ${lease.unit?.label}`} size="lg">
+    <Modal open onClose={onClose} title={t('Lease · {unit}', { unit: lease.unit?.label })} size="lg">
       <div className="space-y-5">
         <LeaseCard lease={lease} />
         {lease.status === 'active' && (
@@ -81,21 +84,21 @@ function LeaseModal({ lease, onClose }) {
                 onClick={() => update.mutate({ id: lease._id, endDate, rent: rent ? toPaise(rent) : undefined, policeVerification: { status: pv } })}>Save changes</Button>
             </div>
             <div className="space-y-3 rounded-lg border border-red-200 bg-red-50/40 p-4">
-              <p className="font-medium text-slate-800">End lease</p>
+              <p className="font-medium text-slate-800">{t('End lease')}</p>
               <Textarea label="Reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Lease completed, tenant moved out" />
-              {isAdmin ? <Checkbox label="Tenant moved out — deactivate their membership" checked={moveOut} onChange={(e) => setMoveOut(e.target.checked)} /> : <p className="text-xs text-slate-500">An admin can also deactivate the tenant's login on move-out.</p>}
+              {isAdmin ? <Checkbox label="Tenant moved out — deactivate their membership" checked={moveOut} onChange={(e) => setMoveOut(e.target.checked)} /> : <p className="text-xs text-slate-500">{t("An admin can also deactivate the tenant's login on move-out.")}</p>}
               <Button variant="danger" disabled={reason.trim().length < 3} loading={end.isPending} onClick={() => end.mutate({ id: lease._id, reason, moveOut: isAdmin && moveOut })}>End lease</Button>
             </div>
           </>
         )}
         {history.data?.leases?.length > 1 && (
           <div>
-            <p className="mb-2 text-sm font-medium text-slate-700">Tenant history of {lease.unit?.label}</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">{t('Tenant history of {unit}', { unit: lease.unit?.label })}</p>
             <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 text-sm">
               {history.data.leases.map((l) => (
                 <li key={l._id} className="flex justify-between gap-2 px-4 py-2">
                   <span>{l.tenantUser?.name}</span>
-                  <span className="text-slate-500">{fmtDate(l.startDate)} – {fmtDate(l.endedAt || l.endDate)} · {label(l.status)}</span>
+                  <span className="text-slate-500">{fmtDate(l.startDate)} – {fmtDate(l.endedAt || l.endDate)} · {t(label(l.status))}</span>
                 </li>
               ))}
             </ul>
@@ -116,6 +119,7 @@ export default function TenanciesPage() {
   const { data: expiring } = useLeases({ expiringWithinDays: 30, limit: 1 });
   const { data: moveout } = useLeases({ expired: true, limit: 1 });
   const open = data?.data.find((l) => l._id === openId);
+  const { t } = useT();
   return (
     <div>
       <PageHeader title="Tenancies" description="Leases of rented units, police verification and move-outs." actions={<Button icon={Plus} onClick={() => setCreating(true)}>Record lease</Button>} />
@@ -123,7 +127,7 @@ export default function TenanciesPage() {
         <StatCard icon={CalendarClock} tone="amber" label="Ending in 30 days" value={expiring?.meta?.total ?? '—'} />
         <StatCard icon={AlertTriangle} tone="red" label="Ended — move-out to confirm" value={moveout?.meta?.total ?? '—'} />
       </div>
-      <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={(t) => { setTab(t); setPage(1); }}
+      <Tabs className="mb-4 w-fit max-w-full" value={tab} onChange={(v) => { setTab(v); setPage(1); }}
         tabs={[{ value: 'active', label: 'Active' }, { value: 'expiring', label: 'Expiring', count: expiring?.meta?.total }, { value: 'moveout', label: 'Move-out due', count: moveout?.meta?.total }, { value: 'ended', label: 'History' }]} />
       <Card>
         <Table loading={isLoading} rows={data?.data} empty="No leases" onRowClick={(l) => setOpenId(l._id)}
@@ -134,11 +138,11 @@ export default function TenanciesPage() {
             { key: 'period', header: 'Period', render: (l) => `${fmtDate(l.startDate)} – ${fmtDate(l.endDate)}` },
             { key: 'rent', header: 'Rent', render: (l) => (l.rent ? money(l.rent) : '—') },
             { key: 'pv', header: 'Police', render: (l) => <StatusBadge status={l.policeVerification?.status === 'verified' ? 'approved' : l.policeVerification?.status === 'submitted' ? 'pending' : 'inactive'} /> },
-            { key: 'status', header: 'Status', render: (l) => (l.moveOutDue ? <Badge tone="red">Move-out due</Badge> : l.status === 'active' && l.daysLeft <= 30 ? <Badge tone="amber">{l.daysLeft} days left</Badge> : <StatusBadge status={l.status} />) },
+            { key: 'status', header: 'Status', render: (l) => (l.moveOutDue ? <Badge tone="red">{t('Move-out due')}</Badge> : l.status === 'active' && l.daysLeft <= 30 ? <Badge tone="amber">{t('{count} days left', { count: l.daysLeft })}</Badge> : <StatusBadge status={l.status} />) },
           ]} />
         <Pagination meta={data?.meta} onPage={setPage} />
       </Card>
-      {!isLoading && !data?.data.length && tab === 'active' && <p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><FileSignature className="size-3.5" /> Leases are added for units whose members are registered as tenants.</p>}
+      {!isLoading && !data?.data.length && tab === 'active' && <p className="mt-3 flex items-center gap-1 text-xs text-slate-500"><FileSignature className="size-3.5" /> {t('Leases are added for units whose members are registered as tenants.')}</p>}
       {creating && <NewLeaseModal onClose={() => setCreating(false)} />}
       {open && <LeaseModal key={open._id} lease={open} onClose={() => setOpenId(null)} />}
     </div>

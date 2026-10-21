@@ -4,6 +4,7 @@ import { Check, Clock, Flag, MessageCircle, Pencil, Phone, Plus, Search, ShieldA
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Attachments, Badge, Button, Card, Checkbox, EmptyState, FileUpload, Input, Modal, Pagination, Select, Spinner, Tabs, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { cn } from '../../../lib/cn';
 import { label, money, timeAgo, toPaise, toRupees } from '../../../lib/format';
@@ -31,18 +32,20 @@ const LISTING_REPORT_REASONS = [
   { value: 'other', label: 'Something else' },
 ];
 
-const priceText = (l) => (l.type === 'free' ? 'Free' : l.price ? `${money(l.price)} ${UNITS[l.priceUnit] || ''}`.trim() : l.type === 'buy' ? 'Budget open' : 'Price on request');
+const priceText = (l, t) => (l.type === 'free' ? t('Free') : l.price ? `${money(l.price)} ${UNITS[l.priceUnit] ? t(UNITS[l.priceUnit]) : ''}`.trim() : l.type === 'buy' ? t('Budget open') : t('Price on request'));
 
 function SearchBox({ value, onChange, placeholder }) {
+  const { t } = useT();
   return (
     <div className="relative">
       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
-      <input aria-label={placeholder} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
+      <input aria-label={t(placeholder)} value={value} onChange={(e) => onChange(e.target.value)} placeholder={t(placeholder)} className="h-10 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" />
     </div>
   );
 }
 
 function ListingFormModal({ open, onClose, listing }) {
+  const { t } = useT();
   const editing = Boolean(listing);
   const { values, bind, applyServerErrors } = useForm({
     type: listing?.type || 'sell', title: listing?.title || '', description: listing?.description || '', category: listing?.category || 'other',
@@ -62,7 +65,7 @@ function ListingFormModal({ open, onClose, listing }) {
     <Modal open={open} onClose={onClose} title={editing ? 'Edit listing' : 'New listing'} size="lg"
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button loading={create.isPending || update.isPending} onClick={submit}>{editing ? 'Save' : 'Post listing'}</Button></>}>
       <div className="grid gap-4 sm:grid-cols-2">
-        {!editing && <Select label="Type" options={TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))} {...bind('type')} />}
+        {!editing && <Select label="Type" options={TYPES.map((ty) => ({ value: ty, label: TYPE_LABEL[ty] }))} {...bind('type')} />}
         <Select label="Category" options={CATEGORIES.map((c) => ({ value: c, label: label(c) }))} {...bind('category')} />
         <Input className="sm:col-span-2" label="Title" required placeholder="e.g. Wooden study table" {...bind('title')} />
         <Textarea className="sm:col-span-2" label="Description" rows={4} {...bind('description')} />
@@ -72,10 +75,10 @@ function ListingFormModal({ open, onClose, listing }) {
         <div className="space-y-2 sm:col-span-2">
           {values.type !== 'free' && <Checkbox label="Price is negotiable" checked={values.negotiable} onChange={bind('negotiable').onChange} />}
           <Checkbox label="Show my phone number on this listing" checked={values.showPhone} onChange={bind('showPhone').onChange} />
-          <p className="text-xs text-slate-500">Buyers can always message you in the app — your number stays private unless you tick this.</p>
+          <p className="text-xs text-slate-500">{t('Buyers can always message you in the app — your number stays private unless you tick this.')}</p>
         </div>
         <div className="sm:col-span-2">
-          <p className="mb-1.5 text-sm font-medium text-slate-700">{editing ? 'Add more photos' : 'Photos'}</p>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">{editing ? t('Add more photos') : t('Photos')}</p>
           <FileUpload folder="marketplace" files={photos} onChange={setPhotos} max={8} label="Add photos" />
         </div>
       </div>
@@ -84,10 +87,11 @@ function ListingFormModal({ open, onClose, listing }) {
 }
 
 function ListingModal({ id, onClose }) {
+  const { t } = useT();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: l, isLoading } = useListing(id);
-  const [message, setMessage] = useState('Hi! Is this still available?');
+  const [message, setMessage] = useState(() => t('Hi! Is this still available?'));
   const [editing, setEditing] = useState(false);
   const [reporting, setReporting] = useState(false);
   const contact = useContactSeller({ onSuccess: (d) => navigate(`/messages/${d.conversation._id}`) });
@@ -104,19 +108,19 @@ function ListingModal({ id, onClose }) {
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={TYPE_TONE[l.type]}>{TYPE_LABEL[l.type]}</Badge>
-            <Badge>{label(l.category)}</Badge>
-            {l.condition !== 'not_applicable' && <Badge>{label(l.condition)}</Badge>}
-            {l.status !== 'active' && <Badge tone={l.status === 'sold' ? 'green' : 'red'}>{label(l.status)}</Badge>}
+            <Badge tone={TYPE_TONE[l.type]}>{t(TYPE_LABEL[l.type])}</Badge>
+            <Badge>{t(label(l.category))}</Badge>
+            {l.condition !== 'not_applicable' && <Badge>{t(label(l.condition))}</Badge>}
+            {l.status !== 'active' && <Badge tone={l.status === 'sold' ? 'green' : 'red'}>{t(label(l.status))}</Badge>}
           </div>
-          <p className="text-2xl font-semibold text-slate-900">{priceText(l)}{l.negotiable && <span className="ml-2 text-sm font-normal text-slate-500">negotiable</span>}</p>
+          <p className="text-2xl font-semibold text-slate-900">{priceText(l, t)}{l.negotiable && <span className="ml-2 text-sm font-normal text-slate-500">{t('negotiable')}</span>}</p>
           {l.description && <p className="whitespace-pre-wrap text-sm text-slate-700">{l.description}</p>}
           <div className="rounded-lg bg-slate-50 p-3 text-sm">
             <p className="font-medium text-slate-800">{personLine(l.seller)}</p>
-            <p className="text-xs text-slate-500">Posted {timeAgo(l.createdAt)}</p>
+            <p className="text-xs text-slate-500">{t('Posted {when}', { when: timeAgo(l.createdAt) })}</p>
             {l.seller.phone && <a href={`tel:${l.seller.phone}`} className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-700"><Phone className="size-4" />{l.seller.phone}</a>}
           </div>
-          {l.status === 'removed' && l.removedReason && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Removed by the moderators: {l.removedReason}</p>}
+          {l.status === 'removed' && l.removedReason && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{t('Removed by the moderators: {reason}', { reason: l.removedReason })}</p>}
 
           {l.isMine ? (
             l.status !== 'removed' && (
@@ -124,20 +128,20 @@ function ListingModal({ id, onClose }) {
                 <Button size="sm" variant="secondary" icon={Pencil} onClick={() => setEditing(true)}>Edit</Button>
                 {l.status === 'active' ? (
                   <>
-                    <Button size="sm" variant="success" icon={Check} onClick={() => setStatus.mutate({ id: l._id, status: 'sold' })}>{l.type === 'buy' ? 'Found it' : l.type === 'rent' ? 'Rented out' : 'Mark sold'}</Button>
+                    <Button size="sm" variant="success" icon={Check} onClick={() => setStatus.mutate({ id: l._id, status: 'sold' })}>{l.type === 'buy' ? t('Found it') : l.type === 'rent' ? t('Rented out') : t('Mark sold')}</Button>
                     <Button size="sm" variant="ghost" onClick={() => setStatus.mutate({ id: l._id, status: 'closed' })}>Close</Button>
                   </>
                 ) : <Button size="sm" variant="secondary" onClick={() => setStatus.mutate({ id: l._id, status: 'active' })}>Relist</Button>}
-                <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm('Delete this listing?') && remove.mutate(l._id)}>Delete</Button>
+                <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm(t('Delete this listing?')) && remove.mutate(l._id)}>Delete</Button>
               </div>
             )
           ) : l.status === 'active' ? (
             <div className="space-y-2 border-t border-slate-100 pt-4">
-              <Textarea label={`Message ${l.seller.name.split(' ')[0]}`} rows={2} value={message} onChange={(e) => setMessage(e.target.value)} />
+              <Textarea label={t('Message {name}', { name: l.seller.name.split(' ')[0] })} rows={2} value={message} onChange={(e) => setMessage(e.target.value)} />
               <div className="flex flex-wrap gap-2">
                 <Button icon={MessageCircle} loading={contact.isPending} disabled={!message.trim()} onClick={() => contact.mutate({ id: l._id, message: message.trim() })}>Send message</Button>
-                {!l.reportedByMe ? <Button variant="ghost" icon={Flag} onClick={() => setReporting(true)}>Report</Button> : <span className="self-center text-xs text-slate-400">You reported this listing</span>}
-                {isManager(user) && <Button variant="ghost" icon={Trash2} onClick={() => window.confirm('Remove this listing for everyone?') && remove.mutate(l._id)}>Remove</Button>}
+                {!l.reportedByMe ? <Button variant="ghost" icon={Flag} onClick={() => setReporting(true)}>Report</Button> : <span className="self-center text-xs text-slate-400">{t('You reported this listing')}</span>}
+                {isManager(user) && <Button variant="ghost" icon={Trash2} onClick={() => window.confirm(t('Remove this listing for everyone?')) && remove.mutate(l._id)}>Remove</Button>}
               </div>
             </div>
           ) : null}
@@ -150,6 +154,7 @@ function ListingModal({ id, onClose }) {
 }
 
 function Listings({ openId, onOpen }) {
+  const { t } = useT();
   const [type, setType] = useState('');
   const [category, setCategory] = useState('');
   const [search, setSearch] = useState('');
@@ -163,8 +168,8 @@ function Listings({ openId, onOpen }) {
       {/* phones: the button gets its own row so it never sits on top of the chips */}
       <div className="mb-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
-          {['', ...TYPES].map((t) => (
-            <button key={t || 'all'} type="button" onClick={() => { setType(t); reset(); }} className={cn('inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium sm:min-h-8', type === t ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600')}>{t ? TYPE_LABEL[t] : 'All'}</button>
+          {['', ...TYPES].map((ty) => (
+            <button key={ty || 'all'} type="button" onClick={() => { setType(ty); reset(); }} className={cn('inline-flex min-h-9 shrink-0 items-center rounded-full border px-3.5 text-sm font-medium sm:min-h-8', type === ty ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-600')}>{ty ? t(TYPE_LABEL[ty]) : t('All')}</button>
           ))}
         </div>
         <Button className="w-full shrink-0 sm:w-auto" icon={Plus} onClick={() => setCreating(true)}>Sell / post</Button>
@@ -183,11 +188,11 @@ function Listings({ openId, onOpen }) {
               <Card key={l._id} className="cursor-pointer overflow-hidden transition hover:border-brand-200" onClick={() => onOpen(l._id)}>
                 <div className="relative">
                   {l.photos[0] ? <img src={l.photos[0].url} alt="" className="aspect-square w-full object-cover" /> : <div className="flex aspect-square items-center justify-center bg-slate-50"><Tag className="size-8 text-slate-300" /></div>}
-                  <Badge tone={TYPE_TONE[l.type]} className="absolute left-2 top-2 bg-white/90">{TYPE_LABEL[l.type]}</Badge>
-                  {l.status !== 'active' && <span className="absolute inset-0 flex items-center justify-center bg-white/60 text-sm font-semibold uppercase text-slate-700">{label(l.status)}</span>}
+                  <Badge tone={TYPE_TONE[l.type]} className="absolute left-2 top-2 bg-white/90">{t(TYPE_LABEL[l.type])}</Badge>
+                  {l.status !== 'active' && <span className="absolute inset-0 flex items-center justify-center bg-white/60 text-sm font-semibold uppercase text-slate-700">{t(label(l.status))}</span>}
                 </div>
                 <div className="p-2.5">
-                  <p className="font-semibold text-slate-900">{priceText(l)}</p>
+                  <p className="font-semibold text-slate-900">{priceText(l, t)}</p>
                   <p className="truncate text-sm text-slate-700">{l.title}</p>
                   <p className="truncate text-xs text-slate-400">{l.seller.units?.join(', ')} · {timeAgo(l.createdAt)}</p>
                 </div>
@@ -234,6 +239,7 @@ function BusinessModal({ open, onClose, business }) {
 }
 
 function Businesses() {
+  const { t } = useT();
   const navigate = useNavigate();
   const { user } = useAuth();
   const admin = user.role === ROLES.ADMIN;
@@ -268,9 +274,9 @@ function Businesses() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900">{b.name}</p>
-                    <p className="text-xs text-slate-500">{label(b.category)} · by {personLine(b.owner)}</p>
+                    <p className="text-xs text-slate-500">{t(label(b.category))} · {t('by {name}', { name: personLine(b.owner) })}</p>
                   </div>
-                  {b.status !== 'approved' && <Badge tone={b.status === 'pending' ? 'amber' : 'red'}>{b.status === 'pending' ? <><Clock className="mr-1 size-3" />Pending</> : 'Rejected'}</Badge>}
+                  {b.status !== 'approved' && <Badge tone={b.status === 'pending' ? 'amber' : 'red'}>{b.status === 'pending' ? <><Clock className="mr-1 size-3" />{t('Pending')}</> : t('Rejected')}</Badge>}
                 </div>
                 {b.description && <p className="mt-2 line-clamp-3 text-sm text-slate-600">{b.description}</p>}
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -278,14 +284,14 @@ function Businesses() {
                   {b.timings && <span>{b.timings}</span>}
                 </div>
                 {b.photos?.length > 0 && <div className="mt-2"><Attachments items={b.photos.slice(0, 4)} /></div>}
-                {b.rejectReason && <p className="mt-2 text-xs text-red-600">Not approved: {b.rejectReason}</p>}
+                {b.rejectReason && <p className="mt-2 text-xs text-red-600">{t('Not approved: {reason}', { reason: b.rejectReason })}</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {b.status === 'approved' && b.contactPhone && <a href={`tel:${b.contactPhone}`} className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700"><Phone className="size-3.5" />{b.contactPhone}</a>}
-                  {b.status === 'approved' && !b.isMine && <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => contact.mutate({ id: b._id, message: `Hi! I found ${b.name} in the marketplace and would like to know more.` })}>Message</Button>}
+                  {b.status === 'approved' && !b.isMine && <Button size="sm" variant="ghost" icon={MessageCircle} onClick={() => contact.mutate({ id: b._id, message: t('Hi! I found {name} in the marketplace and would like to know more.', { name: b.name }) })}>Message</Button>}
                   {b.isMine && <Button size="sm" variant="ghost" icon={Pencil} onClick={() => setEditing(b)}>Edit</Button>}
                   {admin && b.status !== 'approved' && <Button size="sm" variant="success" icon={Check} onClick={() => review.mutate({ id: b._id, status: 'approved' })}>Approve</Button>}
-                  {admin && b.status === 'pending' && <Button size="sm" variant="secondary" icon={X} onClick={() => { const reason = window.prompt('Reason for rejecting'); if (reason) review.mutate({ id: b._id, status: 'rejected', reason }); }}>Reject</Button>}
-                  {(b.isMine || isManager(user)) && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm(`Remove ${b.name}?`) && remove.mutate(b._id)}>Remove</Button>}
+                  {admin && b.status === 'pending' && <Button size="sm" variant="secondary" icon={X} onClick={() => { const reason = window.prompt(t('Reason for rejecting')); if (reason) review.mutate({ id: b._id, status: 'rejected', reason }); }}>Reject</Button>}
+                  {(b.isMine || isManager(user)) && <Button size="sm" variant="ghost" icon={Trash2} onClick={() => window.confirm(t('Remove {name}?', { name: b.name })) && remove.mutate(b._id)}>Remove</Button>}
                 </div>
               </Card>
             ))}
@@ -299,6 +305,7 @@ function Businesses() {
 }
 
 function Moderation({ onOpen }) {
+  const { t } = useT();
   const [page, setPage] = useState(1);
   const { data, isLoading } = useListingReports(true, { page });
   const resolve = useResolveListingReport();
@@ -309,19 +316,19 @@ function Moderation({ onOpen }) {
       {data.data.map((r) => (
         <Card key={r._id} className="p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone="red"><Flag className="mr-1 size-3" />{label(r.reason)}</Badge>
-            <span className="text-xs text-slate-400">by {r.reporter?.name} · {timeAgo(r.createdAt)}</span>
+            <Badge tone="red"><Flag className="mr-1 size-3" />{t(label(r.reason))}</Badge>
+            <span className="text-xs text-slate-400">{t('by {name}', { name: r.reporter?.name })} · {timeAgo(r.createdAt)}</span>
           </div>
           {r.listing && (
             <button type="button" onClick={() => onOpen(r.listing._id)} className="mt-2 block text-left">
               <p className="font-semibold text-slate-900">{r.listing.title}</p>
-              <p className="text-xs text-slate-500">{TYPE_LABEL[r.listing.type]} · {personLine(r.listing.seller)} · {label(r.listing.status)}</p>
+              <p className="text-xs text-slate-500">{t(TYPE_LABEL[r.listing.type])} · {personLine(r.listing.seller)} · {t(label(r.listing.status))}</p>
             </button>
           )}
           {r.note && <p className="mt-1 text-sm text-slate-600">“{r.note}”</p>}
           <div className="mt-3 flex gap-2">
             <Button size="sm" variant="secondary" onClick={() => resolve.mutate({ id: r._id, action: 'dismiss' })}>Dismiss</Button>
-            <Button size="sm" variant="danger" icon={Trash2} onClick={() => { const reason = window.prompt('Reason shown to the seller', 'Removed for breaking the marketplace rules'); if (reason !== null) resolve.mutate({ id: r._id, action: 'remove', reason: reason || undefined }); }}>Remove listing</Button>
+            <Button size="sm" variant="danger" icon={Trash2} onClick={() => { const reason = window.prompt(t('Reason shown to the seller'), t('Removed for breaking the marketplace rules')); if (reason !== null) resolve.mutate({ id: r._id, action: 'remove', reason: reason || undefined }); }}>Remove listing</Button>
           </div>
         </Card>
       ))}

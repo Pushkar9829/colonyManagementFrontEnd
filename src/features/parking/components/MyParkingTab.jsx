@@ -1,6 +1,7 @@
 import { AlertTriangle, BatteryCharging, Car, SquareParking } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, Spinner } from '../../../components/ui';
 import { date as fmtDate, label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { slotTypeLabel, TONES } from '../constants';
 import { useMyParking } from '../api';
 import { ViolationRow } from './ViolationsTab';
@@ -8,6 +9,7 @@ import { ViolationRow } from './ViolationsTab';
 const vehicleType = (t) => (t === 'two_wheeler' ? '2W' : t === 'four_wheeler' ? '4W' : 'Other');
 
 export function MyParkingTab({ onTab }) {
+  const { t } = useT();
   const { data, isLoading, error, refetch } = useMyParking();
   if (isLoading) return <div className="flex justify-center py-12"><Spinner /></div>;
   if (error) return <Card><ErrorState error={error} onRetry={refetch} /></Card>;
@@ -27,13 +29,13 @@ export function MyParkingTab({ onTab }) {
                   <div>
                     <p className="font-mono text-lg font-semibold text-slate-900">{s.number}</p>
                     <p className="text-xs text-slate-500">
-                      {s.area?.name}{s.area?.level ? ` · level ${s.area.level}` : ''} · {slotTypeLabel(s.type)}{s.covered ? ' · covered' : ''}
+                      {s.area?.name}{s.area?.level ? ` · ${t('level {level}', { level: s.area.level })}` : ''} · {slotTypeLabel(s.type)}{s.covered ? ` · ${t('covered')}` : ''}
                     </p>
                   </div>
-                  {!s.active && <Badge>Inactive</Badge>}
+                  {!s.active && <Badge>{t('Inactive')}</Badge>}
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
-                  {s.vehicles?.length ? s.vehicles.map((v) => `${v.number}${v.make ? ` (${v.make})` : ''}`).join(', ') : 'No vehicle linked yet'}
+                  {s.vehicles?.length ? s.vehicles.map((v) => `${v.number}${v.make ? ` (${v.make})` : ''}`).join(', ') : t('No vehicle linked yet')}
                 </p>
               </li>
             ))}
@@ -51,9 +53,9 @@ export function MyParkingTab({ onTab }) {
               <li key={v._id} className="flex items-center justify-between gap-2 px-4 py-3">
                 <div className="min-w-0">
                   <p className="font-mono font-semibold text-slate-900">{v.number}</p>
-                  <p className="truncate text-xs text-slate-500">{[vehicleType(v.type), v.make, v.color].filter(Boolean).join(' · ')}</p>
+                  <p className="truncate text-xs text-slate-500">{[t(vehicleType(v.type)), v.make, v.color].filter(Boolean).join(' · ')}</p>
                 </div>
-                {v.parkingSlot ? <Badge tone="green">Slot {v.parkingSlot}</Badge> : <Badge>No slot</Badge>}
+                {v.parkingSlot ? <Badge tone="green">{t('Slot {slot}', { slot: v.parkingSlot })}</Badge> : <Badge>{t('No slot')}</Badge>}
               </li>
             ))}
           </ul>
@@ -83,7 +85,7 @@ export function MyParkingTab({ onTab }) {
                   <p className="font-medium text-slate-900">{b.charger?.name}</p>
                   <p className="text-xs text-slate-500">{fmtDate(b.date)} · {b.startTime}–{b.endTime}{b.charger?.location ? ` · ${b.charger.location}` : ''}</p>
                 </div>
-                <Badge tone={TONES[b.status]}>{label(b.status)}</Badge>
+                <Badge tone={TONES[b.status]}>{t(label(b.status))}</Badge>
               </li>
             ))}
           </ul>

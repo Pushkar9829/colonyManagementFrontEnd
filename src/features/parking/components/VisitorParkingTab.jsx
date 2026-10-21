@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Car, LogOut, Plus } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, Spinner } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
+import { useT } from '../../../context/LanguageContext';
 import { cn } from '../../../lib/cn';
 import { dateTime, time } from '../../../lib/format';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
@@ -31,12 +32,13 @@ function ParkVisitorModal({ freeSlots, slot, onClose }) {
   );
 }
 
-const overBy = (d) => {
+const overBy = (d, t) => {
   const mins = Math.max(1, Math.round((Date.now() - new Date(d).getTime()) / 60000));
-  return mins < 60 ? `${mins} min` : `${Math.floor(mins / 60)} h ${mins % 60} min`;
+  return mins < 60 ? t('{m} min', { m: mins }) : t('{h} h {m} min', { h: Math.floor(mins / 60), m: mins % 60 });
 };
 
 function SlotTile({ s, onPark, onEnd, ending }) {
+  const { t } = useT();
   const v = s.occupiedBy;
   const over = isOverstay(v);
   return (
@@ -46,16 +48,16 @@ function SlotTile({ s, onPark, onEnd, ending }) {
           <p className="font-mono font-semibold text-slate-900">{s.number}</p>
           <p className="truncate text-xs text-slate-500">{s.area?.name} · {slotTypeLabel(s.type)}</p>
         </div>
-        {!v ? <Badge tone="green">Free</Badge> : over ? <Badge tone="red">Overstay</Badge> : <Badge tone="amber">Occupied</Badge>}
+        {!v ? <Badge tone="green">{t('Free')}</Badge> : over ? <Badge tone="red">{t('Overstay')}</Badge> : <Badge tone="amber">{t('Occupied')}</Badge>}
       </div>
       {v ? (
         <>
           <div className="text-sm">
             <p className="font-mono font-semibold text-slate-900">{v.vehicleNumber}</p>
             <p className={cn('text-xs', over ? 'font-medium text-red-700' : 'text-slate-500')}>
-              Out by {time(v.expectedOutAt)}{over ? ` · ${overBy(v.expectedOutAt)} over` : ''}
+              {t('Out by {time}', { time: time(v.expectedOutAt) })}{over ? ` · ${t('{duration} over', { duration: overBy(v.expectedOutAt, t) })}` : ''}
             </p>
-            {v.unit?.label && <p className="text-xs text-slate-500">Visiting {v.unit.label}</p>}
+            {v.unit?.label && <p className="text-xs text-slate-500">{t('Visiting {unit}', { unit: v.unit.label })}</p>}
           </div>
           <Button size="sm" variant={over ? 'danger' : 'secondary'} icon={LogOut} loading={ending} onClick={() => onEnd(v)}>Car left</Button>
         </>
@@ -67,6 +69,7 @@ function SlotTile({ s, onPark, onEnd, ending }) {
 }
 
 export function VisitorParkingTab() {
+  const { t } = useT();
   const live = useLiveInterval(15000);
   const { data: slotsData, isLoading } = useParkingSlots({ pool: 'visitor', active: true, limit: 100 }, { refetchInterval: live });
   const [overstay, setOverstay] = useState(false);
@@ -76,14 +79,14 @@ export function VisitorParkingTab() {
   const end = useEndVisitorParking();
   const slots = slotsData?.data || [];
   const free = slots.filter((s) => !s.occupiedBy);
-  const endSession = (v) => window.confirm(`Mark ${v.vehicleNumber} as left?`) && end.mutate(v._id);
+  const endSession = (v) => window.confirm(t('Mark {vehicle} as left?', { vehicle: v.vehicleNumber })) && end.mutate(v._id);
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader
           title="Visitor slots"
-          subtitle={`${free.length} free of ${slots.length}`}
+          subtitle={t('{free} free of {total}', { free: free.length, total: slots.length })}
           action={<Button size="sm" icon={Plus} disabled={!free.length} onClick={() => setParking({})}>Park visitor</Button>}
         />
         {isLoading ? (
@@ -114,11 +117,11 @@ export function VisitorParkingTab() {
                   <div className="min-w-0">
                     <p className="font-medium text-slate-900">
                       <span className="font-mono">{v.vehicleNumber}</span>
-                      <span className="text-slate-500"> · slot {v.slot?.number}{v.slot?.area?.name ? ` (${v.slot.area.name})` : ''}</span>
+                      <span className="text-slate-500"> · {t('slot {number}', { number: v.slot?.number })}{v.slot?.area?.name ? ` (${v.slot.area.name})` : ''}</span>
                     </p>
                     <p className={cn('text-xs', over ? 'font-medium text-red-700' : 'text-slate-500')}>
-                      In {dateTime(v.inAt)} · out by {dateTime(v.expectedOutAt)}
-                      {v.unit?.label ? ` · visiting ${v.unit.label}` : ''}
+                      {t('In {in} · out by {out}', { in: dateTime(v.inAt), out: dateTime(v.expectedOutAt) })}
+                      {v.unit?.label ? ` · ${t('visiting {unit}', { unit: v.unit.label })}` : ''}
                       {v.visitor?.name ? ` · ${v.visitor.name}` : ''}
                     </p>
                   </div>

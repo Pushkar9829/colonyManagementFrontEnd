@@ -26,6 +26,7 @@ import { BarrierControl } from '../components/BarrierControl';
 import { useCurrentGate } from '../../gates/useCurrentGate';
 import { GateBar } from '../../gates/components/GatePicker';
 import { gateTakes } from '../../gates/gateRules';
+import { errorText } from '../../../lib/errorText';
 
 const PURPOSES = ['guest', 'delivery', 'cab', 'service', 'other'];
 const LESS_USED = [{ value: 'vehicles', label: 'Vehicles' }, { value: 'children', label: 'Children' }];
@@ -152,14 +153,14 @@ function NewEntry({ queue, gate }) {
     return log.mutate(body, {
       onError: (err) => {
         if (isNetworkError(err)) return enqueue();
-        if (err.code === 'VISITOR_BLOCKED') setOutcome({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: err.message });
-        if (err.code === 'GATE_NOT_ALLOWED') setOutcome({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: err.message, retry: body });
+        if (err.code === 'VISITOR_BLOCKED') setOutcome({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: errorText(err, t) });
+        if (err.code === 'GATE_NOT_ALLOWED') setOutcome({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: errorText(err, t), retry: body });
         return applyServerErrors(err);
       },
     });
   };
   // Override of a gate refusal, recorded on the entry.
-  const override = () => log.mutate({ ...outcome.retry, guardApproved: true }, { onError: (err) => setOutcome({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: err.message }) });
+  const override = () => log.mutate({ ...outcome.retry, guardApproved: true }, { onError: (err) => setOutcome({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: errorText(err, t) }) });
   const kind = visitorKind(values.purpose);
   const wrongGate = gate && !gateTakes(gate, kind) ? t(`{gate} does not take ${KIND_WORD[kind]}`, { gate: gate.name }) : gate?.isPedestrianOnly && values.vehicleNumber ? t('{gate} is for people on foot only', { gate: gate.name }) : null;
 
@@ -250,9 +251,9 @@ function ScanPanel({ queue, gate }) {
 
   // retry: the pass body to send again as an override when the refusal is about the gate.
   const fail = (err, retry) => {
-    if (err.code === 'VISITOR_BLOCKED') setResult({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: err.message });
-    else if (err.code === 'GATE_NOT_ALLOWED') setResult({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: err.message, retry });
-    else setResult({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: err.message });
+    if (err.code === 'VISITOR_BLOCKED') setResult({ tone: 'red', icon: ShieldX, title: t('Do not allow entry'), body: errorText(err, t) });
+    else if (err.code === 'GATE_NOT_ALLOWED') setResult({ tone: 'amber', icon: DoorClosed, title: t('Not at this gate'), body: errorText(err, t), retry });
+    else setResult({ tone: 'red', icon: AlertTriangle, title: t('Not allowed'), body: errorText(err, t) });
   };
   const override = () => verify.mutate({ ...result.retry, guardApproved: true }, { onError: (err) => fail(err) });
 

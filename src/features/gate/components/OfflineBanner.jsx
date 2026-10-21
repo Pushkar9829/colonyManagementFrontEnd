@@ -3,6 +3,7 @@ import { AlertTriangle, CloudOff, RefreshCw, X } from 'lucide-react';
 import { Button } from '../../../components/ui';
 import { dateTime, time } from '../../../lib/format';
 import { useT } from '../../../context/LanguageContext';
+import { translateText } from '../../../lib/errorText';
 
 const KIND = { entry: 'Entry', checkout: 'Check-out', pass: 'Pass', help_scan: 'Daily help' };
 
@@ -49,7 +50,7 @@ export function OfflineBanner({ queue }) {
               <li key={o.key} className="flex flex-wrap items-start gap-2 rounded-lg bg-white/70 p-2">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{t(KIND[o.kind])}: {o.label}{o.gateName ? ` · ${o.gateName}` : ''}</p>
-                  <p className="text-xs">{o.message} · {t('at {when}', { when: dateTime(o.occurredAt) })}</p>
+                  <p className="text-xs">{translateText(o.message, t)} · {t('at {when}', { when: dateTime(o.occurredAt) })}</p>
                 </div>
                 {o.code !== 'VISITOR_BLOCKED' && <Button size="sm" variant="ghost" onClick={() => retry(o.key)}>Retry</Button>}
                 <Button size="sm" variant="ghost" icon={X} aria-label={t('Dismiss')} onClick={() => dismiss(o.key)} />

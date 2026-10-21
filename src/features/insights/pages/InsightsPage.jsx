@@ -7,9 +7,12 @@ import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/cn';
 import { currentPeriod, date, label, money, periodLabel } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
+import { useT } from '../../../context/LanguageContext';
 import { useDefaulterRisk, useHealth, useNoticeTemplates, useRenderTemplate, useSuggestCategory, useUnitRisk } from '../api';
 
 const BAND_TONES = { high: 'red', medium: 'amber', low: 'green' };
+const RISK_LABELS = { high: 'High risk', medium: 'Medium risk', low: 'Low risk' };
+const riskLabel = (b) => RISK_LABELS[b] || `${label(b)} risk`;
 
 function Heuristic({ children }) {
   return (
@@ -23,6 +26,7 @@ function Heuristic({ children }) {
 // ---------- health ----------
 function HealthTab() {
   const [period, setPeriod] = useState(currentPeriod());
+  const { t } = useT();
   const { data, isLoading } = useHealth(period);
   if (isLoading || !data) return <PageLoader />;
   const m = data.metrics;
@@ -34,15 +38,15 @@ function HealthTab() {
         <Input className="w-44" label="Month" type="month" value={period} max={currentPeriod()} onChange={(e) => e.target.value && setPeriod(e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Activity} tone={data.grade === 'A' ? 'green' : data.grade === 'B' ? 'sky' : data.grade === 'C' ? 'amber' : 'red'} label={`Health · ${periodLabel(period)}`} value={`${data.score} / 100 (${data.grade})`} sub={`${delta >= 0 ? '+' : ''}${delta} vs ${periodLabel(data.previousPeriod)}`} />
-        <StatCard label="Collection" value={m.billing.collectionRate !== null ? `${m.billing.collectionRate}%` : '—'} sub={`${money(m.billing.collectedAgainstBills)} of ${money(m.billing.billed)}`} tone="green" />
-        <StatCard label="Complaints" value={`${m.complaints.opened} raised`} sub={`${m.complaints.resolved} resolved · ${m.complaints.slaMetRate ?? '—'}% within SLA`} tone="amber" />
-        <StatCard label="Visitors" value={m.visitors} sub={`${m.sos.raised} SOS · ${m.bookings} bookings`} tone="sky" />
+        <StatCard icon={Activity} tone={data.grade === 'A' ? 'green' : data.grade === 'B' ? 'sky' : data.grade === 'C' ? 'amber' : 'red'} label={t('Health · {period}', { period: periodLabel(period) })} value={`${data.score} / 100 (${data.grade})`} sub={t('{delta} vs {period}', { delta: `${delta >= 0 ? '+' : ''}${delta}`, period: periodLabel(data.previousPeriod) })} />
+        <StatCard label="Collection" value={m.billing.collectionRate !== null ? `${m.billing.collectionRate}%` : '—'} sub={t('{collected} of {billed}', { collected: money(m.billing.collectedAgainstBills), billed: money(m.billing.billed) })} tone="green" />
+        <StatCard label="Complaints" value={t('{n} raised', { n: m.complaints.opened })} sub={t('{resolved} resolved · {rate}% within SLA', { resolved: m.complaints.resolved, rate: m.complaints.slaMetRate ?? '—' })} tone="amber" />
+        <StatCard label="Visitors" value={m.visitors} sub={t('{sos} SOS · {bookings} bookings', { sos: m.sos.raised, bookings: m.bookings })} tone="sky" />
       </div>
       <Card>
         <CardHeader title="Highlights" />
         <ul className="space-y-2 p-5 text-sm">
-          {!data.highlights.length && <li className="text-slate-500">Not much happened this month.</li>}
+          {!data.highlights.length && <li className="text-slate-500">{t('Not much happened this month.')}</li>}
           {data.highlights.map((h) => (
             <li key={h.text} className="flex items-start gap-2">
               <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', h.tone === 'good' ? 'bg-emerald-500' : h.tone === 'bad' ? 'bg-red-500' : 'bg-slate-400')} />
@@ -54,9 +58,9 @@ function HealthTab() {
       <Card>
         <CardHeader title="How the score is made" />
         <div className="grid gap-3 p-5 text-sm sm:grid-cols-3">
-          <p><span className="font-medium">Collections (40%)</span><br /><span className="text-slate-500">{data.parts.collection}% of the month’s bills paid</span></p>
-          <p><span className="font-medium">SLA (30%)</span><br /><span className="text-slate-500">{data.parts.sla}% of resolved complaints on time</span></p>
-          <p><span className="font-medium">Backlog (30%)</span><br /><span className="text-slate-500">{data.parts.backlog} / 100 — {m.complaints.openNow} open for {m.units} units</span></p>
+          <p><span className="font-medium">{t('Collections (40%)')}</span><br /><span className="text-slate-500">{t('{n}% of the month’s bills paid', { n: data.parts.collection })}</span></p>
+          <p><span className="font-medium">{t('SLA (30%)')}</span><br /><span className="text-slate-500">{t('{n}% of resolved complaints on time', { n: data.parts.sla })}</span></p>
+          <p><span className="font-medium">{t('Backlog (30%)')}</span><br /><span className="text-slate-500">{t('{score} / 100 — {open} open for {units} units', { score: data.parts.backlog, open: m.complaints.openNow, units: m.units })}</span></p>
         </div>
       </Card>
     </div>
@@ -65,16 +69,17 @@ function HealthTab() {
 
 // ---------- defaulter risk ----------
 function UnitRiskModal({ unitId, onClose }) {
+  const { t } = useT();
   const { data, isLoading } = useUnitRisk(unitId);
   return (
-    <Modal open onClose={onClose} size="lg" title={data ? `Risk · ${data.unit.label}` : 'Risk'} description={data?.residents.map((r) => `${r.name} (${r.residentType})`).join(', ')}>
+    <Modal open onClose={onClose} size="lg" title={data ? t('Risk · {unit}', { unit: data.unit.label }) : 'Risk'} description={data?.residents.map((r) => `${r.name} (${r.residentType})`).join(', ')}>
       {isLoading || !data ? <PageLoader /> : (
         <div className="space-y-4 text-sm">
-          <div className="flex items-center gap-2"><Badge tone={BAND_TONES[data.band]}>{label(data.band)} risk</Badge><span className="font-semibold">{data.score} / 100</span></div>
+          <div className="flex items-center gap-2"><Badge tone={BAND_TONES[data.band]}>{t(riskLabel(data.band))}</Badge><span className="font-semibold">{data.score} / 100</span></div>
           <ul className="space-y-2">
             {data.factors.map((f) => (
               <li key={f.key} className="rounded-lg border border-slate-200 p-3">
-                <div className="flex justify-between"><span className="font-medium">{f.label}</span><span>{f.points} / {f.max} pts</span></div>
+                <div className="flex justify-between"><span className="font-medium">{f.label}</span><span>{t('{points} / {max} pts', { points: f.points, max: f.max })}</span></div>
                 <p className="text-xs text-slate-500">{f.key === 'overdueAmount' ? money(f.value) : f.value} — {f.explanation}</p>
               </li>
             ))}
@@ -84,7 +89,7 @@ function UnitRiskModal({ unitId, onClose }) {
               { key: 'period', header: 'Month', render: (b) => periodLabel(b.period) },
               { key: 'total', header: 'Bill', render: (b) => money(b.total) },
               { key: 'dueDate', header: 'Due', render: (b) => date(b.dueDate) },
-              { key: 'paidAt', header: 'Paid', render: (b) => (b.balance ? <span className="text-red-600">{money(b.balance)} due</span> : date(b.paidAt)) },
+              { key: 'paidAt', header: 'Paid', render: (b) => (b.balance ? <span className="text-red-600">{t('{amount} due', { amount: money(b.balance) })}</span> : date(b.paidAt)) },
               { key: 'daysLate', header: 'Days late', render: (b) => b.daysLate || '—' },
             ]} />
         </div>
@@ -94,15 +99,16 @@ function UnitRiskModal({ unitId, onClose }) {
 }
 
 function RiskTab() {
+  const { t } = useT();
   const [band, setBand] = useState('');
   const [unitId, setUnitId] = useState(null);
   const { data, isLoading } = useDefaulterRisk({ band: band || undefined, limit: 100 });
   return (
     <div className="space-y-4">
-      {data && <Heuristic>{data.note} Based on the last {data.windowMonths} months.</Heuristic>}
+      {data && <Heuristic>{data.note} {t('Based on the last {n} months.', { n: data.windowMonths })}</Heuristic>}
       {data && (
         <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3">
-          {['high', 'medium', 'low'].map((b) => <StatCard key={b} icon={ShieldAlert} tone={b === 'high' ? 'red' : b === 'medium' ? 'amber' : 'green'} label={`${label(b)} risk`} value={data.counts[b]} sub="units" />)}
+          {['high', 'medium', 'low'].map((b) => <StatCard key={b} icon={ShieldAlert} tone={b === 'high' ? 'red' : b === 'medium' ? 'amber' : 'green'} label={t(riskLabel(b))} value={data.counts[b]} sub="units" />)}
         </div>
       )}
       <Card>
@@ -125,11 +131,12 @@ function RiskTab() {
 // ---------- notice drafts ----------
 function NoticeTab() {
   const toast = useToast();
+  const { t } = useT();
   const { data: templates, isLoading } = useNoticeTemplates();
   const [key, setKey] = useState('');
   const [values, setValues] = useState({});
   const render = useRenderTemplate();
-  const template = templates?.find((t) => t.key === key) || templates?.[0];
+  const template = templates?.find((x) => x.key === key) || templates?.[0];
 
   useEffect(() => {
     if (template) setValues(Object.fromEntries(template.fields.map((f) => [f.key, f.default || ''])));
@@ -140,9 +147,9 @@ function NoticeTab() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(`${draft.title}\n\n${draft.body}`);
-      toast.success('Copied — paste it into a new notice');
+      toast.success(t('Copied — paste it into a new notice'));
     } catch {
-      toast.error('Copy failed; select the text instead');
+      toast.error(t('Copy failed; select the text instead'));
     }
   };
   return (
@@ -150,7 +157,7 @@ function NoticeTab() {
       <Card>
         <CardHeader title="Fill in the details" subtitle="Templates, not AI — edit the result before posting it under Notices" />
         <div className="space-y-3 p-5">
-          <Select label="Template" value={template.key} onChange={(e) => { setKey(e.target.value); render.reset(); }} options={templates.map((t) => ({ value: t.key, label: t.label }))} />
+          <Select label="Template" value={template.key} onChange={(e) => { setKey(e.target.value); render.reset(); }} options={templates.map((x) => ({ value: x.key, label: x.label }))} />
           {template.fields.map((f) =>
             f.type === 'textarea' ? (
               <Textarea key={f.key} label={f.label} rows={4} value={values[f.key] ?? ''} onChange={(e) => setValues({ ...values, [f.key]: e.target.value })} />
@@ -166,7 +173,7 @@ function NoticeTab() {
         <div className="p-5">
           {!draft ? <EmptyState icon={Lightbulb} title="Your draft appears here" /> : (
             <div className="space-y-3 text-sm">
-              {draft.missing.length > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">Still to fill: {draft.missing.map(label).join(', ')}</p>}
+              {draft.missing.length > 0 && <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-700">{t('Still to fill: {fields}', { fields: draft.missing.map((k) => t(label(k))).join(', ') })}</p>}
               <p className="font-semibold text-slate-900">{draft.title}</p>
               <p className="whitespace-pre-wrap text-slate-700">{draft.body}</p>
             </div>
@@ -179,6 +186,7 @@ function NoticeTab() {
 
 // ---------- complaint category helper ----------
 function CategoryTab() {
+  const { t } = useT();
   const [text, setText] = useState({ title: '', description: '' });
   const suggest = useSuggestCategory();
   const r = suggest.data;
@@ -197,15 +205,15 @@ function CategoryTab() {
         <div className="space-y-3 p-5 text-sm">
           {!r ? <EmptyState icon={Lightbulb} title="Type a complaint to see suggestions" /> : (
             <>
-              <Heuristic>{r.note} Learned from {r.basedOn.pastComplaints} past complaints.</Heuristic>
+              <Heuristic>{r.note} {t('Learned from {n} past complaints.', { n: r.basedOn.pastComplaints })}</Heuristic>
               {r.suggestions.map((s) => (
                 <div key={s.category}>
-                  <div className="flex justify-between"><span className="font-medium">{label(s.category)}</span><span className="text-slate-500">{Math.round(s.confidence * 100)}%</span></div>
+                  <div className="flex justify-between"><span className="font-medium">{t(label(s.category))}</span><span className="text-slate-500">{Math.round(s.confidence * 100)}%</span></div>
                   <div className="mt-1 h-2 rounded-full bg-slate-100"><div className="h-2 rounded-full bg-brand-600" style={{ width: `${Math.round(s.confidence * 100)}%` }} /></div>
-                  {s.matched.length > 0 && <p className="mt-1 text-xs text-slate-500">Matched: {s.matched.join(', ')}</p>}
+                  {s.matched.length > 0 && <p className="mt-1 text-xs text-slate-500">{t('Matched: {words}', { words: s.matched.join(', ') })}</p>}
                 </div>
               ))}
-              <p className="text-slate-600">Suggested priority: <Badge tone={r.suggestedPriority === 'urgent' ? 'red' : r.suggestedPriority === 'high' ? 'amber' : 'blue'}>{label(r.suggestedPriority)}</Badge></p>
+              <p className="text-slate-600">{t('Suggested priority:')} <Badge tone={r.suggestedPriority === 'urgent' ? 'red' : r.suggestedPriority === 'high' ? 'amber' : 'blue'}>{t(label(r.suggestedPriority))}</Badge></p>
             </>
           )}
         </div>

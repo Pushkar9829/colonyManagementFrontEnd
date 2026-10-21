@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Checkbox, EmptyState, Input, Modal, Pagination, Select, StatusBadge, Table, Textarea } from '../../../components/ui';
+import { useT } from '../../../context/LanguageContext';
 import { date as fmtDate, label, money, toPaise, toRupees } from '../../../lib/format';
 import { useAmenities, useCancelPass, useCreatePlan, useMarkPassPaid, usePassPlans, usePasses, useUpdatePlan } from '../api';
 
@@ -38,6 +39,7 @@ function PlanModal({ plan, amenities, onClose }) {
 }
 
 export default function PassesAdminPage() {
+  const { t } = useT();
   const { data: amenities = [] } = useAmenities();
   const { data: plans = [] } = usePassPlans();
   const [filters, setFilters] = useState({ status: '', amenity: '', code: '', page: 1 });
@@ -49,7 +51,7 @@ export default function PassesAdminPage() {
 
   return (
     <div>
-      <Link to="/amenities" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> Amenities</Link>
+      <Link to="/amenities" className="mb-4 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"><ArrowLeft className="size-4" /> {t('Amenities')}</Link>
       <PageHeader title="Memberships & passes" description="Sell monthly passes for the gym, pool and more. Guards check passes on the Pass check screen." actions={<Button icon={Plus} onClick={() => setEditing({})} disabled={!amenities.length}>New plan</Button>} />
       <Card className="mb-6">
         <CardHeader title="Plans" />
@@ -58,8 +60,8 @@ export default function PassesAdminPage() {
             {plans.map((p) => (
               <li key={p._id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div>
-                  <p className="font-medium text-slate-900">{p.amenity?.name} · {p.name} {!p.active && <Badge>Not on sale</Badge>}</p>
-                  <p className="text-sm text-slate-500">{p.durationDays} days · {p.price ? money(p.price) : 'Free'}</p>
+                  <p className="font-medium text-slate-900">{p.amenity?.name} · {p.name} {!p.active && <Badge>{t('Not on sale')}</Badge>}</p>
+                  <p className="text-sm text-slate-500">{t('{n} days', { n: p.durationDays })} · {p.price ? money(p.price) : t('Free')}</p>
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => setEditing(p)}>Edit</Button>
               </li>
@@ -79,17 +81,17 @@ export default function PassesAdminPage() {
             { key: 'holder', header: 'Holder', render: (p) => `${p.holder?.name}${p.unit ? ` · ${p.unit.label}` : ''}` },
             { key: 'plan', header: 'Plan', render: (p) => `${p.amenity?.name} · ${p.plan?.name}` },
             { key: 'valid', header: 'Valid', render: (p) => `${fmtDate(p.validFrom)} – ${fmtDate(p.validTo)}` },
-            { key: 'price', header: 'Price', render: (p) => (p.price ? money(p.price) : 'Free') },
+            { key: 'price', header: 'Price', render: (p) => (p.price ? money(p.price) : t('Free')) },
             { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
             {
               key: 'a', header: '', render: (p) => (
                 <div className="flex justify-end gap-1">
-                  {p.status === 'payment_pending' && <Button size="sm" variant="secondary" onClick={() => { const method = window.prompt('Payment method (cash / upi / card)', 'cash'); if (method) markPaid.mutate({ id: p._id, method: method.trim().toLowerCase() }); }}>Record payment</Button>}
+                  {p.status === 'payment_pending' && <Button size="sm" variant="secondary" onClick={() => { const method = window.prompt(t('Payment method (cash / upi / card)'), 'cash'); if (method) markPaid.mutate({ id: p._id, method: method.trim().toLowerCase() }); }}>Record payment</Button>}
                   {['active', 'payment_pending'].includes(p.status) && (
                     <Button size="sm" variant="ghost" onClick={() => {
-                      const reason = window.prompt('Reason for cancelling');
+                      const reason = window.prompt(t('Reason for cancelling'));
                       if (reason === null) return;
-                      const refund = p.status === 'active' && p.price ? window.prompt(`Refund amount in ₹ (0 – ${toRupees(p.price)})`, '0') : '0';
+                      const refund = p.status === 'active' && p.price ? window.prompt(t('Refund amount in ₹ (0 – {max})', { max: toRupees(p.price) }), '0') : '0';
                       cancel.mutate({ id: p._id, reason: reason || undefined, refundAmount: toPaise(refund) || undefined });
                     }}>Cancel</Button>
                   )}

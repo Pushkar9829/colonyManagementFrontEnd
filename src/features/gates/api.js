@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['gates'] };
 
@@ -8,13 +9,13 @@ const inv = { invalidate: ['gates'] };
 export const useGates = (params, options) =>
   useQuery({ queryKey: ['gates', 'list', params || {}], queryFn: () => api.get('/gates', params), staleTime: 60000, ...options });
 
-export const useCreateGate = (o) => useApiMutation((b) => api.post('/gates', b), { ...inv, success: (g) => `${g.name} added`, ...o });
+export const useCreateGate = (o) => useApiMutation((b) => api.post('/gates', b), { ...inv, success: (g) => tt('{name} added', { name: g.name }), ...o });
 export const useUpdateGate = (o) => useApiMutation(({ id, ...b }) => api.patch(`/gates/${id}`, b), { ...inv, success: 'Gate saved', ...o });
 export const useReorderGates = (o) => useApiMutation((ids) => api.post('/gates/reorder', { ids }), { ...inv, success: false, ...o });
 export const useRemoveGate = (o) =>
   useApiMutation((id) => api.del(`/gates/${id}`), {
     ...inv,
-    success: (r) => (r?.deleted === false ? `${r.gate.name} has history, so it was closed instead of deleted` : 'Gate deleted'),
+    success: (r) => (r?.deleted === false ? tt('{name} has history, so it was closed instead of deleted', { name: r.gate.name }) : 'Gate deleted'),
     ...o,
   });
 

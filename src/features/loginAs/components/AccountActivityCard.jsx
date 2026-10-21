@@ -24,7 +24,7 @@ export function AccountActivityCard() {
               <div className="min-w-0">
                 <p className="font-medium text-slate-800">{s.byName} <span className="font-normal text-slate-500">({t(LEVEL_LABELS[s.byLevel])}{s.society?.name ? ` · ${s.society.name}` : ''})</span></p>
                 <p className="text-slate-600">“{s.reason}”</p>
-                <p className="text-xs text-slate-500">{dateTime(s.startedAt)} · {s.status === 'active' ? t('still open') : t(durationText(s.durationSeconds))}</p>
+                <p className="text-xs text-slate-500">{dateTime(s.startedAt)} · {s.status === 'active' ? t('still open') : durationText(s.durationSeconds, t)}</p>
               </div>
             </li>
           ))}

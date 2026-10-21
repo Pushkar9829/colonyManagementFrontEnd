@@ -4,7 +4,7 @@ import { useT } from '../context/LanguageContext';
 
 // useMutation + cache invalidation + toasts, the pattern every feature form uses.
 //   invalidate: array of query-key prefixes to refetch on success
-//   success: toast text (or fn(data) => text); set false to stay quiet
+//   success: toast text (or fn(data, vars, t) => text); set false to stay quiet
 export function useApiMutation(mutationFn, { invalidate = [], success, onSuccess, toastErrors = true } = {}) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -13,7 +13,7 @@ export function useApiMutation(mutationFn, { invalidate = [], success, onSuccess
     mutationFn,
     onSuccess: async (data, vars) => {
       await Promise.all(invalidate.map((key) => qc.invalidateQueries({ queryKey: Array.isArray(key) ? key : [key] })));
-      const msg = typeof success === 'function' ? success(data, vars) : success;
+      const msg = typeof success === 'function' ? success(data, vars, t) : success;
       if (msg) toast.success(typeof msg === 'string' ? t(msg) : msg);
       onSuccess?.(data, vars);
     },

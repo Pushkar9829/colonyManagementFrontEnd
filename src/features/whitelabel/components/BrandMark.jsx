@@ -4,6 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { cn } from '../../../lib/cn';
 import { useLoginBranding, useSocietyBranding } from '../api';
 import { appNameOf, applyBrandColour, brandQuery } from '../brand';
+import { useT } from '../../../context/LanguageContext';
 
 // Logo (or the house icon) and app name.
 export function BrandMark({ brand, className }) {
@@ -41,11 +42,12 @@ export function useLoginBrand() {
 }
 
 export function LoginBrandBanner({ brand }) {
+  const { t } = useT();
   if (!brand) return null;
   return (
     <div className="mb-6 flex items-center gap-3 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
       <BrandMark brand={brand} className="text-lg font-semibold text-brand-700" />
-      {(brand.supportEmail || brand.supportPhone) && <span className="ml-auto hidden text-xs text-slate-500 sm:block">Help: {brand.supportEmail || brand.supportPhone}</span>}
+      {(brand.supportEmail || brand.supportPhone) && <span className="ml-auto hidden text-xs text-slate-500 sm:block">{t('Help: {contact}', { contact: brand.supportEmail || brand.supportPhone })}</span>}
     </div>
   );
 }

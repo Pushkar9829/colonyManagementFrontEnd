@@ -4,6 +4,7 @@ import { MailCheck } from 'lucide-react';
 import { api } from '../../../api/client';
 import { Button, Input } from '../../../components/ui';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 export default function ForgotPasswordPage() {
   const { t } = useT();
@@ -19,7 +20,7 @@ export default function ForgotPasswordPage() {
     try {
       setSent(await api.post('/auth/password/forgot', { email: email.trim() }, { auth: false }));
     } catch (err) {
-      setError(err.fieldErrors?.email || err.message);
+      setError(err.fieldErrors?.email || errorText(err, t));
     } finally {
       setLoading(false);
     }
@@ -30,7 +31,7 @@ export default function ForgotPasswordPage() {
       <div className="text-center">
         <MailCheck className="mx-auto size-12 text-brand-500" />
         <h1 className="mt-4 text-2xl font-semibold text-slate-900">{t('Check your email')}</h1>
-        <p className="mt-2 text-sm text-slate-500">{sent.message} {t('The link works for 30 minutes.')}</p>
+        <p className="mt-2 text-sm text-slate-500">{t(sent.message)} {t('The link works for 30 minutes.')}</p>
         {sent.devLink && (
           <p className="mt-4 break-all rounded-lg bg-amber-50 px-3 py-2 text-left text-xs text-amber-800">
             Dev only (no email provider configured): <a className="font-medium underline" href={sent.devLink}>open the reset link</a>

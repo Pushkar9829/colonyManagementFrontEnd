@@ -4,6 +4,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, CardHeader, Input, Modal, Pagination, Select, Table } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
 import { label } from '../../../lib/format';
+import { useT } from '../../../context/LanguageContext';
 import { useBlocks, useBulkUnits, useCreateBlock, useCreateUnit, useDeleteBlock, useDeleteUnit, useUnits } from '../api';
 
 const UNIT_TYPES = ['flat', 'villa', 'plot', 'shop', 'other'].map((v) => ({ value: v, label: label(v) }));
@@ -25,10 +26,11 @@ function BlockModal({ open, onClose }) {
 function BulkModal({ open, onClose, blocks }) {
   const { values, bind, applyServerErrors } = useForm({ block: '', fromFloor: '1', toFloor: '4', unitsPerFloor: '4', type: 'flat', areaSqft: '' });
   const bulk = useBulkUnits({ onSuccess: onClose });
+  const { t } = useT();
   const count = Math.max(0, (Number(values.toFloor) - Number(values.fromFloor) + 1) * Number(values.unitsPerFloor || 0));
   return (
     <Modal open={open} onClose={onClose} title="Generate units" description="Creates numbers like 101, 102 … per floor. Existing units are skipped."
-      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!values.block} loading={bulk.isPending} onClick={() => bulk.mutate({ ...values, areaSqft: values.areaSqft || undefined }, { onError: applyServerErrors })}>Create {count} units</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!values.block} loading={bulk.isPending} onClick={() => bulk.mutate({ ...values, areaSqft: values.areaSqft || undefined }, { onError: applyServerErrors })}>{t('Create {count} units', { count })}</Button></>}>
       <div className="grid grid-cols-2 gap-4">
         <Select className="col-span-2" label="Block" required placeholder="Select block" options={blocks.map((b) => ({ value: b._id, label: b.name }))} {...bind('block')} />
         <Input label="From floor" type="number" min={0} hint="0 = ground (G01…)" {...bind('fromFloor')} />
@@ -65,6 +67,7 @@ export default function UnitsPage() {
   const { data, isLoading } = useUnits({ ...filters, block: filters.block || undefined, occupancy: filters.occupancy || undefined, search: filters.search || undefined });
   const deleteBlock = useDeleteBlock();
   const deleteUnit = useDeleteUnit();
+  const { t } = useT();
   const setFilter = (k) => (e) => setFilters((f) => ({ ...f, [k]: e.target.value, page: 1 }));
 
   return (
@@ -83,13 +86,13 @@ export default function UnitsPage() {
 
       <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
         <Card className="h-fit">
-          <CardHeader title="Blocks" subtitle={`${blocks.length} total`} />
+          <CardHeader title="Blocks" subtitle={t('{count} total', { count: blocks.length })} />
           <ul className="divide-y divide-slate-100">
-            {!blocks.length && <li className="px-5 py-6 text-sm text-slate-500">Add your first block to start.</li>}
+            {!blocks.length && <li className="px-5 py-6 text-sm text-slate-500">{t('Add your first block to start.')}</li>}
             {blocks.map((b) => (
               <li key={b._id} className="flex items-center justify-between px-5 py-2.5 text-sm">
-                <span className="font-medium text-slate-700">Block {b.name}</span>
-                <button type="button" onClick={() => window.confirm(`Delete block ${b.name}?`) && deleteBlock.mutate(b._id)} className="text-slate-400 hover:text-red-600" aria-label={`Delete block ${b.name}`}>
+                <span className="font-medium text-slate-700">{t('Block {name}', { name: b.name })}</span>
+                <button type="button" onClick={() => window.confirm(t('Delete block {name}?', { name: b.name })) && deleteBlock.mutate(b._id)} className="text-slate-400 hover:text-red-600" aria-label={t('Delete block {name}', { name: b.name })}>
                   <Trash2 className="size-4" />
                 </button>
               </li>
@@ -100,7 +103,7 @@ export default function UnitsPage() {
         <Card>
           <div className="grid gap-3 border-b border-slate-100 p-4 sm:grid-cols-3">
             <Input placeholder="Search e.g. A-1" value={filters.search} onChange={setFilter('search')} />
-            <Select value={filters.block} onChange={setFilter('block')} placeholder="All blocks" options={blocks.map((b) => ({ value: b._id, label: `Block ${b.name}` }))} />
+            <Select value={filters.block} onChange={setFilter('block')} placeholder="All blocks" options={blocks.map((b) => ({ value: b._id, label: t('Block {name}', { name: b.name }) }))} />
             <Select value={filters.occupancy} onChange={setFilter('occupancy')} placeholder="Any occupancy" options={['vacant', 'owner_occupied', 'rented'].map((v) => ({ value: v, label: label(v) }))} />
           </div>
           <Table
@@ -110,15 +113,15 @@ export default function UnitsPage() {
             columns={[
               { key: 'label', header: 'Unit', render: (u) => <span className="font-medium text-slate-900">{u.label}</span> },
               { key: 'floor', header: 'Floor', render: (u) => u.floor ?? '—' },
-              { key: 'type', header: 'Type', render: (u) => label(u.type) },
+              { key: 'type', header: 'Type', render: (u) => t(label(u.type)) },
               { key: 'areaSqft', header: 'Area', render: (u) => (u.areaSqft ? `${u.areaSqft} sq.ft` : '—') },
-              { key: 'occupancy', header: 'Occupancy', render: (u) => <Badge tone={u.occupancy === 'vacant' ? 'slate' : u.occupancy === 'rented' ? 'blue' : 'green'}>{label(u.occupancy)}</Badge> },
+              { key: 'occupancy', header: 'Occupancy', render: (u) => <Badge tone={u.occupancy === 'vacant' ? 'slate' : u.occupancy === 'rented' ? 'blue' : 'green'}>{t(label(u.occupancy))}</Badge> },
               {
                 key: 'actions',
                 header: '',
                 className: 'text-right',
                 render: (u) => (
-                  <button type="button" onClick={() => window.confirm(`Delete unit ${u.label}?`) && deleteUnit.mutate(u._id)} className="text-slate-400 hover:text-red-600" aria-label={`Delete ${u.label}`}>
+                  <button type="button" onClick={() => window.confirm(t('Delete unit {unit}?', { unit: u.label })) && deleteUnit.mutate(u._id)} className="text-slate-400 hover:text-red-600" aria-label={t('Delete {name}', { name: u.label })}>
                     <Trash2 className="size-4" />
                   </button>
                 ),

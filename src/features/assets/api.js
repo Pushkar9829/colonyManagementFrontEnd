@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { put } from './shared';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['assets'] };
 const fireInv = { invalidate: ['fire'] };
@@ -13,7 +14,7 @@ export const useAssetTimeline = (id, page = 1) => useQuery({ queryKey: ['assets'
 export const useAmcVisits = (id, enabled) => useQuery({ queryKey: ['assets', 'amc-visits', id], queryFn: () => api.get(`/assets/${id}/amc-visits`), enabled: Boolean(id) && enabled });
 export const lookupAssetCode = (code) => api.get(`/assets/by-code/${encodeURIComponent(code)}`);
 
-export const useCreateAsset = (o) => useApiMutation((b) => api.post('/assets', b), { ...inv, success: (a) => `Asset ${a.code} registered`, ...o });
+export const useCreateAsset = (o) => useApiMutation((b) => api.post('/assets', b), { ...inv, success: (a) => tt('Asset {code} registered', { code: a.code }), ...o });
 export const useUpdateAsset = (o) => useApiMutation(({ id, ...b }) => api.patch(`/assets/${id}`, b), { ...inv, success: 'Asset updated', ...o });
 export const useAssetStatus = (o) => useApiMutation(({ id, ...b }) => api.post(`/assets/${id}/status`, b), { ...inv, success: 'Status changed', ...o });
 export const useAddAssetFiles = (o) => useApiMutation(({ id, ...b }) => api.post(`/assets/${id}/files`, b), { ...inv, success: 'Files added', ...o });

@@ -1,35 +1,37 @@
 import { FileSpreadsheet, FileText } from 'lucide-react';
 import { Button, Input, Select } from '../../../components/ui';
 import { cn } from '../../../lib/cn';
+import { tr, useT } from '../../../context/LanguageContext';
 import { money } from '../../../lib/format';
 import { useAccounts, useDownload } from '../api';
 import { ACCOUNT_TYPES, rangePresets } from '../lib';
 
 // Account dropdown grouped by type. `types` limits the choice (e.g. ['expense']).
 export function AccountSelect({ value, onChange, types, label, placeholder = 'Select account', includeInactive = false, error, className, required, bankOnly = false }) {
+  const { t } = useT();
   const { data: accounts = [] } = useAccounts();
   const options = accounts
     .filter((a) => (includeInactive || a.active) && (!types || types.includes(a.type)) && (!bankOnly || a.isBank || a.isCash))
-    .map((a) => ({ value: a.code, label: `${a.code} · ${a.name}${a.active ? '' : ' (inactive)'}`, type: a.type }));
-  const grouped = ACCOUNT_TYPES.filter((t) => options.some((o) => o.type === t.value));
+    .map((a) => ({ value: a.code, label: a.active ? `${a.code} · ${a.name}` : t('{name} (inactive)', { name: `${a.code} · ${a.name}` }), type: a.type }));
+  const grouped = ACCOUNT_TYPES.filter((g) => options.some((o) => o.type === g.value));
   return (
     <div className={cn('space-y-1.5', className)}>
       {label && (
         <span className="block text-sm font-medium text-slate-700">
-          {label}
+          {tr(t, label)}
           {required && <span className="text-red-500"> *</span>}
         </span>
       )}
       <select
-        aria-label={label || placeholder}
+        aria-label={tr(t, label || placeholder)}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         className={cn('block h-10 w-full rounded-lg border bg-white px-3 pr-8 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20', error ? 'border-red-400' : 'border-slate-300')}
       >
-        <option value="">{placeholder}</option>
-        {grouped.map((t) => (
-          <optgroup key={t.value} label={t.label}>
-            {options.filter((o) => o.type === t.value).map((o) => (
+        <option value="">{tr(t, placeholder)}</option>
+        {grouped.map((g) => (
+          <optgroup key={g.value} label={t(g.label)}>
+            {options.filter((o) => o.type === g.value).map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </optgroup>

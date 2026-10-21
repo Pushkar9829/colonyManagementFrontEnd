@@ -6,9 +6,12 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { Button, Card, ErrorState, Input, PageLoader } from '../../../components/ui';
 import { lookupAssetCode } from '../api';
 import { codeFromScan } from '../constants';
+import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Scan an asset's QR label with the phone camera (or type the code) and jump to its page.
 export default function AssetScanPage() {
+  const { t } = useT();
   const navigate = useNavigate();
   const video = useRef(null);
   const busy = useRef(false);
@@ -25,7 +28,7 @@ export default function AssetScanPage() {
       const asset = await lookupAssetCode(code);
       navigate(`/assets/${asset._id}`, { replace: true });
     } catch (err) {
-      setError(err.status === 404 ? `No asset with code "${code}"` : err.message);
+      setError(err.status === 404 ? t('No asset with code "{code}"', { code }) : errorText(err, t));
       setTimeout(() => { busy.current = false; }, 1500);
     }
   };
@@ -35,7 +38,7 @@ export default function AssetScanPage() {
   useEffect(() => {
     if (!video.current) return undefined;
     const scanner = new QrScanner(video.current, (r) => openRef.current(r.data), { returnDetailedScanResult: true, highlightScanRegion: true, maxScansPerSecond: 4 });
-    scanner.start().catch(() => setCamError('Camera not available. Type the code printed under the QR instead.'));
+    scanner.start().catch(() => setCamError(t('Camera not available. Type the code printed under the QR instead.')));
     return () => scanner.destroy();
   }, []);
 

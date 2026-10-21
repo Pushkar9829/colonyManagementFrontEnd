@@ -6,16 +6,18 @@ export const LANGUAGES = [
   { code: 'pa', label: 'ਪੰਜਾਬੀ' },
 ];
 
-// Each language is a separate chunk, downloaded only when someone picks it (English needs nothing).
+// Each language is downloaded only when someone picks it (English needs nothing). A language is split
+// into parts: everyday screens, admin/accountant/manager screens, and the platform console + server messages.
 const LOADERS = {
-  hi: () => import('./i18n/hi.js'),
-  mr: () => import('./i18n/mr.js'),
-  pa: () => import('./i18n/pa.js'),
+  hi: () => Promise.all([import('./i18n/hi.js'), import('./i18n/hi-admin.js'), import('./i18n/hi-platform.js')]),
+  mr: () => Promise.all([import('./i18n/mr.js'), import('./i18n/mr-admin.js'), import('./i18n/mr-platform.js')]),
+  pa: () => Promise.all([import('./i18n/pa.js'), import('./i18n/pa-admin.js'), import('./i18n/pa-platform.js')]),
 };
 
 export const LANGUAGE_CODES = LANGUAGES.map((l) => l.code);
 
 export async function loadDictionary(code) {
   const load = LOADERS[code];
-  return load ? (await load()).default : {};
+  if (!load) return {};
+  return Object.assign({}, ...(await load()).map((m) => m.default));
 }

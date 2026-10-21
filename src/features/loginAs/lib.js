@@ -14,7 +14,9 @@ export function actingSummary(user, now = Date.now()) {
   return { who: unit ? `${user.name} (${unit})` : user.name, minutes: minutesLeft(user.actingAs.expiresAt, now), by: user.actingAs.byName };
 }
 
-export const durationText = (seconds) => {
+// Pass the `t` from useT() to translate (English otherwise).
+const fillVars = (s, v) => (v ? s.replace(/\{(\w+)\}/g, (_, k) => v[k]) : s);
+export const durationText = (seconds, t = fillVars) => {
   const m = Math.round((seconds || 0) / 60);
-  return m < 1 ? 'under a minute' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+  return m < 1 ? t('under a minute') : m < 60 ? t('{n} min', { n: m }) : t('{h} h {m} min', { h: Math.floor(m / 60), m: m % 60 });
 };

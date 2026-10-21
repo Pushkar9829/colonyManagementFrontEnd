@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { checkout } from './checkout';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = ['bookings', 'amenities', 'dashboard'];
 
@@ -40,7 +41,7 @@ export const useCancelBooking = (o) =>
     ...o,
   });
 export const useDecideBooking = () =>
-  useApiMutation(({ id, ...b }) => api.post(`/bookings/${id}/decide`, b), { invalidate: inv, success: (b) => `Booking ${b.status.replace('_', ' ')}` });
+  useApiMutation(({ id, ...b }) => api.post(`/bookings/${id}/decide`, b), { invalidate: inv, success: (b) => ({ confirmed: 'Booking confirmed', rejected: 'Booking rejected', payment_pending: 'Booking payment pending' }[b.status] || tt('Booking {status}', { status: b.status.replace('_', ' ') })) });
 export const useMarkBookingPaid = (o) => useApiMutation(({ id, ...b }) => api.post(`/bookings/${id}/mark-paid`, b), { invalidate: inv, success: 'Payment recorded', ...o });
 export const useRefundDeposit = (o) => useApiMutation(({ id, ...b }) => api.post(`/bookings/${id}/refund-deposit`, b), { invalidate: inv, success: 'Deposit refund recorded', ...o });
 export const useMarkAttendance = () => useApiMutation(({ id, attended }) => api.post(`/bookings/${id}/attendance`, { attended }), { invalidate: inv, success: 'Marked' });

@@ -7,6 +7,7 @@ import { QrImage, qrDataUrl } from '../../visitors/components/QrImage';
 import { getPosition, useCheckpoints, useCreateCheckpoint, useDeleteCheckpoint, useUpdateCheckpoint } from '../api';
 import { escapeHtml } from './shared';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Opens a separate window with only the QR cards so the app shell is not printed.
 // The window is opened synchronously (inside the click) to avoid popup blockers, then filled.
@@ -165,7 +166,7 @@ export function CheckpointsTab() {
         footer={<>
           <Button variant="secondary" onClick={close}>Cancel</Button>
           {confirm?.type === 'delete'
-            ? <Button variant="danger" loading={del.isPending} onClick={() => del.mutate(confirm.cp._id, { onError: (e) => setConfirmError(e.message) })}>Delete</Button>
+            ? <Button variant="danger" loading={del.isPending} onClick={() => del.mutate(confirm.cp._id, { onError: (e) => setConfirmError(errorText(e, t)) })}>Delete</Button>
             : <Button loading={regen.isPending} onClick={() => regen.mutate({ id: confirm.cp._id, regenerateCode: true })}>Regenerate</Button>}
         </>}>
         <p className="text-sm text-slate-600">

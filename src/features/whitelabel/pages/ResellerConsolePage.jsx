@@ -6,9 +6,11 @@ import { date, label, money } from '../../../lib/format';
 import { useMyInvoices, useMyKeys, useMySocieties, useResellerHome, useRevokeMyKey } from '../api';
 import { BrandMark, useBrandColour } from '../components/BrandMark';
 import { KeyStatusBadge, termText } from '../components/KeyBits';
+import { useT } from '../../../context/LanguageContext';
 
 // The white-label partner's console: only its own keys, societies and key-pack invoices.
 export default function ResellerConsolePage() {
+  const { t } = useT();
   const { data, isLoading, error, refetch } = useResellerHome();
   const [status, setStatus] = useState('');
   const [page, setPage] = useState(1);
@@ -30,8 +32,8 @@ export default function ResellerConsolePage() {
         <div className="flex flex-wrap items-center justify-between gap-3 p-5">
           <BrandMark brand={brand} className="text-lg font-semibold text-brand-700" />
           <div className="flex flex-wrap gap-2 text-xs">
-            <Badge tone={reseller.status === 'active' ? 'green' : 'red'}>{label(reseller.status)}</Badge>
-            <Badge>Sign-up link: ?brand={reseller.slug}</Badge>
+            <Badge tone={reseller.status === 'active' ? 'green' : 'red'}>{t(label(reseller.status))}</Badge>
+            <Badge>{t('Sign-up link: {link}', { link: `?brand=${reseller.slug}` })}</Badge>
             {reseller.brand?.customDomain && <Badge>{reseller.brand.customDomain}</Badge>}
           </div>
         </div>
@@ -48,11 +50,11 @@ export default function ResellerConsolePage() {
         <Table loading={keys.isLoading} rows={keys.data?.data} empty="No keys"
           columns={[
             { key: 'last4', header: 'Key', render: (k) => <span className="font-mono">CH-••••-••••-{k.last4}</span> },
-            { key: 'plan', header: 'Plan', render: (k) => `${label(k.plan)} · ${termText(k)}` },
+            { key: 'plan', header: 'Plan', render: (k) => `${t(label(k.plan))} · ${termText(k, t)}` },
             { key: 'status', header: 'Status', render: (k) => <KeyStatusBadge status={k.status} /> },
             { key: 'society', header: 'Society', render: (k) => k.activatedSociety?.name || '—' },
             { key: 'activatedAt', header: 'Used on', mobile: false, render: (k) => (k.activatedAt ? date(k.activatedAt) : '—') },
-            { key: 'actions', header: '', render: (k) => k.status === 'unused' && <Button size="sm" variant="ghost" loading={revoke.isPending && revoke.variables === k._id} onClick={() => window.confirm('Revoke this key? Nobody will be able to use it.') && revoke.mutate(k._id)}>Revoke</Button> },
+            { key: 'actions', header: '', render: (k) => k.status === 'unused' && <Button size="sm" variant="ghost" loading={revoke.isPending && revoke.variables === k._id} onClick={() => window.confirm(t('Revoke this key? Nobody will be able to use it.')) && revoke.mutate(k._id)}>Revoke</Button> },
           ]} />
         <Pagination meta={keys.data?.meta} onPage={setPage} />
       </Card>
@@ -62,9 +64,9 @@ export default function ResellerConsolePage() {
         <Table loading={societies.isLoading} rows={societies.data?.data} empty="No society has used a key yet"
           columns={[
             { key: 'name', header: 'Society', render: (x) => <div><p className="font-medium text-slate-900">{x.name}</p><p className="text-xs text-slate-500">{x.city || '—'}</p></div> },
-            { key: 'plan', header: 'Plan', render: (x) => <Badge tone="brand">{label(x.plan?.name || 'free')}</Badge> },
-            { key: 'until', header: 'Paid until', render: (x) => (x.keys?.[0]?.expiresAt ? (new Date(x.keys[0].expiresAt).getUTCFullYear() >= 2099 ? 'Lifetime' : date(x.keys[0].expiresAt)) : '—') },
-            { key: 'active', header: 'Status', render: (x) => (x.active ? <Badge tone="green">Active</Badge> : <Badge tone="red">Suspended</Badge>) },
+            { key: 'plan', header: 'Plan', render: (x) => <Badge tone="brand">{t(label(x.plan?.name || 'free'))}</Badge> },
+            { key: 'until', header: 'Paid until', render: (x) => (x.keys?.[0]?.expiresAt ? (new Date(x.keys[0].expiresAt).getUTCFullYear() >= 2099 ? t('Lifetime') : date(x.keys[0].expiresAt)) : '—') },
+            { key: 'active', header: 'Status', render: (x) => (x.active ? <Badge tone="green">{t('Active')}</Badge> : <Badge tone="red">{t('Suspended')}</Badge>) },
           ]} />
         <Pagination meta={societies.data?.meta} onPage={setSocPage} />
       </Card>

@@ -3,9 +3,11 @@ import { Download, Upload } from 'lucide-react';
 import { Badge, Button, Modal } from '../../../components/ui';
 import { money } from '../../../lib/format';
 import { useDownload, useImportOpening } from '../api';
+import { useT } from '../../../context/LanguageContext';
 
 // Go-live import of dues brought forward: check first (dry run), then import.
 export function OpeningBalancesModal({ onClose }) {
+  const { t } = useT();
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
   const run = useImportOpening({ onSuccess: (r) => setResult(r) });
@@ -18,7 +20,7 @@ export function OpeningBalancesModal({ onClose }) {
         <>
           <Button variant="ghost" icon={Download} loading={busy === 'tpl'} onClick={() => download('tpl', '/bills/opening-balances/template.xlsx', null, 'opening-balances-template.xlsx')}>Template</Button>
           <Button variant="secondary" disabled={!file} loading={run.isPending && run.variables?.dryRun} onClick={() => run.mutate({ file, dryRun: true })}>Check file</Button>
-          <Button icon={Upload} disabled={!file} loading={run.isPending && !run.variables?.dryRun} onClick={() => window.confirm('Import these opening balances?') && run.mutate({ file })}>Import</Button>
+          <Button icon={Upload} disabled={!file} loading={run.isPending && !run.variables?.dryRun} onClick={() => window.confirm(t('Import these opening balances?')) && run.mutate({ file })}>Import</Button>
         </>
       }>
       <div className="space-y-4 text-sm">
@@ -26,14 +28,14 @@ export function OpeningBalancesModal({ onClose }) {
         {result && (
           <div className="space-y-2">
             <div className="flex flex-wrap gap-2">
-              {result.dryRun ? <Badge tone="blue">{result.valid} ready</Badge> : <Badge tone="green">{result.imported} imported</Badge>}
-              {result.failed > 0 && <Badge tone="red">{result.failed} with problems</Badge>}
+              {result.dryRun ? <Badge tone="blue">{t('{count} ready', { count: result.valid })}</Badge> : <Badge tone="green">{t('{count} imported', { count: result.imported })}</Badge>}
+              {result.failed > 0 && <Badge tone="red">{t('{count} with problems', { count: result.failed })}</Badge>}
             </div>
             {failed.length > 0 && (
               <ul className="max-h-60 divide-y divide-slate-100 overflow-y-auto rounded-lg border border-slate-200">
                 {failed.map((r) => (
                   <li key={`${r.row}-${r.unit}`} className="flex justify-between gap-3 px-3 py-2">
-                    <span>Row {r.row ?? '–'} · {r.unit} {Number.isFinite(r.amount) ? `· ${money(r.amount)}` : ''}</span>
+                    <span>{t('Row {row}', { row: r.row ?? '–' })} · {r.unit} {Number.isFinite(r.amount) ? `· ${money(r.amount)}` : ''}</span>
                     <span className={r.skipped ? 'text-amber-700' : 'text-red-600'}>{r.error}</span>
                   </li>
                 ))}

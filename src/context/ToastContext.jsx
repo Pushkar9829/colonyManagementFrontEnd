@@ -1,12 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { cn } from '../lib/cn';
+import { useT } from './LanguageContext';
+import { errorText } from '../lib/errorText';
 
 const ToastContext = createContext(null);
 let nextId = 1;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const { t: tx } = useT();
 
   const dismiss = useCallback((id) => setToasts((t) => t.filter((x) => x.id !== id)), []);
   const push = useCallback(
@@ -21,7 +24,7 @@ export function ToastProvider({ children }) {
   const value = useMemo(
     () => ({
       success: (m) => push('success', m),
-      error: (m) => push('error', typeof m === 'string' ? m : m?.message || 'Something went wrong'),
+      error: (m) => push('error', typeof m === 'string' || m?.message || m?.template ? m : 'Something went wrong'),
     }),
     [push],
   );
@@ -40,8 +43,8 @@ export function ToastProvider({ children }) {
             )}
           >
             {t.type === 'error' ? <AlertTriangle className="mt-0.5 size-4 shrink-0 text-red-600" /> : <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600" />}
-            <p className="flex-1 text-slate-700">{t.message}</p>
-            <button type="button" onClick={() => dismiss(t.id)} className="text-slate-400 hover:text-slate-600" aria-label="Dismiss">
+            <p className="flex-1 text-slate-700">{t.type === 'error' ? errorText(t.message, tx) : t.message}</p>
+            <button type="button" onClick={() => dismiss(t.id)} className="text-slate-400 hover:text-slate-600" aria-label={tx('Dismiss')}>
               <X className="size-4" />
             </button>
           </div>

@@ -4,6 +4,7 @@ import { Plus, Trash2, Vote } from 'lucide-react';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge, Button, Card, EmptyState, Input, Modal, PageLoader, Select, Textarea } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
+import { useT } from '../../../context/LanguageContext';
 import { useForm } from '../../../hooks/useForm';
 import { dateTime } from '../../../lib/format';
 import { ROLES } from '../../../lib/roles';
@@ -12,6 +13,7 @@ import { ELIGIBILITY, ElectionStatus } from '../components';
 
 function NewElectionModal({ open, onClose }) {
   const navigate = useNavigate();
+  const { t } = useT();
   const { values, bind, applyServerErrors } = useForm({ title: '', description: '', eligibility: 'unit_owner', nominationStart: '', nominationEnd: '', votingStart: '', votingEnd: '' });
   const [positions, setPositions] = useState([{ title: 'Chairman', seats: 1 }, { title: 'Secretary', seats: 1 }, { title: 'Treasurer', seats: 1 }]);
   const create = useCreateElection({ onSuccess: (e) => { onClose(); navigate(`/elections/${e._id}`); } });
@@ -38,17 +40,17 @@ function NewElectionModal({ open, onClose }) {
         <Input type="datetime-local" label="Voting opens" {...bind('votingStart')} />
         <Input type="datetime-local" label="Voting closes" {...bind('votingEnd')} />
         <div className="space-y-2 sm:col-span-2">
-          <p className="text-sm font-medium text-slate-700">Positions</p>
+          <p className="text-sm font-medium text-slate-700">{t('Positions')}</p>
           {positions.map((p, i) => (
             // eslint-disable-next-line react/no-array-index-key
             <div key={i} className="flex gap-2">
               <Input className="flex-1" placeholder="Position" value={p.title} onChange={(e) => setPos(i, { title: e.target.value })} />
               <Input className="w-24" type="number" min="1" aria-label="Seats" value={p.seats} onChange={(e) => setPos(i, { seats: e.target.value })} />
-              <Button variant="ghost" icon={Trash2} aria-label="Remove position" disabled={positions.length === 1} onClick={() => setPositions(positions.filter((_, j) => j !== i))} />
+              <Button variant="ghost" icon={Trash2} aria-label={t('Remove position')} disabled={positions.length === 1} onClick={() => setPositions(positions.filter((_, j) => j !== i))} />
             </div>
           ))}
           <Button size="sm" variant="secondary" icon={Plus} onClick={() => setPositions([...positions, { title: '', seats: 1 }])}>Add position</Button>
-          <p className="text-xs text-slate-500">The number is the seats to fill (e.g. 5 committee members).</p>
+          <p className="text-xs text-slate-500">{t('The number is the seats to fill (e.g. 5 committee members).')}</p>
         </div>
       </div>
     </Modal>
@@ -58,6 +60,7 @@ function NewElectionModal({ open, onClose }) {
 export default function ElectionsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useT();
   const [creating, setCreating] = useState(false);
   const { data, isLoading } = useElections({ limit: 50 });
   const admin = user.role === ROLES.ADMIN;
@@ -76,9 +79,9 @@ export default function ElectionsPage() {
               <p className="mt-1 font-mono text-[11px] text-slate-400">{e.number}</p>
               <p className="mt-2 text-sm text-slate-600">{e.positions.map((p) => `${p.title}${p.seats > 1 ? ` ×${p.seats}` : ''}`).join(' · ')}</p>
               <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
-                {e.status === 'voting' && e.votingEnd && <span>Voting closes {dateTime(e.votingEnd)}</span>}
-                {e.status === 'nominations' && e.nominationEnd && <span>Nominations close {dateTime(e.nominationEnd)}</span>}
-                {e.status === 'voting' && (e.me?.hasVoted ? <Badge tone="green">You have voted</Badge> : e.me?.eligible && <Badge tone="amber">Your vote is pending</Badge>)}
+                {e.status === 'voting' && e.votingEnd && <span>{t('Voting closes {when}', { when: dateTime(e.votingEnd) })}</span>}
+                {e.status === 'nominations' && e.nominationEnd && <span>{t('Nominations close {when}', { when: dateTime(e.nominationEnd) })}</span>}
+                {e.status === 'voting' && (e.me?.hasVoted ? <Badge tone="green">{t('You have voted')}</Badge> : e.me?.eligible && <Badge tone="amber">{t('Your vote is pending')}</Badge>)}
               </div>
             </Card>
           ))}

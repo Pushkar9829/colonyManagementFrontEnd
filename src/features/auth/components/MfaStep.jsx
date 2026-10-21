@@ -3,6 +3,7 @@ import { ShieldCheck } from 'lucide-react';
 import { Button, Input } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useT } from '../../../context/LanguageContext';
+import { errorText } from '../../../lib/errorText';
 
 // Second login step: 6-digit code from the authenticator app, or a one-time backup code.
 export function MfaStep({ mfaToken, onDone, onRestart }) {
@@ -23,7 +24,7 @@ export function MfaStep({ mfaToken, onDone, onRestart }) {
       await verifyMfa(mfaToken, useBackup ? { backupCode: value.trim() } : { code: value.trim() });
       onDone();
     } catch (err) {
-      setError(err.message);
+      setError(errorText(err, t));
       if (['MFA_LOCKED', 'MFA_TOKEN_INVALID'].includes(err.code)) setDead(true);
       setValue('');
     } finally {

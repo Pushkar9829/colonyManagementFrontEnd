@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['documents'] };
 
@@ -13,7 +14,7 @@ export const useDownloadLog = (id, enabled) => useQuery({ queryKey: ['documents'
 export const useCreateFolder = (o) => useApiMutation((b) => api.post('/documents/folders', b), { ...inv, success: 'Folder created', ...o });
 export const useUploadDocument = (o) => useApiMutation((b) => api.post('/documents', b), { ...inv, success: 'Document uploaded', ...o });
 export const useUpdateDocument = (o) => useApiMutation(({ id, ...b }) => api.patch(`/documents/${id}`, b), { ...inv, success: 'Saved', ...o });
-export const useAddVersion = (o) => useApiMutation(({ id, ...b }) => api.post(`/documents/${id}/versions`, b), { ...inv, success: (d) => `Version ${d.currentVersion} uploaded`, ...o });
+export const useAddVersion = (o) => useApiMutation(({ id, ...b }) => api.post(`/documents/${id}/versions`, b), { ...inv, success: (d) => tt('Version {n} uploaded', { n: d.currentVersion }), ...o });
 export const useArchiveDocument = () => useApiMutation(({ id, archived }) => api.post(`/documents/${id}/${archived ? 'archive' : 'restore'}`), { ...inv, success: (d) => (d.archived ? 'Archived' : 'Restored') });
 
 // Records the download server-side, then opens the file. The tab is opened before the request

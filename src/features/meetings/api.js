@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 const inv = { invalidate: ['meetings'] };
 const on = (id, path = '') => `/meetings/${id}${path}`;
@@ -12,7 +13,7 @@ export const useActionItems = (params) => useQuery({ queryKey: ['meetings', 'act
 
 export const useCreateMeeting = (o) => useApiMutation((b) => api.post('/meetings', b), { ...inv, success: 'Meeting created', ...o });
 export const useUpdateMeeting = (o) => useApiMutation(({ id, ...b }) => api.patch(on(id), b), { ...inv, success: 'Saved', ...o });
-export const useSendNotice = () => useApiMutation((id) => api.post(on(id, '/notice')), { ...inv, success: (m) => `Notice sent to ${m.notice.recipients} member(s)` });
+export const useSendNotice = () => useApiMutation((id) => api.post(on(id, '/notice')), { ...inv, success: (m) => tt('Notice sent to {n} member(s)', { n: m.notice.recipients }) });
 export const useCancelMeeting = () => useApiMutation(({ id, reason }) => api.post(on(id, '/cancel'), { reason }), { ...inv, success: 'Meeting cancelled' });
 export const useAddAgendaItem = (o) => useApiMutation(({ id, ...b }) => api.post(on(id, '/agenda'), b), { ...inv, success: 'Agenda item added', ...o });
 export const useUpdateAgendaItem = (o) => useApiMutation(({ id, itemId, ...b }) => api.patch(on(id, `/agenda/${itemId}`), b), { ...inv, success: 'Saved', ...o });

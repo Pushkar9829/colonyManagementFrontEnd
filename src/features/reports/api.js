@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { useApiMutation } from '../../hooks/useApiMutation';
+import { tt } from '../../lib/i18n/toastText';
 
 export const useReportCatalogue = () => useQuery({ queryKey: ['reports', 'catalogue'], queryFn: () => api.get('/reports'), staleTime: Infinity });
 
@@ -10,4 +11,4 @@ export const useSchedulePreview = (frequency) => useQuery({ queryKey: ['reports'
 export const useCreateSchedule = (o) => useApiMutation((b) => api.post('/reports/schedules', b), { ...inv, success: 'Summary email scheduled', ...o });
 export const useUpdateSchedule = () => useApiMutation(({ id, ...b }) => api.patch(`/reports/schedules/${id}`, b), { ...inv, success: 'Schedule saved' });
 export const useDeleteSchedule = () => useApiMutation((id) => api.del(`/reports/schedules/${id}`), { ...inv, success: 'Schedule removed' });
-export const useSendScheduleNow = () => useApiMutation((id) => api.post(`/reports/schedules/${id}/send`), { ...inv, success: (r) => `Sent to ${r.sentTo.join(', ')}` });
+export const useSendScheduleNow = () => useApiMutation((id) => api.post(`/reports/schedules/${id}/send`), { ...inv, success: (r) => tt('Sent to {emails}', { emails: r.sentTo.join(', ') }) });

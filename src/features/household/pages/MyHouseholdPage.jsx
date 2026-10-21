@@ -145,7 +145,7 @@ function Family({ h }) {
                   {m.specialNeeds && <Badge tone="amber">{t('Special needs')}</Badge>}
                 </div>
                 {(m.allergies || m.conditions) && <p className="text-xs text-slate-500">{[m.conditions, m.allergies && t('Allergic to {what}', { what: m.allergies })].filter(Boolean).join(' · ')}</p>}
-                {m.occupation && <p className="text-xs text-slate-600">{occupationSummary(m.occupation)}</p>}
+                {m.occupation && <p className="text-xs text-slate-600">{occupationSummary(m.occupation, t)}</p>}
               </div>
               <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100" aria-label={t('Edit {name}', { name: m.name })} onClick={() => setEditing(m)}><Pencil className="size-4" /></button>
               <button type="button" className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-red-600" aria-label={t('Remove {name}', { name: m.name })} onClick={() => window.confirm(t('Remove {name}?', { name: m.name })) && remove.mutate(m._id)}><Trash2 className="size-4" /></button>

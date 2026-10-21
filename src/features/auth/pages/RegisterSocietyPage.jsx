@@ -5,6 +5,7 @@ import { Button, Input } from '../../../components/ui';
 import { useForm } from '../../../hooks/useForm';
 import { useT } from '../../../context/LanguageContext';
 import { LoginBrandBanner, useLoginBrand } from '../../whitelabel/components/BrandMark';
+import { errorText } from '../../../lib/errorText';
 
 export default function RegisterSocietyPage() {
   const { t } = useT();
@@ -50,7 +51,7 @@ export default function RegisterSocietyPage() {
           licenceKey: fe.licenceKey,
         },
       });
-      if (err.code !== 'VALIDATION_ERROR') setError(err.message);
+      if (err.code !== 'VALIDATION_ERROR') setError(errorText(err, t));
     } finally {
       setLoading(false);
     }

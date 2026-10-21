@@ -5,11 +5,13 @@ import { useToast } from '../../../context/ToastContext';
 import { currentPeriod, date, label, todayISO } from '../../../lib/format';
 import { useBlocks } from '../../units/api';
 import { downloadFile } from '../../billing/download';
+import { useT } from '../../../context/LanguageContext';
 import { METER_TYPES, uomOf, useBulkReadings, useImportReadings, useReadingSheet } from '../api';
 
 // Month-end reading round for one block: type the new readings in a grid and save them together.
 export function ReadingSheet() {
   const toast = useToast();
+  const { t } = useT();
   const { data: blocks } = useBlocks();
   const [filters, setFilters] = useState({ block: '', type: 'water', period: currentPeriod() });
   const [readAt, setReadAt] = useState(todayISO());
@@ -45,13 +47,13 @@ export function ReadingSheet() {
         <Input label="Read on" type="date" value={readAt} max={todayISO()} onChange={(e) => setReadAt(e.target.value)} />
       </div>
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-        <Button size="sm" disabled={!filled.length} loading={bulk.isPending} onClick={save}>Save {filled.length || ''} readings</Button>
+        <Button size="sm" disabled={!filled.length} loading={bulk.isPending} onClick={save}>{filled.length ? t('Save {count} readings', { count: filled.length }) : t('Save readings')}</Button>
         <Button size="sm" variant="secondary" icon={FileSpreadsheet} onClick={exportSheet}>Download sheet</Button>
         <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
-          <Upload className="size-3.5" /> {imp.isPending ? 'Importing…' : 'Import filled sheet'}
+          <Upload className="size-3.5" /> {imp.isPending ? t('Importing…') : t('Import filled sheet')}
           <input type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) imp.mutate(f); e.target.value = ''; }} />
         </label>
-        <span className="text-xs text-slate-500">Sheet columns: Serial, Reading, Read on (optional)</span>
+        <span className="text-xs text-slate-500">{t('Sheet columns: Serial, Reading, Read on (optional)')}</span>
       </div>
       {isLoading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
@@ -61,7 +63,7 @@ export function ReadingSheet() {
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr><th className="px-4 py-3">Unit</th><th className="px-4 py-3">Meter</th><th className="px-4 py-3">Last reading</th><th className="px-4 py-3">This month</th><th className="px-4 py-3">New reading</th><th className="px-4 py-3" /></tr>
+              <tr><th className="px-4 py-3">{t('Unit')}</th><th className="px-4 py-3">{t('Meter')}</th><th className="px-4 py-3">{t('Last reading')}</th><th className="px-4 py-3">{t('This month')}</th><th className="px-4 py-3">{t('New reading')}</th><th className="px-4 py-3" /></tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
               {rows.map((r) => {
@@ -72,14 +74,14 @@ export function ReadingSheet() {
                 return (
                   <tr key={id}>
                     <td className="px-4 py-2 font-medium text-slate-900">{r.unit?.label}</td>
-                    <td className="px-4 py-2 text-slate-600">{r.meter.serial} · {label(r.meter.type)}</td>
+                    <td className="px-4 py-2 text-slate-600">{r.meter.serial} · {t(label(r.meter.type))}</td>
                     <td className="whitespace-nowrap px-4 py-2">{r.lastReading} <span className="text-xs text-slate-400">{date(r.lastReadAt)}</span></td>
                     <td className="px-4 py-2">{r.periodReading ? r.periodReading.reading : '—'}</td>
                     <td className="px-4 py-2">
                       <input type="number" step="any" min={0} inputMode="decimal" value={v} onChange={(e) => setValues((x) => ({ ...x, [id]: e.target.value }))}
-                        className={`h-9 w-32 rounded-lg border px-2 text-sm ${low ? 'border-red-400' : 'border-slate-300'}`} aria-label={`New reading for ${r.meter.serial}`} placeholder={uomOf(r.meter.type)} />
+                        className={`h-9 w-32 rounded-lg border px-2 text-sm ${low ? 'border-red-400' : 'border-slate-300'}`} aria-label={t('New reading for {serial}', { serial: r.meter.serial })} placeholder={uomOf(r.meter.type)} />
                     </td>
-                    <td className="px-4 py-2">{res ? (res.ok ? <Badge tone="green">Saved</Badge> : <span className="text-xs text-red-600">{res.error}</span>) : low ? <span className="text-xs text-red-600">Below last reading</span> : null}</td>
+                    <td className="px-4 py-2">{res ? (res.ok ? <Badge tone="green">{t('Saved')}</Badge> : <span className="text-xs text-red-600">{res.error}</span>) : low ? <span className="text-xs text-red-600">{t('Below last reading')}</span> : null}</td>
                   </tr>
                 );
               })}

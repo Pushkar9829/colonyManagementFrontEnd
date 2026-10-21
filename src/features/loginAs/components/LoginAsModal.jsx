@@ -4,14 +4,17 @@ import { LogIn } from 'lucide-react';
 import { Button, Input, Modal, Select } from '../../../components/ui';
 import { useAuth } from '../../../context/AuthContext';
 import { useToast } from '../../../context/ToastContext';
+import { useT } from '../../../context/LanguageContext';
 import { ROLE_LABELS } from '../../../lib/roles';
 import { useLoginAsRules } from '../api';
 import { canLoginAsRole, DURATIONS } from '../lib';
+import { errorText } from '../../../lib/errorText';
 
 // Confirm step: your own password (and two-step code), a reason and how long. Everything is logged and the
 // person can see it on their profile.
 export function LoginAsModal({ target, onClose }) {
   const { user, loginAs } = useAuth();
+  const { t } = useT();
   const toast = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({ password: '', code: '', reason: '', minutes: '30' });
@@ -35,8 +38,8 @@ export function LoginAsModal({ target, onClose }) {
       navigate('/');
     } catch (err) {
       if (err.fieldErrors && Object.keys(err.fieldErrors).length) setErrors(err.fieldErrors);
-      else if (err.code === 'PASSWORD_INCORRECT') setErrors({ password: err.message });
-      else if (err.code?.startsWith('MFA_')) setErrors({ code: err.message });
+      else if (err.code === 'PASSWORD_INCORRECT') setErrors({ password: errorText(err, t) });
+      else if (err.code?.startsWith('MFA_')) setErrors({ code: errorText(err, t) });
       else toast.error(err);
     } finally {
       setBusy(false);
@@ -45,7 +48,7 @@ export function LoginAsModal({ target, onClose }) {
 
   const who = [target.name, target.unitLabel].filter(Boolean).join(' · ');
   return (
-    <Modal open onClose={onClose} title={`Log in as ${target.name}`} description={`${who}${target.role ? ` · ${ROLE_LABELS[target.role] || target.role}` : ''}. You will see the app exactly as they do. This is recorded and they can see it.`}
+    <Modal open onClose={onClose} title={t('Log in as {name}', { name: target.name })} description={t('{who}. You will see the app exactly as they do. This is recorded and they can see it.', { who: `${who}${target.role ? ` · ${t(ROLE_LABELS[target.role] || target.role)}` : ''}` })}
       footer={<><Button variant="secondary" onClick={onClose}>Cancel</Button><Button icon={LogIn} loading={busy} onClick={submit}>Log in as</Button></>}>
       <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
         <Input className="sm:col-span-2" label="Your password" type="password" autoComplete="current-password" required value={form.password} onChange={set('password')} error={errors.password} />
@@ -61,6 +64,7 @@ export function LoginAsModal({ target, onClose }) {
 // Row action. Society members: shown only for roles the rules allow; platform console: always (the server decides).
 export function LoginAsButton({ target, size = 'sm', variant = 'ghost', className }) {
   const { user } = useAuth();
+  const { t } = useT();
   const [open, setOpen] = useState(false);
   const isSocietyUser = Boolean(user?.society);
   const rules = useLoginAsRules({ enabled: isSocietyUser && ['admin', 'accountant', 'facility_manager'].includes(user?.role) && !user?.actingAs });
@@ -68,7 +72,7 @@ export function LoginAsButton({ target, size = 'sm', variant = 'ghost', classNam
   if (isSocietyUser && !canLoginAsRole(rules.data, target.role)) return null;
   return (
     <>
-      <Button size={size} variant={variant} icon={LogIn} className={className} title={`Log in as ${target.name}`} onClick={() => setOpen(true)}>Log in as</Button>
+      <Button size={size} variant={variant} icon={LogIn} className={className} title={t('Log in as {name}', { name: target.name })} onClick={() => setOpen(true)}>Log in as</Button>
       {open && <LoginAsModal target={target} onClose={() => setOpen(false)} />}
     </>
   );
