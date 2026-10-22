@@ -101,6 +101,8 @@ export const router = createBrowserRouter([
           ]),
           guarded([A], [{ path: 'devices', element: page(() => import('../features/devices/pages/DevicesPage')) }]),
           // ---- feature module routes (add below this line; use guarded([roles], [...]) and page(() => import(...))) ----
+          guarded([A], [{ path: 'settings/appearance', element: page(() => import('../features/appearance/pages/AppearancePage')) }]),
+          { element: <RequirePlatform />, children: [{ path: 'platform/templates', element: page(() => import('../features/appearance/pages/PlatformTemplatesPage')) }] },
           guarded([ACC], [{ path: 'settings/payments', element: page(() => import('../features/colonyPayments/pages/OnlinePaymentsPage')) }]),
           { element: <RequirePlatform />, children: [{ path: 'platform/resellers', element: page(() => import('../features/whitelabel/pages/PlatformResellersPage')) }] },
           guarded([FM], [{ path: 'ads', element: page(() => import('../features/ads/pages/SocietyAdsPage')) }]),

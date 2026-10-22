@@ -34,6 +34,7 @@ import { DoorClosed as GatesIcon } from 'lucide-react';
 import { PartyPopper as CelebrationsIcon } from 'lucide-react';
 import { BadgePercent as AdsIcon, ScanEye as LoginAsIcon } from 'lucide-react';
 import { Wallet as OnlinePaymentsIcon, Handshake as ResellersIcon, KeyRound as PartnerConsoleIcon } from 'lucide-react';
+import { Palette as AppearanceIcon, LayoutTemplate as TemplatesIcon } from 'lucide-react';
 
 export const A = 'admin';
 export const ACC = 'accountant';
@@ -106,9 +107,11 @@ export const NAV_ITEMS = [
   { to: '/members', label: 'Members', icon: Users, roles: [A], section: 'Residents' },
   { to: '/devices', label: 'Devices & API keys', icon: KeyRound, roles: [A], section: 'Settings' },
   { to: '/audit', label: 'Audit log', icon: ScrollText, roles: [A], section: 'Settings' },
-  { to: '/settings', label: 'Society settings', icon: Settings, roles: [A], section: 'Settings' },
+  { to: '/settings', label: 'Society settings', icon: Settings, roles: [A], section: 'Settings', end: true },
 
   // ---- feature module nav items (add below this line; keep the section field) ----
+  { to: '/settings/appearance', label: 'Appearance', icon: AppearanceIcon, roles: [A], section: 'Settings' },
+  { to: '/platform/templates', label: 'App templates', icon: TemplatesIcon, roles: [SA], section: 'Platform', permission: 'templates.manage' },
   { to: '/settings/payments', label: 'Online payments', icon: OnlinePaymentsIcon, roles: [A, ACC], section: 'Settings' },
   { to: '/platform/resellers', label: 'Resellers', icon: ResellersIcon, roles: [SA], section: 'Platform', permission: 'whitelabel.manage' },
   // White-label partner admins (role reseller_admin): their console is the home page.

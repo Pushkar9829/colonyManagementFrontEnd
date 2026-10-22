@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn';
 import { tr, useT } from '../../context/LanguageContext';
 
 const variants = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm',
+  primary: 'tpl-btn-primary bg-brand-600 text-white hover:bg-brand-700 shadow-sm', // soft / outline looks: index.css (data-buttons)
   secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 shadow-sm',
   danger: 'bg-red-600 text-white hover:bg-red-700 shadow-sm',
   success: 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm',
@@ -23,7 +23,7 @@ export function Button({ variant = 'primary', size = 'md', loading = false, icon
       type={type}
       disabled={disabled || loading}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
+        'inline-flex items-center justify-center rounded-[var(--tpl-radius-button,0.5rem)] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
         variants[variant],
         sizes[size],
         className,

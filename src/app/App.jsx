@@ -4,6 +4,7 @@ import { AuthProvider } from '../context/AuthContext';
 import { ToastProvider } from '../context/ToastContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { ThemeProvider } from '../context/ThemeContext';
+import { TemplateProvider } from '../context/TemplateContext';
 import { router } from './router';
 
 const queryClient = new QueryClient({
@@ -24,7 +25,9 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <AuthProvider>
-              <RouterProvider router={router} />
+              <TemplateProvider>
+                <RouterProvider router={router} />
+              </TemplateProvider>
             </AuthProvider>
           </ToastProvider>
         </QueryClientProvider>

@@ -11,6 +11,7 @@ import {
 } from '../api';
 import { KeyStatusBadge, termText } from '../components/KeyBits';
 import { useT } from '../../../context/LanguageContext';
+import { ResellerTemplatesPanel } from '../../appearance/components/PlatformPanels';
 
 const PLAN_OPTIONS = ['basic', 'standard', 'premium'].map((p) => ({ value: p, label: label(p) }));
 const KEY_COUNT_LABELS = { unused: 'Unused keys', active: 'Active keys', revoked: 'Revoked keys' };
@@ -190,6 +191,7 @@ function ResellerModal({ id, onClose }) {
               </label>
             </div>
             <BrandForm key={r.updatedAt} initial={r} saving={update.isPending} onSave={(b, o) => update.mutate(b, o)} />
+            <ResellerTemplatesPanel key={`tpl-${r.updatedAt}`} resellerId={r._id} />
           </div>
         )}
         {tab === 'societies' && (

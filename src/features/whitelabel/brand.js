@@ -1,11 +1,10 @@
-// White-label branding: a reseller's colour replaces the brand palette through CSS variables (Tailwind v4
-// utilities such as bg-brand-600 read --color-brand-600), so no component needs to know about resellers.
+// White-label branding: a reseller's colour replaces the brand palette through the template variables
+// (--tpl-brand-*, read by Tailwind's brand-* utilities in index.css), so no component needs to know about
+// resellers. Used by the partner's own console; colonies get partner colours through their app template.
+const SHARE = { 50: 7, 100: 15, 200: 30, 300: 48, 400: 68, 500: 86, 700: 84, 800: 70, 900: 58, 950: 36 };
 const SHADES = {
-  '--color-brand-50': (c) => `color-mix(in srgb, ${c} 8%, white)`,
-  '--color-brand-100': (c) => `color-mix(in srgb, ${c} 18%, white)`,
-  '--color-brand-500': (c) => `color-mix(in srgb, ${c} 82%, white)`,
-  '--color-brand-600': (c) => c,
-  '--color-brand-700': (c) => `color-mix(in srgb, ${c} 82%, black)`,
+  ...Object.fromEntries(Object.entries(SHARE).map(([s, n]) => [`--tpl-brand-${s}`, (c) => `color-mix(in srgb, ${c} ${n}%, ${Number(s) < 600 ? 'white' : 'black'})`])),
+  '--tpl-brand-600': (c) => c,
 };
 const HEX = /^#[0-9a-fA-F]{6}$/;
 

@@ -7,8 +7,10 @@ import fs from 'node:fs';
 const theme = fs.readFileSync(new URL('../node_modules/tailwindcss/theme.css', import.meta.url), 'utf8');
 const vars = {};
 for (const m of theme.matchAll(/--color-([a-z]+)-(\d+):\s*([^;]+);/g)) (vars[m[1]] ??= {})[m[2]] = m[3].trim();
-// our brand scale (index.css @theme) — keep in sync
-vars.brand = { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 300: '#a5b4fc', 400: '#818cf8', 200: '#c7d2fe', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' };
+// our brand scale (index.css @theme) — keep in sync. The colony's app template sets --tpl-brand-* on <html>
+// (lib/template.js), so the dark remap points at those variables and works for every template.
+const BRAND = { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' };
+vars.brand = Object.fromEntries(Object.entries(BRAND).map(([shade, hex]) => [shade, `var(--tpl-brand-${shade}, ${hex})`]));
 
 const NEUTRAL = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
 const CHROMA_MAP = { 50: '950', 100: '900', 200: '800', 700: '300', 800: '200', 900: '100', 950: '50' };

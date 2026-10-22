@@ -13,6 +13,7 @@ import { PlatformPaymentsPanel } from '../../colonyPayments/components/PlatformP
 import { SocietyMembersPanel } from '../../loginAs/components/SocietyMembersPanel';
 import { PermissionGate } from '../components/PermissionGate';
 import { WhatsAppPanel } from '../components/WhatsAppPanel';
+import { SocietyAppearancePanel } from '../../appearance/components/PlatformPanels';
 import { useCan } from '../useCan';
 
 function SocietyModal({ id, onClose }) {
@@ -83,6 +84,7 @@ function SocietyModal({ id, onClose }) {
         <FeatureFlagsPanel societyId={id} />
         {s.active && <SocietyMembersPanel societyId={id} />}
         {can('whatsapp.manage') && <WhatsAppPanel societyId={id} />}
+        {(can('templates.manage') || can('societies.view')) && <SocietyAppearancePanel societyId={id} />}
         <div>
           <p className="mb-2 font-medium text-slate-700">{t('Recent activity')}</p>
           <ul className="space-y-1 text-xs text-slate-500">

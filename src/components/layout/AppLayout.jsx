@@ -18,6 +18,9 @@ import { ActingAsBanner } from '../../features/loginAs/components/ActingAsBanner
 import { AdBanner } from '../../features/ads/components/AdBanner';
 import { AdPopup } from '../../features/ads/components/AdPopup';
 import { SidebarBrand } from '../../features/whitelabel/components/BrandMark';
+import { useTemplate } from '../../context/TemplateContext';
+import { CoverSlotContext } from '../../features/dashboard/components/HomeLayouts';
+import { TemplatePreviewBanner } from '../../features/appearance/components/PreviewBanner';
 
 const OPEN_KEY = 'cms.navOpen';
 const readOpen = () => {
@@ -210,19 +213,39 @@ export function AppLayout() {
   );
 }
 
+// The colony's app template decides the header and menu colours (lib/template.js, index.css .tpl-*).
+const SIDEBAR_STYLES = {
+  light: 'border-r border-slate-200 bg-white',
+  brand: 'tpl-surface-brand tpl-on-dark',
+  dark: 'tpl-surface-dark tpl-on-dark',
+};
+const HEADER_STYLES = {
+  white: 'border-b border-slate-200 bg-white/90 backdrop-blur',
+  brand: 'tpl-surface-brand-strong tpl-on-dark',
+  gradient: 'tpl-surface-gradient tpl-on-dark',
+  // floats over the cover photo of the home screen (hero layout)
+  overlay: 'tpl-on-dark bg-gradient-to-b from-black/40 to-transparent',
+};
+const HERO_ROLES = ['resident', 'guard', 'staff'];
+
 function Shell() {
   const { user, logout } = useAuth();
   const { t } = useT();
+  const { template } = useTemplate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [coverSlot, setCoverSlot] = useState(null);
   const location = useLocation();
   const online = useOnline();
   const closeMobile = () => setMobileOpen(false);
   const hasBottomBar = Boolean(user.society && BOTTOM_BAR[user.role]);
+  const overlay = Boolean(user.society) && template.header === 'transparent-on-cover' && template.home === 'hero' && location.pathname === '/' && HERO_ROLES.includes(user.role);
+  const headerStyle = overlay ? 'overlay' : HEADER_STYLES[template.header] ? template.header : 'white';
+  const sidebarStyle = SIDEBAR_STYLES[template.sidebar] || SIDEBAR_STYLES.light;
 
   return (
     <div className="min-h-screen">
       {/* desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block">
+      <aside className={cn('fixed inset-y-0 left-0 z-30 hidden w-64 lg:block', sidebarStyle)}>
         <Sidebar />
       </aside>
 
@@ -230,7 +253,7 @@ function Shell() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-slate-900/40" onClick={closeMobile} />
-          <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-xl">
+          <aside className={cn('absolute inset-y-0 left-0 w-72 max-w-[85vw] shadow-xl', sidebarStyle)}>
             <button type="button" onClick={closeMobile} className="absolute right-3 top-4 rounded-md p-2 text-slate-400 hover:bg-slate-100" aria-label={t('Close menu')}>
               <X className="size-5" />
             </button>
@@ -240,7 +263,8 @@ function Shell() {
       )}
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-1.5 border-b border-slate-200 bg-white/90 px-3 backdrop-blur sm:gap-2 sm:px-6">
+        {overlay && <div ref={setCoverSlot} className="tpl-cover min-h-16" />}
+        <header className={cn('top-0 z-20 flex h-16 items-center gap-1.5 px-3 sm:gap-2 sm:px-6', overlay ? 'absolute inset-x-0 lg:left-64' : 'sticky', HEADER_STYLES[headerStyle])}>
           <button type="button" onClick={() => setMobileOpen(true)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label={t('Open menu')}>
             <Menu className="size-5" />
           </button>
@@ -264,6 +288,7 @@ function Shell() {
             <LogOut className="size-5" />
           </button>
         </header>
+        <TemplatePreviewBanner />
         <ActingAsBanner />
         <AdBanner />
         {!online && (
@@ -274,7 +299,9 @@ function Shell() {
         )}
         <main className={cn('mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8', hasBottomBar && 'pb-24 lg:pb-6')}>
           <ErrorBoundary key={location.pathname}>
-            <Outlet />
+            <CoverSlotContext.Provider value={overlay ? coverSlot : null}>
+              <Outlet />
+            </CoverSlotContext.Provider>
           </ErrorBoundary>
         </main>
       </div>

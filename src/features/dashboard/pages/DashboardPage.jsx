@@ -22,7 +22,7 @@ import {
   Wallet,
   Wrench,
 } from 'lucide-react';
-import { MapPin } from 'lucide-react';
+import { BriefcaseBusiness, MapPin } from 'lucide-react';
 import { api } from '../../../api/client';
 import { useLiveInterval } from '../../../realtime/RealtimeProvider';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -39,6 +39,8 @@ import { useT } from '../../../context/LanguageContext';
 import { SetupChecklist } from '../components/SetupChecklist';
 import { TodayJobs } from '../components/TodayJobs';
 import { TodayBirthdaysCard } from '../../celebrations/components/TodayBirthdaysCard';
+import { useTemplate } from '../../../context/TemplateContext';
+import { HomeView } from '../components/HomeLayouts';
 import { useChecklistDay, useCurrentPatrol, useMaintenanceNumbers, useParcelWaiting, useStaffToday, useWorkOrderNumbers } from '../api';
 
 function useDashboard() {
@@ -62,23 +64,6 @@ function SosBanner({ count, urgent }) {
       <Siren className="size-5 shrink-0 animate-pulse" />
       <span className="font-semibold">{t(count > 1 ? (urgent ? '{count} open SOS alerts — respond now' : '{count} open SOS alerts') : (urgent ? '{count} open SOS alert — respond now' : '{count} open SOS alert'), { count })}</span>
       <span className="ml-auto text-sm underline">{t('View')}</span>
-    </Link>
-  );
-}
-
-// Large tap targets for the jobs people come to the home screen for.
-function BigAction({ to, icon: Icon, children, primary, className }) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        'flex min-h-16 items-center justify-center gap-2.5 rounded-xl px-4 py-3 text-center font-semibold shadow-sm transition',
-        primary ? 'bg-brand-600 text-white hover:bg-brand-700' : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-50',
-        className,
-      )}
-    >
-      <Icon className="size-6 shrink-0" />
-      <span>{children}</span>
     </Link>
   );
 }
@@ -201,7 +186,7 @@ function DuesCard({ dues }) {
         <p className={cn('text-xs', overdue ? 'font-medium text-red-700' : 'text-slate-500')}>{overdue ? t('{amount} overdue', { amount: money(dues.overdue) }) : due ? t('Not overdue yet') : t('Nothing to pay')}</p>
       </Link>
       {due > 0 && (
-        <Link to="/billing" className={cn('mt-auto inline-flex h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white shadow-sm', overdue ? 'bg-red-600 hover:bg-red-700' : 'bg-brand-600 hover:bg-brand-700')}>
+        <Link to="/billing" className={cn('mt-auto inline-flex h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-white shadow-sm', overdue ? 'bg-red-600 hover:bg-red-700' : 'tpl-btn-primary bg-brand-600 hover:bg-brand-700')}>
           {t('Pay {amount}', { amount: money(due) })}
         </Link>
       )}
@@ -209,41 +194,52 @@ function DuesCard({ dues }) {
   );
 }
 
-function Resident({ d }) {
+function Resident({ d, home }) {
   const { t } = useT();
   const approve = useApproveVisitor();
   const deny = useDenyVisitor();
-  return (
-    <div className="space-y-6">
-      {d.pendingVisitors.length > 0 && (
-        <Card className="border-amber-200">
-          <div className="border-b border-amber-100 bg-amber-50 px-5 py-3 font-semibold text-amber-800">{t('Someone is at the gate')}</div>
-          <ul className="divide-y divide-slate-100">
-            {d.pendingVisitors.map((v) => (
-              <li key={v._id} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                <div className="flex-1">
-                  <p className="font-medium text-slate-900">{v.name}</p>
-                  <p className="text-sm text-slate-500">{t(label(v.purpose))}{v.company ? ` · ${v.company}` : ''} · {timeAgo(v.createdAt)}</p>
-                </div>
-                <Button size="sm" variant="success" onClick={() => approve.mutate(v._id)}>{t('Allow')}</Button>
-                <Button size="sm" variant="danger" onClick={() => deny.mutate(v._id)}>{t('Deny')}</Button>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <DuesCard dues={d.dues} />
-        <StatCard icon={Wrench} tone="amber" label={t('My open complaints')} value={d.openComplaints} to="/complaints" />
-        <StatCard icon={Megaphone} tone="sky" label={t('Unread notices')} value={d.unreadNotices} to="/notices" />
-        <StatCard icon={Vote} tone="brand" label={t('Open polls')} value={d.openPolls} to="/polls" />
-      </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <BigAction to="/visitors?new=pass" icon={UserPlus} className="flex-col text-sm sm:flex-row sm:text-base">{t('Pre-approve a guest')}</BigAction>
-        <BigAction to="/complaints" icon={Wrench} className="flex-col text-sm sm:flex-row sm:text-base">{t('Raise a complaint')}</BigAction>
-        <BigAction to="/amenities" icon={CalendarDays} className="flex-col text-sm sm:flex-row sm:text-base">{t('Book amenity')}</BigAction>
-        <BigAction to="/billing" icon={IndianRupee} className="flex-col text-sm sm:flex-row sm:text-base">{t('Pay')}</BigAction>
-      </div>
+  const due = Math.max(0, d.dues.outstanding || 0);
+  const overdue = d.dues.overdue > 0;
+  const alerts = d.pendingVisitors.length > 0 && (
+    <Card className="border-amber-200">
+      <div className="border-b border-amber-100 bg-amber-50 px-5 py-3 font-semibold text-amber-800">{t('Someone is at the gate')}</div>
+      <ul className="divide-y divide-slate-100">
+        {d.pendingVisitors.map((v) => (
+          <li key={v._id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+            <div className="flex-1">
+              <p className="font-medium text-slate-900">{v.name}</p>
+              <p className="text-sm text-slate-500">{t(label(v.purpose))}{v.company ? ` · ${v.company}` : ''} · {timeAgo(v.createdAt)}</p>
+            </div>
+            <Button size="sm" variant="success" onClick={() => approve.mutate(v._id)}>{t('Allow')}</Button>
+            <Button size="sm" variant="danger" onClick={() => deny.mutate(v._id)}>{t('Deny')}</Button>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+  const stats = [
+    {
+      key: 'dues',
+      node: <DuesCard dues={d.dues} />,
+      icon: IndianRupee,
+      tone: overdue ? 'red' : due ? 'amber' : 'green',
+      label: t('Amount due'),
+      value: money(due),
+      sub: overdue ? t('{amount} overdue', { amount: money(d.dues.overdue) }) : due ? t('Not overdue yet') : t('Nothing to pay'),
+      to: '/billing',
+    },
+    { key: 'complaints', icon: Wrench, tone: 'amber', label: t('My open complaints'), value: d.openComplaints, to: '/complaints' },
+    { key: 'notices', icon: Megaphone, tone: 'sky', label: t('Unread notices'), value: d.unreadNotices, to: '/notices' },
+    { key: 'polls', icon: Vote, tone: 'brand', label: t('Open polls'), value: d.openPolls, to: '/polls' },
+  ];
+  const actions = [
+    { to: '/visitors?new=pass', icon: UserPlus, label: t('Pre-approve a guest') },
+    { to: '/complaints', icon: Wrench, label: t('Raise a complaint') },
+    { to: '/amenities', icon: CalendarDays, label: t('Book amenity') },
+    { to: '/billing', icon: IndianRupee, label: t('Pay') },
+  ];
+  const extras = (
+    <>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader title={t('Unpaid bills')} action={<Link to="/billing" className="text-sm font-medium text-brand-600 hover:underline">{t('All bills')}</Link>} />
@@ -275,8 +271,9 @@ function Resident({ d }) {
       <Link to="/daily-help" className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline">
         <UserCheck className="size-4" />{t('My daily help')}
       </Link>
-    </div>
+    </>
   );
+  return <HomeView {...home} alerts={alerts} stats={stats} actions={actions} extras={extras} />;
 }
 
 // The round running now (not yet finished), else the soonest upcoming one.
@@ -290,14 +287,14 @@ function nextPatrol(items, t) {
   return { value: sameDay ? time(next.nextDueAt) : `${date(next.nextDueAt)} ${time(next.nextDueAt)}`, sub: next.route.name, tone: 'sky' };
 }
 
-function Guard({ d }) {
+function Guard({ d, home }) {
   const { isEnabled } = useFeatures();
   const parcels = useParcelWaiting(isEnabled('parcels'));
   const patrols = useCurrentPatrol(isEnabled('patrols'));
   const { t } = useT();
   const patrol = nextPatrol(patrols.data, t);
-  return (
-    <div className="space-y-6">
+  const alerts = (
+    <>
       <SosBanner count={d.activeSos} urgent />
       <Link to="/gate" className="flex items-center gap-3 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3">
         <MapPin className="size-6 shrink-0 text-brand-600" />
@@ -307,61 +304,89 @@ function Guard({ d }) {
         </div>
         {d.atGate && <span className="shrink-0 text-right text-xs text-slate-600">{t('{n} today', { n: d.atGate.today })}<br />{t('{n} inside', { n: d.atGate.inside })}</span>}
       </Link>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <BigAction to="/gate" icon={UserPlus} primary className="text-lg">{t('New visitor')}</BigAction>
-        <BigAction to="/gate?tab=scan" icon={QrCode} className="text-lg">{t('Scan pass / code')}</BigAction>
-        {isEnabled('parcels') && <BigAction to="/gate?tab=parcels" icon={Package} className="text-lg">{t('Log parcel')}</BigAction>}
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <StatCard icon={AlertTriangle} tone="amber" label="Waiting at gate" value={d.pendingVisitors} sub={d.pendingVisitors ? 'Waiting for the resident' : 'No one waiting'} to="/gate?tab=pending" />
-        <StatCard icon={DoorOpen} tone="green" label="Inside now" value={d.insideNow} sub={d.helpInside ? t('+ {n} daily help', { n: d.helpInside }) : 'Visitors'} to="/gate?tab=inside" />
-        {parcels.data && <StatCard icon={Package} tone="sky" label="Parcels waiting" value={parcels.data.waiting} sub={parcels.data.ageing?.over3days ? t('{n} over 3 days', { n: parcels.data.ageing.over3days }) : undefined} to="/parcels" />}
-        {patrol ? (
-          <StatCard icon={Footprints} tone={patrol.tone} label="Next patrol" value={patrol.value} sub={wrap(patrol.sub)} to="/patrols" />
-        ) : (
-          <StatCard icon={Siren} tone="red" label="Open SOS" value={d.activeSos} to="/sos" />
-        )}
-      </div>
-    </div>
+    </>
   );
+  const actions = [
+    { to: '/gate', icon: UserPlus, label: t('New visitor'), primary: true },
+    { to: '/gate?tab=scan', icon: QrCode, label: t('Scan pass / code') },
+    ...(isEnabled('parcels') ? [{ to: '/gate?tab=parcels', icon: Package, label: t('Log parcel') }] : []),
+  ];
+  const stats = [
+    { key: 'waiting', icon: AlertTriangle, tone: 'amber', label: 'Waiting at gate', value: d.pendingVisitors, sub: d.pendingVisitors ? 'Waiting for the resident' : 'No one waiting', to: '/gate?tab=pending' },
+    { key: 'inside', icon: DoorOpen, tone: 'green', label: 'Inside now', value: d.insideNow, sub: d.helpInside ? t('+ {n} daily help', { n: d.helpInside }) : 'Visitors', to: '/gate?tab=inside' },
+    ...(parcels.data ? [{ key: 'parcels', icon: Package, tone: 'sky', label: 'Parcels waiting', value: parcels.data.waiting, sub: parcels.data.ageing?.over3days ? t('{n} over 3 days', { n: parcels.data.ageing.over3days }) : undefined, to: '/parcels' }] : []),
+    patrol
+      ? { key: 'patrol', icon: Footprints, tone: patrol.tone, label: 'Next patrol', value: patrol.value, sub: home.layout === 'cards' ? wrap(patrol.sub) : patrol.sub, to: '/patrols' }
+      : { key: 'sos', icon: Siren, tone: 'red', label: 'Open SOS', value: d.activeSos, to: '/sos' },
+  ];
+  return <HomeView {...home} alerts={alerts} stats={stats} actions={actions} actionsFirst bigActions />;
 }
 
-function Staff({ d }) {
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        <StatCard icon={Wrench} label="Assigned to me" value={d.assignedComplaints} sub="Open complaints" to="/complaints" />
-        <StatCard icon={AlertTriangle} tone="red" label="Late jobs" value={d.overdueComplaints} sub={d.overdueComplaints ? 'Past the promised time' : 'None late'} to="/complaints?overdue=true" />
+function Staff({ d, home }) {
+  const { t } = useT();
+  const stats = [
+    { key: 'assigned', icon: Wrench, tone: 'brand', label: 'Assigned to me', value: d.assignedComplaints, sub: 'Open complaints', to: '/complaints' },
+    { key: 'late', icon: AlertTriangle, tone: 'red', label: 'Late jobs', value: d.overdueComplaints, sub: d.overdueComplaints ? 'Past the promised time' : 'None late', to: '/complaints?overdue=true' },
+  ];
+  // grid-cols-1: the attendance card's columns must not push the page wider than a phone
+  const extras = (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="min-w-0 space-y-6">
+        <PunchCard />
+        <TodayJobs />
       </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-          <PunchCard />
-          <TodayJobs />
-        </div>
-        <MyTicketsCard />
-      </div>
+      <MyTicketsCard />
     </div>
   );
+  // The classic card layout keeps the staff home as it was; the other layouts add shortcuts to the two
+  // pages staff open most.
+  if (home.layout === 'cards') {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+          {stats.map((s) => <StatCard key={s.key} icon={s.icon} tone={s.tone} label={s.label} value={s.value} sub={s.sub} to={s.to} />)}
+        </div>
+        {extras}
+      </div>
+    );
+  }
+  const actions = [
+    { to: '/complaints', icon: Wrench, label: t('My jobs') },
+    { to: '/my-work', icon: BriefcaseBusiness, label: t('My work') },
+  ];
+  return <HomeView {...home} stats={stats} actions={actions} extras={extras} />;
 }
 
 const VIEWS = { management: Management, resident: Resident, guard: Guard, staff: Staff };
 
+// Resident, guard and staff homes follow the colony's app template (its home layout); the management
+// dashboards keep their layout and only take the template's colours and shapes.
+const TEMPLATED_VIEWS = ['resident', 'guard', 'staff'];
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const { t } = useT();
+  const { template, appearance } = useTemplate();
   const { data, isLoading, error, refetch } = useDashboard();
   const View = data ? (data.view === 'management' && user.role === ROLES.FACILITY_MANAGER ? Operations : VIEWS[data.view]) : null;
   // People with more than one home see which flat the numbers are for.
   const showing = user.unit?.label && (user.memberships || []).length > 1 ? t('Showing {unit}', { unit: user.unit.label }) : '';
+  const title = `${t(greeting())}, ${user.name.split(' ')[0]}`;
+  const description = showing ? `${showing} · ${user.society?.name}` : `${user.society?.name}${user.unit?.label ? ` · ${user.unit.label}` : ''}`;
+  const layout = TEMPLATED_VIEWS.includes(data?.view) ? template.home || 'cards' : 'cards';
+  const home = {
+    layout,
+    icons: template.icons || 'circle',
+    hero: { greeting: title, description: showing || user.unit?.label || '', society: user.society?.name, logoUrl: appearance?.logoUrl, coverUrl: appearance?.coverUrl },
+  };
+  const hero = layout === 'hero';
   return (
     <div>
-      <PageHeader
-        title={`${t(greeting())}, ${user.name.split(' ')[0]}`}
-        description={showing ? `${showing} · ${user.society?.name}` : `${user.society?.name}${user.unit?.label ? ` · ${user.unit.label}` : ''}`}
-      />
+      {!hero && <PageHeader title={title} description={description} />}
       {user.role === 'admin' && user.society && <SetupChecklist />}
-      {user.society && <TodayBirthdaysCard />}
-      {isLoading ? <PageLoader /> : error ? <ErrorState error={error} onRetry={refetch} /> : <View d={data} />}
+      {user.society && !hero && <TodayBirthdaysCard />}
+      {isLoading ? <PageLoader /> : error ? <ErrorState error={error} onRetry={refetch} /> : <View d={data} home={home} />}
+      {user.society && hero && <div className="mt-6"><TodayBirthdaysCard /></div>}
     </div>
   );
 }

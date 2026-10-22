@@ -203,13 +203,13 @@ html.dark {
   --color-taupe-800: oklch(92.2% 0.005 34.3);
   --color-taupe-900: oklch(96% 0.002 17.2);
   --color-taupe-950: oklch(98.6% 0.002 67.8);
-  --color-brand-50: color-mix(in oklab, #1e1b4b 70%, transparent);
-  --color-brand-100: color-mix(in oklab, #312e81 70%, transparent);
-  --color-brand-200: #3730a3;
-  --color-brand-700: #a5b4fc;
-  --color-brand-800: #c7d2fe;
-  --color-brand-900: #e0e7ff;
-  --color-brand-950: #eef2ff;
+  --color-brand-50: color-mix(in oklab, var(--tpl-brand-950, #1e1b4b) 70%, transparent);
+  --color-brand-100: color-mix(in oklab, var(--tpl-brand-900, #312e81) 70%, transparent);
+  --color-brand-200: var(--tpl-brand-800, #3730a3);
+  --color-brand-700: var(--tpl-brand-300, #a5b4fc);
+  --color-brand-800: var(--tpl-brand-200, #c7d2fe);
+  --color-brand-900: var(--tpl-brand-100, #e0e7ff);
+  --color-brand-950: var(--tpl-brand-50, #eef2ff);
 }
 
 /* Surfaces: white is also used for text on buttons, so only backgrounds/borders are remapped. */
@@ -426,13 +426,13 @@ html.dark .dark-keep {
   --color-taupe-800: oklch(26.8% 0.011 36.5);
   --color-taupe-900: oklch(21.4% 0.009 43.1);
   --color-taupe-950: oklch(14.7% 0.004 49.3);
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
-  --color-brand-700: #4338ca;
-  --color-brand-800: #3730a3;
-  --color-brand-900: #312e81;
-  --color-brand-950: #1e1b4b;
+  --color-brand-50: var(--tpl-brand-50, #eef2ff);
+  --color-brand-100: var(--tpl-brand-100, #e0e7ff);
+  --color-brand-200: var(--tpl-brand-200, #c7d2fe);
+  --color-brand-700: var(--tpl-brand-700, #4338ca);
+  --color-brand-800: var(--tpl-brand-800, #3730a3);
+  --color-brand-900: var(--tpl-brand-900, #312e81);
+  --color-brand-950: var(--tpl-brand-950, #1e1b4b);
 }
 
 html.dark input, html.dark select, html.dark textarea { color-scheme: dark; }

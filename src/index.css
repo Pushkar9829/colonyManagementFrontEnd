@@ -1,13 +1,28 @@
 @import 'tailwindcss';
 @import './styles/dark-theme.css';
 
+/* Brand colours, fonts and corner radius come from the colony's app template (lib/template.js sets the
+   --tpl-* variables on <html>); the fallbacks are Classic Blue, the default look. */
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --color-brand-50: #eef2ff;
-  --color-brand-100: #e0e7ff;
-  --color-brand-500: #6366f1;
-  --color-brand-600: #4f46e5;
-  --color-brand-700: #4338ca;
+  --font-sans: var(--tpl-font-body, 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif);
+  --color-brand-50: var(--tpl-brand-50, #eef2ff);
+  --color-brand-100: var(--tpl-brand-100, #e0e7ff);
+  --color-brand-200: var(--tpl-brand-200, #c7d2fe);
+  --color-brand-300: var(--tpl-brand-300, #a5b4fc);
+  --color-brand-400: var(--tpl-brand-400, #818cf8);
+  --color-brand-500: var(--tpl-brand-500, #6366f1);
+  --color-brand-600: var(--tpl-brand-600, #4f46e5);
+  --color-brand-700: var(--tpl-brand-700, #4338ca);
+  --color-brand-800: var(--tpl-brand-800, #3730a3);
+  --color-brand-900: var(--tpl-brand-900, #312e81);
+  --color-brand-950: var(--tpl-brand-950, #1e1b4b);
+  --color-accent: var(--tpl-accent, #0ea5e9);
+  --radius-sm: var(--tpl-radius-sm, 0.25rem);
+  --radius-md: var(--tpl-radius-md, 0.375rem);
+  --radius-lg: var(--tpl-radius-lg, 0.5rem);
+  --radius-xl: var(--tpl-radius-xl, 0.75rem);
+  --radius-2xl: var(--tpl-radius-2xl, 1rem);
+  --radius-3xl: var(--tpl-radius-3xl, 1.5rem);
 }
 
 @layer base {
@@ -16,6 +31,9 @@
   }
   body {
     @apply bg-slate-50 text-slate-800 antialiased;
+  }
+  h1, h2, h3 {
+    font-family: var(--tpl-font-heading, var(--font-sans));
   }
 }
 
@@ -28,4 +46,98 @@
     align-items: center;
     justify-content: center;
   }
+}
+
+/* ---------- App templates (data attributes set by lib/template.js) ---------- */
+
+/* Shadow style: flat drops card shadows, elevated deepens them. */
+html[data-shadow='flat'] :is(.shadow-sm, .shadow, .shadow-md) {
+  --tw-shadow: 0 0 #0000;
+}
+html[data-shadow='elevated'] :is(.shadow-sm, .shadow) {
+  --tw-shadow: 0 1px 2px -1px var(--tw-shadow-color, rgb(15 23 42 / 0.08)), 0 10px 24px -10px var(--tw-shadow-color, rgb(15 23 42 / 0.2));
+}
+
+/* Button style for primary buttons (Button variant="primary" and the dashboard's main actions). */
+html[data-buttons='soft'] .tpl-btn-primary {
+  background-color: var(--color-brand-100);
+  color: var(--color-brand-800);
+  --tw-shadow: 0 0 #0000;
+}
+html[data-buttons='soft'] .tpl-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-brand-200);
+}
+html[data-buttons='outline'] .tpl-btn-primary {
+  background-color: transparent;
+  color: var(--color-brand-700);
+  --tw-shadow: inset 0 0 0 1.5px var(--color-brand-600);
+}
+html[data-buttons='outline'] .tpl-btn-primary:hover:not(:disabled) {
+  background-color: var(--color-brand-50);
+}
+
+/* Dark mode: brand-coloured text (links, icons) uses a lighter shade so it stays readable on dark surfaces. */
+html.dark :is(.text-brand-500, .text-brand-600) {
+  color: var(--tpl-brand-400, #818cf8);
+}
+
+/* Coloured surfaces read the raw template colours (not the dark-mode remap), so a brand header or menu
+   keeps its colour, with white text, in light and dark mode. */
+.tpl-surface-brand {
+  background-color: var(--tpl-brand-800, #3730a3);
+  color: #fff;
+}
+.tpl-surface-brand-strong {
+  background-color: var(--tpl-brand-700, #4338ca);
+  color: #fff;
+}
+.tpl-surface-gradient {
+  background-color: var(--tpl-brand-700, #4338ca);
+  background-image: linear-gradient(115deg, var(--tpl-brand-800, #3730a3), var(--tpl-brand-700, #4338ca) 55%, color-mix(in srgb, var(--tpl-brand-700, #4338ca) 78%, var(--tpl-accent, #0ea5e9)));
+  color: #fff;
+}
+.tpl-surface-dark {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+html.dark .tpl-surface-dark {
+  background-color: #020617;
+}
+/* The colony's generated cover when it has no photo: brand gradient with soft rooftops. */
+.tpl-cover {
+  background-color: var(--tpl-brand-700, #4338ca);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='120' viewBox='0 0 240 120'%3E%3Cpath fill='%23ffffff' fill-opacity='0.09' d='M0 120V78l20-14 20 14v-30h28v-14l18-12 18 12v44h20V50l22-16 22 16v28h16V60l14-10 14 10v60z'/%3E%3C/svg%3E"),
+    radial-gradient(circle at 85% 15%, color-mix(in srgb, var(--tpl-accent, #0ea5e9) 45%, transparent), transparent 55%),
+    linear-gradient(135deg, var(--tpl-brand-800, #3730a3), var(--tpl-brand-600, #4f46e5));
+  background-repeat: repeat-x, no-repeat, no-repeat;
+  background-position: bottom left, center, center;
+  background-size: 240px 120px, cover, cover;
+  color: #fff;
+}
+
+/* Text and controls sitting on a coloured or dark surface (brand / gradient header, brand / dark menu,
+   header over a cover photo): the light-theme greys become white. Drop-down panels (shadow-lg) keep their
+   normal colours. */
+.tpl-on-dark :is(.text-slate-600, .text-slate-700, .text-slate-800, .text-slate-900, .text-brand-600, .text-brand-700):not(.shadow-lg, .shadow-lg *) {
+  color: rgb(255 255 255 / 0.94);
+}
+.tpl-on-dark :is(.text-slate-400, .text-slate-500):not(.shadow-lg, .shadow-lg *) {
+  color: rgb(255 255 255 / 0.74);
+}
+.tpl-on-dark :is(.hover\:bg-slate-100, .hover\:bg-slate-50, .hover\:bg-brand-50):not(.shadow-lg, .shadow-lg *):hover {
+  background-color: rgb(255 255 255 / 0.12);
+}
+.tpl-on-dark :is(.hover\:text-slate-900, .hover\:text-slate-700):not(.shadow-lg, .shadow-lg *):hover {
+  color: #fff;
+}
+.tpl-on-dark :is(.border-slate-100, .border-slate-200, .border-slate-300):not(.shadow-lg, .shadow-lg *) {
+  border-color: rgb(255 255 255 / 0.18);
+}
+.tpl-on-dark :is(.bg-white, .bg-slate-50, .bg-slate-100):not(.shadow-lg, .shadow-lg *) {
+  background-color: rgb(255 255 255 / 0.12);
+}
+.tpl-on-dark [aria-current='page']:not(.shadow-lg, .shadow-lg *) {
+  background-color: rgb(255 255 255 / 0.18);
+  color: #fff;
 }

@@ -3,18 +3,22 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 const KEY = 'cms.theme';
 const ThemeContext = createContext({ theme: 'system', setTheme: () => {}, resolved: 'light' });
 
+// null when the person never picked a theme (then a dark-first app template may start dark).
 const readSaved = () => {
   try {
-    return localStorage.getItem(KEY) || 'system';
+    return localStorage.getItem(KEY);
   } catch {
-    return 'system';
+    return null;
   }
 };
 
 // 'light' | 'dark' | 'system'. Applies the `dark` class on <html>; colours are remapped in index.css.
 export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(readSaved);
+  const [saved, setSaved] = useState(readSaved);
+  const theme = saved || 'system';
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  // lib/template.js announces the applied template; Night Sky and other dark-first templates start dark.
+  const [darkFirst, setDarkFirst] = useState(() => document.documentElement.getAttribute('data-dark-first') === 'true');
 
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
@@ -24,11 +28,20 @@ export function ThemeProvider({ children }) {
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
-  const resolved = theme === 'system' ? (systemDark ? 'dark' : 'light') : theme;
+  useEffect(() => {
+    const root = document.documentElement;
+    const onTemplate = (e) => setDarkFirst(Boolean(e.detail?.darkFirst));
+    root.addEventListener('cms:template', onTemplate);
+    return () => root.removeEventListener('cms:template', onTemplate);
+  }, []);
+
+  const resolved = theme === 'system' ? (systemDark || (!saved && darkFirst) ? 'dark' : 'light') : theme;
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', resolved === 'dark');
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#0f172a' : '#4f46e5');
+    const root = document.documentElement;
+    root.classList.toggle('dark', resolved === 'dark');
+    const brand = getComputedStyle(root).getPropertyValue('--tpl-brand-600').trim() || '#4f46e5';
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'dark' ? '#0f172a' : brand);
   }, [resolved]);
 
   const value = useMemo(
@@ -36,7 +49,7 @@ export function ThemeProvider({ children }) {
       theme,
       resolved,
       setTheme(next) {
-        setThemeState(next);
+        setSaved(next);
         try {
           localStorage.setItem(KEY, next);
         } catch {

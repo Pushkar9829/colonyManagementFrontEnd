@@ -3,8 +3,11 @@ import { createRoot } from 'react-dom/client';
 import App from './app/App';
 import './index.css';
 import { installGlobalErrorHandlers } from './components/layout/ErrorBoundary';
+import { applyStoredTemplate } from './lib/template';
 
 installGlobalErrorHandlers();
+// Paint in the colony's last template (and dark mode) before React renders; the API confirms it after.
+applyStoredTemplate();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

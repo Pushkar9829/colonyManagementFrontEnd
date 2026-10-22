@@ -16,7 +16,8 @@ export function BrandMark({ brand, className }) {
   );
 }
 
-// Applies a brand's colour while mounted, and restores ColonyHub's afterwards.
+// Applies a brand's colour while mounted, and restores ColonyHub's afterwards. Society and login pages get
+// their colours from the app template instead (context/TemplateContext: the server resolves partner colours).
 export function useBrandColour(brand) {
   const colour = brand?.reseller ? brand.primaryColor : null;
   useEffect(() => {
@@ -26,18 +27,16 @@ export function useBrandColour(brand) {
   }, [colour]);
 }
 
-// Sidebar header inside the app: the open society's reseller brand, ColonyHub otherwise.
+// Sidebar header inside the app: the open society's reseller brand, ColonyHub otherwise (name and logo).
 export function SidebarBrand() {
   const { user } = useAuth();
   const { data: brand } = useSocietyBranding(Boolean(user?.society));
-  useBrandColour(brand);
   return <BrandMark brand={brand} />;
 }
 
 // Login / register pages: brand from ?brand=<slug> or the custom domain the app is served on.
 export function useLoginBrand() {
   const { data: brand } = useLoginBranding(brandQuery());
-  useBrandColour(brand);
   return brand?.reseller ? brand : null;
 }
 

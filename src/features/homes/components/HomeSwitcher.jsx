@@ -50,7 +50,7 @@ export function HomeSwitcher({ onSwitched }) {
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-left hover:bg-slate-50" aria-haspopup="listbox" aria-expanded={open}>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-slate-800">{isPlatform ? t('Platform console') : user.society?.name}</p>
-          <p className="truncate text-xs text-slate-500">{isPlatform ? (user.platformRoleName ? t('{role} · all societies', { role: user.platformRoleName }) : t('All societies')) : describe(user, t)}</p>
+          <p className="truncate text-xs text-slate-500">{isPlatform ? (user.platformRoleName ? t('{role} · all societies', { role: t(user.platformRoleName) }) : t('All societies')) : describe(user, t)}</p>
         </div>
         <ChevronsUpDown className="size-4 shrink-0 text-slate-400" />
       </button>

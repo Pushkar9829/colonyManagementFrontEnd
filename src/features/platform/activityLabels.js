@@ -29,6 +29,13 @@ export const ACTION_LABELS = {
   'luckydraw.cancelled': 'Cancelled a lucky draw',
   'whatsapp.settings_changed': 'Changed a society’s WhatsApp mode',
   'whatsapp.credits_added': 'Added WhatsApp credits',
+  'template.enabled': 'Switched an app template on',
+  'template.disabled': 'Switched an app template off',
+  'template.default_set': 'Changed the default app template',
+  'template.plan_rule_changed': 'Changed a plan’s app templates',
+  'society.appearance_changed': 'Changed a society’s app template settings',
+  'society.template_forced': 'Forced an app template on a society',
+  'reseller.templates_changed': 'Changed a reseller’s app templates',
 };
 
 // Filter options: whole areas first, then each action.
@@ -44,6 +51,7 @@ export const ACTION_AREAS = [
   { value: 'role', label: 'Roles' },
   { value: 'luckydraw', label: 'Lucky draws' },
   { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'template', label: 'App templates' },
 ];
 
 const words = (s) => s.replace(/[._]/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
@@ -91,6 +99,17 @@ export function describeDetails(row, t = fillVars) {
       return [d.name, d.email, d.role].filter(Boolean).join(' · ');
     case 'team.member_role_changed':
       return `${d.name}: ${d.from || '—'} → ${d.to}`;
+    case 'template.enabled':
+    case 'template.disabled':
+    case 'template.default_set':
+      return d.key || d.template || '';
+    case 'template.plan_rule_changed':
+      return [d.plan, d.templates && t('{n} templates', { n: d.templates.length })].filter(Boolean).join(' · ');
+    case 'society.template_forced':
+      return d.forceTemplate || '';
+    case 'society.appearance_changed':
+    case 'reseller.templates_changed':
+      return [d.allowedTemplates && (d.allowedTemplates.length ? t('{n} templates', { n: d.allowedTemplates.length }) : t('plan templates')), d.adminMayChange !== undefined && t(d.adminMayChange ? 'admin may change' : 'admin may not change'), d.brandOverridesTemplate !== undefined && t(d.brandOverridesTemplate ? 'brand colour wins' : 'template colours'), d.forceTemplate === null && t('no longer forced')].filter(Boolean).join(' · ');
     case 'role.created':
     case 'role.updated':
       return [d.name, d.permissions && t('{n} permissions', { n: d.permissions.length })].filter(Boolean).join(' · ');
